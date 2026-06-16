@@ -1,7 +1,17 @@
 import { describe, it, expect } from 'vitest';
 
 describe('RLS Schema Unit Tests', () => {
-  const REQUIRED_TABLES = ['companies', 'users', 'sales', 'sale_items', 'payments'];
+  const REQUIRED_TABLES = [
+    'companies',
+    'users',
+    'sales',
+    'sale_items',
+    'payments',
+    'memberships',
+    'auth_sessions',
+    'auth_audit_logs',
+    'password_reset_tokens'
+  ];
 
   const validateSql = (sql: string) => {
     const errors: string[] = [];
@@ -38,6 +48,10 @@ describe('RLS Schema Unit Tests', () => {
       ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
       ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
       ALTER TABLE sale_items ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE memberships ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE auth_sessions ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE auth_audit_logs ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE password_reset_tokens ENABLE ROW LEVEL SECURITY;
 
       -- 2. Force RLS
       ALTER TABLE companies FORCE ROW LEVEL SECURITY;
@@ -45,6 +59,10 @@ describe('RLS Schema Unit Tests', () => {
       ALTER TABLE sales FORCE ROW LEVEL SECURITY;
       ALTER TABLE payments FORCE ROW LEVEL SECURITY;
       ALTER TABLE sale_items FORCE ROW LEVEL SECURITY;
+      ALTER TABLE memberships FORCE ROW LEVEL SECURITY;
+      ALTER TABLE auth_sessions FORCE ROW LEVEL SECURITY;
+      ALTER TABLE auth_audit_logs FORCE ROW LEVEL SECURITY;
+      ALTER TABLE password_reset_tokens FORCE ROW LEVEL SECURITY;
 
       -- 3. Policies
       CREATE POLICY comp_policy ON companies FOR ALL USING (id = 1) WITH CHECK (id = 1);
@@ -80,6 +98,10 @@ describe('RLS Schema Unit Tests', () => {
       ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
       ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
       ALTER TABLE sale_items ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE memberships ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE auth_sessions ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE auth_audit_logs ENABLE ROW LEVEL SECURITY;
+      ALTER TABLE password_reset_tokens ENABLE ROW LEVEL SECURITY;
 
       -- 2. Force RLS
       ALTER TABLE companies FORCE ROW LEVEL SECURITY;
@@ -87,6 +109,10 @@ describe('RLS Schema Unit Tests', () => {
       ALTER TABLE sales FORCE ROW LEVEL SECURITY;
       ALTER TABLE payments FORCE ROW LEVEL SECURITY;
       ALTER TABLE sale_items FORCE ROW LEVEL SECURITY;
+      ALTER TABLE memberships FORCE ROW LEVEL SECURITY;
+      ALTER TABLE auth_sessions FORCE ROW LEVEL SECURITY;
+      ALTER TABLE auth_audit_logs FORCE ROW LEVEL SECURITY;
+      ALTER TABLE password_reset_tokens FORCE ROW LEVEL SECURITY;
 
       -- Policies lacks validation
       CREATE POLICY user_policy ON users FOR ALL USING (id = current_tenant);

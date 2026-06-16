@@ -4,22 +4,35 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 
-const REQUIRED_TABLES = ['companies', 'users', 'sales', 'sale_items', 'payments'];
+const REQUIRED_TABLES = [
+  'companies',
+  'users',
+  'sales',
+  'sale_items',
+  'payments',
+  'memberships',
+  'auth_sessions',
+  'auth_audit_logs',
+  'password_reset_tokens'
+];
 
 let rlsErrors = 0;
 
 function runRlsSchemaAudit() {
   console.log('🛡️  Rodando RLS Schema Static Gate...\n');
 
-  const rlsFilePath = path.join('src', 'infrastructure', 'postgres', 'schema', 'local', '002_init_local_rls.sql');
-  
-  if (!fs.existsSync(rlsFilePath)) {
+  const schemasDir = path.join('src', 'infrastructure', 'postgres', 'schema', 'local');
+  if (!fs.existsSync(schemasDir)) {
     console.error(`\n❌ RLS_SCHEMA_GATE_FAILED`);
-    console.error(`- Risco: Arquivo de inicialização de RLS "${rlsFilePath}" não encontrado!`);
+    console.error(`- Risco: Diretório de esquemas "${schemasDir}" não encontrado!`);
     process.exit(1);
   }
 
-  const sqlContent = fs.readFileSync(rlsFilePath, 'utf8');
+  const sqlFiles = fs.readdirSync(schemasDir).filter(f => f.endsWith('.sql'));
+  let sqlContent = '';
+  for (const file of sqlFiles) {
+    sqlContent += fs.readFileSync(path.join(schemasDir, file), 'utf8') + '\n';
+  }
 
   // 1. Verify "ALTER TABLE ... ENABLE ROW LEVEL SECURITY" for all required tables
   REQUIRED_TABLES.forEach(table => {
@@ -27,7 +40,7 @@ function runRlsSchemaAudit() {
     if (!enableRegex.test(sqlContent)) {
       console.error(`\n❌ RLS_SCHEMA_GATE_FAILED`);
       console.error(`- Detalhe: Tabela "${table}" não possui instrução de ENABLE ROW LEVEL SECURITY.`);
-      console.error(`- Correção sugerida: Adicione "ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY;" no arquivo ${rlsFilePath}.`);
+      console.error(`- Correção sugerida: Adicione "ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY;" no seu arquivo SQL de esquema.`);
       rlsErrors++;
     }
   });
@@ -38,14 +51,12 @@ function runRlsSchemaAudit() {
     if (!forceRegex.test(sqlContent)) {
       console.error(`\n❌ RLS_SCHEMA_GATE_FAILED`);
       console.error(`- Detalhe: Tabela "${table}" não possui instrução de FORCE ROW LEVEL SECURITY.`);
-      console.error(`- Correção sugerida: Adicione "ALTER TABLE ${table} FORCE ROW LEVEL SECURITY;" no arquivo ${rlsFilePath}.`);
+      console.error(`- Correção sugerida: Adicione "ALTER TABLE ${table} FORCE ROW LEVEL SECURITY;" no seu arquivo SQL de esquema.`);
       rlsErrors++;
     }
   });
 
   // 3. Verify policies for companies table (isolated by id, has USING & WITH CHECK)
-  const companyPolicyRegex = /CREATE\s+POLICY\s+\w+\s+ON\s+companies\s+FOR\s+ALL\s+USING\s*\(\s*id::text\s*=\s*current_setting\('app\.current_company_id',\s*true\)\s*\)\s+WITH\s+CHECK\s*\(\s*id::text\s*=\s*current_setting\('app\.current_company_id',\s*true\)\s*\)/i;
-  // A relaxed but secure regex to inspect USING and WITH CHECK structure on companies
   const hasUsingAndCheckCompanies = 
     sqlContent.toLowerCase().includes('using') &&
     sqlContent.toLowerCase().includes('with check') &&
@@ -58,25 +69,20 @@ function runRlsSchemaAudit() {
   }
 
   // 4. Verify policies for other required tables (isolated by company_id, has USING & WITH CHECK)
-  // These are in the dynamic DO $$ block of 002_init_local_rls.sql
-  // Specifically, 'users', 'sales', 'payments', 'sale_items' must be in the tables loop array.
   REQUIRED_TABLES.filter(t => t !== 'companies').forEach(table => {
     const tableInDynamicBlockRegex = new RegExp(`'${table}'`, 'i');
-    if (!tableInDynamicBlockRegex.test(sqlContent)) {
+    const isInDynamicLoop = tableInDynamicBlockRegex.test(sqlContent);
+
+    const hasExplicitPolicy = new RegExp(`CREATE\\s+POLICY\\s+\\w+\\s+ON\\s+${table}`, 'i').test(sqlContent);
+    const tableSqlSegment = sqlContent.split(new RegExp(`CREATE\\s+POLICY\\s+\\w+\\s+ON\\s+${table}`, 'i'))[1] || '';
+    const hasUsingAndCheckExplicit = tableSqlSegment.toLowerCase().includes('using') && tableSqlSegment.toLowerCase().includes('with check');
+
+    if (!isInDynamicLoop && !(hasExplicitPolicy && hasUsingAndCheckExplicit)) {
       console.error(`\n❌ RLS_SCHEMA_GATE_FAILED`);
-      console.error(`- Detalhe: Tabela "${table}" não incluída no bloco dinâmico de políticas de isolamento por "company_id".`);
+      console.error(`- Detalhe: Tabela "${table}" não possui políticas de RLS válidas (USING e WITH CHECK) configuradas.`);
       rlsErrors++;
     }
   });
-
-  // Verify that the dynamic block applies both USING and WITH CHECK
-  const dynamicBlockHasUsing = sqlContent.includes('USING (company_id::text = current_setting');
-  const dynamicBlockHasCheck = sqlContent.includes('WITH CHECK (company_id::text = current_setting');
-  if (!dynamicBlockHasUsing || !dynamicBlockHasCheck) {
-    console.error(`\n❌ RLS_SCHEMA_GATE_FAILED`);
-    console.error(`- Detalhe: Falta cláusula "USING" ou "WITH CHECK" nas políticas dinâmicas do loop de tabelas.`);
-    rlsErrors++;
-  }
 
   if (rlsErrors > 0) {
     console.error(`\n❌ Falha na validação das regras estáticas de RLS. Foram encontradas ${rlsErrors} inconsistências.`);

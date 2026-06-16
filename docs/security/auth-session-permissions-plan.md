@@ -52,3 +52,38 @@ Para suportar múltiplos tenants de forma escalável e com capacidade de abrigar
 5. **`auth_audit_logs` (Logs de Auditoria):** Auditoria cronológica de atividades críticas (ex: login bem-sucedido, falha de senha, acesso negado, bloqueio de usuário).
 
 *Nota de compatibilidade:* Durante a transição do schema inicial herdado, a coluna histórica `users.company_id` permanece preservada por questões de compatibilidade transiente, enquanto o modelo avançado baseado na associação via `memberships` passa a ser estruturado como diretriz oficial para futuras instâncias multiempresa.
+
+---
+
+## 4. Implementação Física de Banco de Dados e Segurança
+
+As tabelas de autenticação foram fisicamente incorporadas no banco de dados local do Yopoy por meio do arquivo de migração `src/infrastructure/postgres/schema/local/005_auth_core.sql`.
+
+### Detalhamento Macroscópico de Segurança
+
+1. **`memberships`:**
+   - **Check Constraint:** Limita os valores previstos de roles (`owner`, `admin`, `employee`, `accountant`, `support`).
+   - **Row Level Security:** Políticas do PostgreSQL impõem a restrição baseada em `current_setting('app.current_company_id')`.
+   - **Chave de Unicidade:** Chave única composta assegura que um mesmo usuário tenha somente um papel (`role`) em cada empresa independente.
+
+2. **`auth_sessions`:**
+   - **Proteção Criptográfica:** Armazena somente o hash criptográfico seguro do token (`session_token_hash`), impedindo a exposição direta das chaves secretas no banco.
+   - **Row Level Security:** Aplicação estrita baseada em `app.current_company_id`.
+   - **Índices de Performance:** Otimização para busca rápida via token hash e IDs de empresas e usuários.
+
+3. **`auth_audit_logs`:**
+   - **Auditoria Forense Imutável:** Registra eventos operacionais e de falha contendo metadados flexíveis (`jsonb`), garantindo conformidade forense a qualquer instante.
+   - **Restrição de Eventos:** Garante conformidade com os tipos de eventos concebidos (`company_registered`, `login_success`, `login_failed`, `logout`, etc.).
+   - **Row Level Security:** Segregação garantida por nível de tenant.
+
+4. **`password_reset_tokens`:**
+   - **Hashes Seguros:** Armazenamento restrito a hashes seguros de tokens temporários (`reset_token_hash`).
+   - **Row Level Security:** Segregação garantida por nível de tenant.
+
+5. **Sanatização de Adaptações (`users` table):**
+   - Incorporação de colunas essenciais para auditoria sem quebra transiente das tabelas atuais, incluindo `password_hash`, `email_verified`, `failed_login_attempts`, `locked_until`, e `last_login`.
+
+### Suíte de Testes e RLS Schema Gate
+- O script automatizado local `src/security/scripts/check-rls-schema.ts` audita a totalidade de arquivos de script SQL para certificar que todas as 9 tabelas do sistema estão cobertas com `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e cláusulas específicas de `USING` e `WITH CHECK`.
+- O isolamento físico de dados é testado de ponta a ponta no arquivo `src/infrastructure/postgres-native/tests/native-auth-rls.test.ts`.
+

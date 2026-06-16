@@ -43,5 +43,9 @@ describe('Native Postgres Sandbox - Schema Test', () => {
     expect(tables).toContain('users');
     expect(tables).toContain('sales');
     expect(tables).toContain('payments');
+    expect(tables).toContain('memberships');
+    expect(tables).toContain('auth_sessions');
+    expect(tables).toContain('auth_audit_logs');
+    expect(tables).toContain('password_reset_tokens');
   });
 });

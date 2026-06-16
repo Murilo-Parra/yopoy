@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { randomUUID } from 'crypto';
 import { LocalPostgresUnitOfWork } from '../../infrastructure/postgres/unit-of-work/LocalPostgresUnitOfWork';
 import { PostgresAuthUserRepository } from '../../infrastructure/postgres/auth/PostgresAuthUserRepository';
 import { PostgresMembershipRepository } from '../../infrastructure/postgres/auth/PostgresMembershipRepository';
@@ -283,6 +284,117 @@ export class AuthHttpHandlers {
    * POST /api/auth/register-company
    */
   public handleRegisterCompany = async (req: Request, res: Response): Promise<void> => {
-    return AuthHttpErrors.sendNotImplementedSafely(res);
+    try {
+      const validation = AuthRequestValidators.validateRegisterCompanyInput(req.body);
+      if (!validation.valid) {
+        return AuthHttpErrors.sendInvalidInput(res, validation.message);
+      }
+
+      const { company, admin } = req.body;
+
+      // 1. Backend pre-generates IDs and Session Token safely
+      const companyId = randomUUID();
+      const tokenService = new NodeCryptoSessionTokenService();
+      const tokenResult = tokenService.generateSessionToken({ ttlSeconds: 24 * 60 * 60 });
+      const rawSessionToken = tokenResult.rawToken;
+      const sessionTokenHash = tokenResult.tokenHash;
+      const expiresAt = tokenResult.expiresAt;
+
+      // 2. Open PostgreSQL transaction with RLS active under generated companyId
+      const result = await this.uow.transaction(companyId, async (tx) => {
+        const companyRepository = new PostgresCompanyAuthRepository(tx.executor);
+        const userRepository = new PostgresAuthUserRepository(tx.executor);
+        const membershipRepository = new PostgresMembershipRepository(tx.executor);
+        const sessionRepository = new PostgresAuthSessionRepository(tx.executor);
+        const auditRepository = new PostgresAuthAuditRepository(tx.executor);
+        const passwordHasher = new BcryptPasswordHasher(10);
+
+        // Instanciar e executar RegisterCompanyUseCase dentro da mesma transação com RLS ativo
+        const useCase = new RegisterCompanyUseCase(
+          companyRepository,
+          userRepository,
+          membershipRepository,
+          auditRepository,
+          passwordHasher
+        );
+
+        const useCaseResult = await useCase.execute({
+          companyName: company.razaoSocial,
+          adminFullName: admin.nomeCompleto,
+          adminEmail: admin.email,
+          adminPassword: admin.senha,
+          companyId,
+          cnpj: company.cnpj.replace(/\D/g, '') // normalise document to only digits
+        });
+
+        // Set or update full_name column on user row, since RegisterCompanyUseCase only sets basic fields
+        await tx.executor.execute({
+          sql: 'UPDATE users SET full_name = $1, email_verified = true, updated_at = NOW() WHERE id = $2',
+          params: [admin.nomeCompleto, useCaseResult.user.id],
+          mode: 'real',
+          label: 'updateAdminUserFullName'
+        });
+
+        // Registra sessão inicial sob o mesmo contexto transacional
+        const sessionRecord = await sessionRepository.createSession({
+          userId: useCaseResult.user.id,
+          sessionTokenHash,
+          expiresAt
+        });
+
+        return {
+          useCaseResult,
+          session: sessionRecord
+        };
+      });
+
+      // 3. Set yopoy_session cookie securely
+      AuthCookieService.setSessionCookie(req, res, rawSessionToken, expiresAt);
+
+      // 4. Return successful JSON result containing no raw credentials/tokens/hashes
+      res.status(200).json({
+        ok: true,
+        company: {
+          id: companyId,
+          razaoSocial: company.razaoSocial,
+          nomeFantasia: company.nomeFantasia || company.razaoSocial,
+          cnpj: company.cnpj.replace(/\D/g, '')
+        },
+        user: {
+          id: result.useCaseResult.user.id,
+          companyId: companyId,
+          fullName: admin.nomeCompleto,
+          email: result.useCaseResult.user.email,
+          role: 'owner'
+        },
+        session: {
+          id: result.session.id,
+          expiresAt: expiresAt.toISOString()
+        }
+      });
+    } catch (err: any) {
+      const errorCode = err?.code;
+      const errorMessage = String(err?.message || '');
+
+      if (errorCode === 'AUTH_VALIDATION_ERROR' || err instanceof AuthValidationError) {
+        return AuthHttpErrors.sendInvalidInput(res, err.message);
+      }
+
+      if (errorMessage.startsWith('Password policy violated')) {
+        return AuthHttpErrors.sendInvalidInput(res, 'Senha não atende à política de segurança.');
+      }
+
+      if (err.code === '23505') {
+        const errorDetail = (err.detail || err.message || '').toLowerCase();
+        if (errorDetail.includes('companies') || errorDetail.includes('cnpj') || errorDetail.includes('document')) {
+          return AuthHttpErrors.sendCompanyAlreadyExists(res);
+        } else {
+          return AuthHttpErrors.sendUserAlreadyExists(res);
+        }
+      }
+
+      console.error('Company registration handler error:', err);
+      return AuthHttpErrors.sendInternalServerError(res);
+    }
   };
 }

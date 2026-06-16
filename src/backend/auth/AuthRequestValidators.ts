@@ -92,4 +92,87 @@ export class AuthRequestValidators {
 
     return { valid: true };
   }
+
+  /**
+   * Valida os campos da requisição de cadastro de empresa.
+   */
+  public static validateRegisterCompanyInput(body: any): { valid: boolean; message?: string } {
+    if (!body || typeof body !== 'object') {
+      return { valid: false, message: 'JSON inválido' };
+    }
+
+    const { company, admin } = body;
+
+    if (!company || typeof company !== 'object') {
+      return { valid: false, message: 'Objeto company é obrigatório' };
+    }
+
+    if (!admin || typeof admin !== 'object') {
+      return { valid: false, message: 'Objeto admin é obrigatório' };
+    }
+
+    // Validate Company fields
+    if (!company.razaoSocial || typeof company.razaoSocial !== 'string' || company.razaoSocial.trim() === '') {
+      return { valid: false, message: 'Razão Social é obrigatória' };
+    }
+
+    if (!company.cnpj || typeof company.cnpj !== 'string' || company.cnpj.trim() === '') {
+      return { valid: false, message: 'CNPJ é obrigatório' };
+    }
+
+    // CNPJ Normalization is done in handler/usecase, let's validate format/digits
+    const normalizedCnpj = company.cnpj.replace(/\D/g, '');
+    if (normalizedCnpj.length !== 14) {
+      return { valid: false, message: 'CNPJ deve conter exatamente 14 dígitos' };
+    }
+
+    if (!company.email || !this.isValidEmail(company.email)) {
+      return { valid: false, message: 'E-mail da empresa inválido' };
+    }
+
+    if (!company.endereco || typeof company.endereco !== 'object') {
+      return { valid: false, message: 'Endereço é obrigatório' };
+    }
+
+    const { rua, numero, cidade, uf } = company.endereco;
+    if (!rua || typeof rua !== 'string' || rua.trim() === '') {
+      return { valid: false, message: 'Rua do endereço é obrigatória' };
+    }
+    if (!numero || typeof numero !== 'string' || numero.trim() === '') {
+      return { valid: false, message: 'Número do endereço é obrigatório' };
+    }
+    if (!cidade || typeof cidade !== 'string' || cidade.trim() === '') {
+      return { valid: false, message: 'Cidade do endereço é obrigatória' };
+    }
+    if (!uf || typeof uf !== 'string' || uf.trim().length !== 2) {
+      return { valid: false, message: 'UF do endereço deve conter 2 letras' };
+    }
+
+    if (!company.regimeTributario || typeof company.regimeTributario !== 'string' || company.regimeTributario.trim() === '') {
+      return { valid: false, message: 'Regime tributário é obrigatório' };
+    }
+
+    // Validate Admin fields
+    if (!admin.nomeCompleto || typeof admin.nomeCompleto !== 'string' || admin.nomeCompleto.trim() === '') {
+      return { valid: false, message: 'Nome completo do administrador é obrigatório' };
+    }
+
+    if (!admin.email || !this.isValidEmail(admin.email)) {
+      return { valid: false, message: 'E-mail do administrador é inválido' };
+    }
+
+    if (!admin.senha || typeof admin.senha !== 'string' || admin.senha.trim() === '') {
+      return { valid: false, message: 'Senha é obrigatória' };
+    }
+
+    if (!admin.confirmarSenha || typeof admin.confirmarSenha !== 'string' || admin.confirmarSenha.trim() === '') {
+      return { valid: false, message: 'Confirmação de senha é obrigatória' };
+    }
+
+    if (admin.senha !== admin.confirmarSenha) {
+      return { valid: false, message: 'A senha e a confirmação de senha devem ser iguais' };
+    }
+
+    return { valid: true };
+  }
 }

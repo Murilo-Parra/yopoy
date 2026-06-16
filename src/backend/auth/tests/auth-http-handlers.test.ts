@@ -324,25 +324,164 @@ describe('AuthHttpHandlers Integration Tests', () => {
   });
 
   describe('POST /api/auth/register-company', () => {
-    it('should return 501 BOOTSTRAP_NOT_IMPLEMENTED_SAFELY on safe fallback schema restrictions', async () => {
+    const validRegistrationPayload = () => ({
+      company: {
+        razaoSocial: 'Empresa Teste LTDA ' + randomUUID().substring(0, 8),
+        nomeFantasia: 'Empresa Teste',
+        cnpj: '00000000000100',
+        email: `contato-${randomUUID().substring(0, 8)}@empresa.com`,
+        telefone: '11999999999',
+        endereco: {
+          rua: 'Rua Exemplo',
+          numero: '100',
+          cidade: 'São Paulo',
+          uf: 'SP'
+        },
+        regimeTributario: 'simples_nacional'
+      },
+      admin: {
+        nomeCompleto: 'Administrador Principal',
+        email: `admin-${randomUUID().substring(0, 8)}@empresa.com`,
+        senha: 'N7!rKq4#vM2zLw9',
+        confirmarSenha: 'N7!rKq4#vM2zLw9'
+      }
+    });
+
+    it('should successfully register a company, owner, membership, and session under RLS', async () => {
       if (!hasDb) return;
 
-      const companyName = 'Secure New Firm';
-      const adminName = 'Bob Builder';
-      const adminMail = `bob-${randomUUID().substring(0, 8)}@buildercorp.com`;
-      const adminPass = 'N7!rKq4#vM2zLw9';
+      const payload = validRegistrationPayload();
+      const res = await request(app)
+        .post('/api/auth/register-company')
+        .send(payload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+
+      // Verify returned objects
+      expect(res.body.company.id).toBeDefined();
+      expect(res.body.company.razaoSocial).toBe(payload.company.razaoSocial);
+      expect(res.body.company.cnpj).toBe('00000000000100');
+
+      expect(res.body.user.id).toBeDefined();
+      expect(res.body.user.companyId).toBe(res.body.company.id);
+      expect(res.body.user.fullName).toBe(payload.admin.nomeCompleto);
+      expect(res.body.user.email).toBe(payload.admin.email.toLowerCase().trim());
+      expect(res.body.user.role).toBe('owner');
+
+      expect(res.body.session.id).toBeDefined();
+      expect(res.body.session.expiresAt).toBeDefined();
+
+      // Negative assertions - no leaked tokens/secrets/hashes
+      expect(res.body.rawSessionToken).toBeUndefined();
+      expect(res.body.passwordHash).toBeUndefined();
+      expect(res.body.sessionTokenHash).toBeUndefined();
+      expect(res.body.tokenHash).toBeUndefined();
+      expect(res.body.error).toBeUndefined();
+
+      // Ensure HttpOnly cookie is set
+      const cookies = getSetCookies(res);
+      const sessionCookie = cookies.find((c: string) => c.startsWith('yopoy_session='));
+      expect(sessionCookie).toBeDefined();
+      expect(sessionCookie).toContain('HttpOnly');
+
+      // Ensure login works after registration
+      const loginRes = await request(app)
+        .post('/api/auth/login')
+        .send({
+          companyId: res.body.company.id,
+          email: payload.admin.email,
+          password: payload.admin.senha
+        });
+
+      expect(loginRes.status).toBe(200);
+      expect(loginRes.body.ok).toBe(true);
+      expect(loginRes.body.user.id).toBe(res.body.user.id);
+
+      // Ensure session validation works with the registered cookie
+      const valCookies = getSetCookies(loginRes);
+      const valSessionCookie = valCookies.find((c: string) => c.startsWith('yopoy_session='));
+
+      const valRes = await request(app)
+        .get('/api/auth/session')
+        .set('Cookie', valSessionCookie)
+        .set('X-Yopoy-Company-Id', res.body.company.id);
+
+      expect(valRes.status).toBe(200);
+      expect(valRes.body.authenticated).toBe(true);
+      expect(valRes.body.session.userId).toBe(res.body.user.id);
+    });
+
+    it('should return 409 COMPANY_ALREADY_EXISTS on duplicate CNPJ', async () => {
+      if (!hasDb) return;
+
+      const payload1 = validRegistrationPayload();
+      // Ensure specific CNPJ
+      payload1.company.cnpj = '11222333000100';
+
+      const res1 = await request(app)
+        .post('/api/auth/register-company')
+        .send(payload1);
+
+      expect(res1.status).toBe(200);
+
+      const payload2 = validRegistrationPayload();
+      payload2.company.cnpj = '11222333000100'; // duplicate CNPJ
+
+      const res2 = await request(app)
+        .post('/api/auth/register-company')
+        .send(payload2);
+
+      expect(res2.status).toBe(409);
+      expect(res2.body.ok).toBe(false);
+      expect(res2.body.error.code).toBe('COMPANY_ALREADY_EXISTS');
+    });
+
+    it('should return 400 on weak password (fails policy)', async () => {
+      if (!hasDb) return;
+
+      const payload = validRegistrationPayload();
+      payload.admin.senha = '123'; // too short / weak
+      payload.admin.confirmarSenha = '123';
 
       const res = await request(app)
         .post('/api/auth/register-company')
-        .send({
-          companyName,
-          adminFullName: adminName,
-          adminEmail: adminMail,
-          adminPassword: adminPass
-        });
+        .send(payload);
 
-      expect(res.status).toBe(501);
-      expect(res.body.error.code).toBe('BOOTSTRAP_NOT_IMPLEMENTED_SAFELY');
+      expect(res.status).toBe(400);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error.code).toBe('INVALID_INPUT');
+    });
+
+    it('should return 400 on unmatched confirmation password', async () => {
+      if (!hasDb) return;
+
+      const payload = validRegistrationPayload();
+      payload.admin.confirmarSenha = 'differentPassword123!';
+
+      const res = await request(app)
+        .post('/api/auth/register-company')
+        .send(payload);
+
+      expect(res.status).toBe(400);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error.code).toBe('INVALID_INPUT');
+      expect(res.body.error.message).toContain('iguais');
+    });
+
+    it('should return 400 on invalid email formatting', async () => {
+      if (!hasDb) return;
+
+      const payload = validRegistrationPayload();
+      payload.admin.email = 'not-an-email';
+
+      const res = await request(app)
+        .post('/api/auth/register-company')
+        .send(payload);
+
+      expect(res.status).toBe(400);
+      expect(res.body.ok).toBe(false);
+      expect(res.body.error.code).toBe('INVALID_INPUT');
     });
   });
 });

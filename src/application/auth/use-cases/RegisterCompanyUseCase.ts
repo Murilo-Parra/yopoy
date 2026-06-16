@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { CompanyRepository } from '../../repositories/CompanyRepository';
 import { AuthUserRepository } from '../contracts/AuthUserRepository';
 import { MembershipRepository } from '../contracts/MembershipRepository';
@@ -13,6 +14,9 @@ export interface RegisterCompanyInput {
   adminFullName: string;
   adminEmail: string;
   adminPassword: string;
+  companyId?: string;
+  userId?: string;
+  cnpj?: string;
 }
 
 export interface RegisterCompanyOutput {
@@ -63,10 +67,11 @@ export class RegisterCompanyUseCase {
     const hashedPassword = await this.passwordHasher.hashPassword(adminPassword);
 
     // Create Company
-    const companyId = `com_${Math.random().toString(36).substring(2, 9)}`;
+    const companyId = input.companyId || `com_${Math.random().toString(36).substring(2, 9)}`;
     const company: Company = {
       id: companyId,
       name: companyName.trim(),
+      cnpj: input.cnpj,
       status: 'ACTIVE',
       created_at: new Date(),
     };

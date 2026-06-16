@@ -40,6 +40,14 @@ export class AuthHttpErrors {
     this.sendError(res, 501, 'BOOTSTRAP_NOT_IMPLEMENTED_SAFELY', message);
   }
 
+  public static sendCompanyAlreadyExists(res: Response, message: string = 'Uma empresa com este CNPJ já está cadastrada.'): void {
+    this.sendError(res, 409, 'COMPANY_ALREADY_EXISTS', message);
+  }
+
+  public static sendUserAlreadyExists(res: Response, message: string = 'Este e-mail de usuário já está em uso.'): void {
+    this.sendError(res, 409, 'USER_ALREADY_EXISTS', message);
+  }
+
   public static sendInternalServerError(res: Response): void {
     this.sendError(res, 500, 'INTERNAL_SERVER_ERROR', 'Erro interno no servidor.');
   }

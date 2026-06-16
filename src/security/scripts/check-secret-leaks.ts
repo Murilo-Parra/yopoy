@@ -51,7 +51,15 @@ function getTrackedFiles(): string[] {
       const list = fs.readdirSync(dir);
       for (const item of list) {
         const fullPath = path.join(dir, item);
-        if (item === 'node_modules' || item === 'modules' || item === 'dist' || item === '.git' || item === 'coverage' || item === '.vite') continue;
+        if (
+          item === 'node_modules' ||
+          item === 'modules' ||
+          item === 'dist' ||
+          item === '.git' ||
+          item === 'coverage' ||
+          item === '.vite' ||
+          (item.startsWith('.env') && item !== '.env.example')
+        ) continue;
         if (fs.statSync(fullPath).isDirectory()) {
           walk(fullPath);
         } else {

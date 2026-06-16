@@ -1,0 +1,40 @@
+export class FiscalProductionSystemWideNonOperationalSealFinalBlockerRegister {
+  public static getBlockers(): string[] {
+    return [
+      'B-PSWNSC-01: Closure operacional real bloqueado.',
+      'B-PSWNSC-02: Selo real bloqueado.',
+      'B-PSWNSC-03: Registro legal/operacional real bloqueado.',
+      'B-PSWNSC-04: Autoridade real bloqueada.',
+      'B-PSWNSC-05: Propagação de autoridade real bloqueada.',
+      'B-PSWNSC-06: Handoff operacional real bloqueado.',
+      'B-PSWNSC-07: Handoff real de autoridade bloqueado.',
+      'B-PSWNSC-08: Handoff real de ativação bloqueado.',
+      'B-PSWNSC-09: Caminho real de ativação bloqueado.',
+      'B-PSWNSC-10: Caminho real para Produção V2 bloqueado.',
+      'B-PSWNSC-11: Canal real de comando final bloqueado.',
+      'B-PSWNSC-12: Comando final real bloqueado.',
+      'B-PSWNSC-13: Hash, assinatura e proof reais bloqueados.',
+      'B-PSWNSC-14: PDF/ZIP/JSON/CSV reais bloqueados.',
+      'B-PSWNSC-15: Exportação e envio real de pacote bloqueados.',
+      'B-PSWNSC-16: Notificação real bloqueada.',
+      'B-PSWNSC-17: Go-live real bloqueado.',
+      'B-PSWNSC-18: Cutover real bloqueado.',
+      'B-PSWNSC-19: Autoridade real de ativação bloqueada.',
+      'B-PSWNSC-20: Gate e token reais bloqueados.',
+      'B-PSWNSC-21: Produção V2 e routeToV2 bloqueados.',
+      'B-PSWNSC-22: Legado obrigatório preservado.',
+      'B-PSWNSC-23: Tráfego, load balancer e DNS reais bloqueados.',
+      'B-PSWNSC-24: Proxy, middleware, tap, mirror, sniffer e shadow traffic reais bloqueados.',
+      'B-PSWNSC-25: Runtime, queue, job, worker, scheduler, cron e shell reais bloqueados.',
+      'B-PSWNSC-26: Banco, transação, DML, DDL e migration reais bloqueados.',
+      'B-PSWNSC-27: SEFAZ, API externa, webhook e callback reais bloqueados.',
+      'B-PSWNSC-28: Payload, XML, PDF, tenant data e documento fiscal reais bloqueados.',
+      'B-PSWNSC-29: Token, API key, secret, certificate, PFX e private key bloqueados.',
+      'B-PSWNSC-30: Crypto e assinatura XML reais bloqueadas.',
+      'B-PSWNSC-31: Filesystem, storage e banco escrito bloqueados.',
+      'B-PSWNSC-32: Lint global com ESLint v9 flat config reconhecido como pendência.',
+      'B-PSWNSC-33: TS2308/namespace overlap preexistente reconhecido como pendência.',
+      'B-PSWNSC-34: Namespace overlap introduzido pelo 45.5 bloqueado.'
+    ];
+  }
+}

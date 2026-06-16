@@ -1,0 +1,50 @@
+import { FiscalHomologationEvidencePackage } from './FiscalHomologationClosureTypes';
+
+export class FiscalHomologationEvidencePackageService {
+  public static getEvidencePackage(): FiscalHomologationEvidencePackage {
+    return {
+      generatedAt: new Date().toISOString(),
+      blueprintPresent: true,
+      mockHarnessPresent: true,
+      reviewPresent: true,
+      metricsPresent: true,
+      realHomologationExecutions: 0 as 0,
+      realSefazCalls: 0 as 0,
+      realCertificatesLoaded: 0 as 0,
+      realPfxReads: 0 as 0,
+      realCertificatePasswordReads: 0 as 0,
+      realXmlSigned: 0 as 0,
+      realPdfGenerated: 0 as 0,
+      realTrafficChanges: 0 as 0,
+      realDmlExecutions: 0 as 0,
+      homologationExecuted: false as false,
+      realSefazCalled: false as false,
+      certificateLoaded: false as false,
+      realPfxRead: false as false,
+      certificatePasswordRead: false as false,
+      xmlSigned: false as false,
+      pdfGenerated: false as false,
+      releaseActivated: false as false,
+      canaryActivated: false as false,
+      productionV2Activated: false as false,
+      trafficChanged: false as false,
+      endpointsCalled: false as false,
+      workersCreated: false as false,
+      schedulersCreated: false as false,
+      readOnly: true,
+      closureOnly: true,
+      mockOnly: true,
+      governanceOnly: true,
+      simulationOnly: true,
+      activationBlocked: true,
+      approvedForRealHomologation: false,
+      approvedForSefazConnection: false,
+      approvedForCertificateLoad: false,
+      approvedForXmlSigning: false,
+      approvedForPdfGeneration: false,
+      approvedForProductionV2: false,
+      payloadIncluded: false,
+      sensitiveDataIncluded: false
+    };
+  }
+}

@@ -1,0 +1,138 @@
+export enum FiscalProductionCanaryTrafficSwitchStatus {
+  CANARY_TRAFFIC_SWITCH_DRY_RUN_READY = 'CANARY_TRAFFIC_SWITCH_DRY_RUN_READY',
+  REVERSIBLE_ACTIVATION_SIMULATION_READY = 'REVERSIBLE_ACTIVATION_SIMULATION_READY',
+  BLOCKED_FOR_REAL_CANARY_TRAFFIC_SWITCH = 'BLOCKED_FOR_REAL_CANARY_TRAFFIC_SWITCH',
+  FAILED_SAFE = 'FAILED_SAFE'
+}
+
+export interface FiscalProductionCanaryTrafficSwitchInput {
+  requestedBy?: string;
+  companyId?: string;
+  requestId?: string;
+  canaryPurpose?: string;
+  targetTeam?: string;
+  targetTenantScope?: string;
+  metadata?: any;
+  forceActivateRealCanary?: boolean;
+  forceActivateProductionV2?: boolean;
+  forceChangeTraffic?: boolean;
+  forceRouteToV2?: boolean;
+  forceDisableLegacyRoute?: boolean;
+  forceInstallProxy?: boolean;
+  forceInstallMiddleware?: boolean;
+  forceInstallTap?: boolean;
+  forceModifyAppUse?: boolean;
+  forceModifyRouterUse?: boolean;
+  forceCallRealEndpoint?: boolean;
+  forceCallLegacyHandler?: boolean;
+  forceCallV2Handler?: boolean;
+  forceCaptureRequest?: boolean;
+  forceCaptureResponse?: boolean;
+  forceCapturePayload?: boolean;
+  forceDuplicateRequest?: boolean;
+  forceMirrorRealTraffic?: boolean;
+  forceEnableShadowTraffic?: boolean;
+  forceExecuteRealRelease?: boolean;
+  forceExecuteRealDeploy?: boolean;
+  forceExecuteRealRollout?: boolean;
+  forceApproveRealCutover?: boolean;
+  forceExecuteRealCutover?: boolean;
+  forceExecuteRealRollback?: boolean;
+  forcePublishRealPackage?: boolean;
+  forceGenerateExecutableArtifact?: boolean;
+  forceCreateWorker?: boolean;
+  forceCreateScheduler?: boolean;
+  forceUnlockGate?: boolean;
+  forceGrantRealAuthorization?: boolean;
+  forceConnectRealDatabase?: boolean;
+  forceExecuteDml?: boolean;
+  forceExecuteDdl?: boolean;
+  forceCallRealSefaz?: boolean;
+  forceLoadRealCertificate?: boolean;
+  forceReadRealPfx?: boolean;
+  forceReadCertificatePassword?: boolean;
+  forceUseRealCrypto?: boolean;
+  forceSignRealXml?: boolean;
+  forceGenerateRealPdf?: boolean;
+}
+
+export interface FiscalProductionCanaryTrafficSwitchResult {
+  success: boolean;
+  status: FiscalProductionCanaryTrafficSwitchStatus | string;
+  validationExecuted: boolean;
+  evaluationExecuted: boolean;
+  decisionSimulated: boolean;
+  canaryTrafficSimulationPlanGenerated: boolean;
+  reversibleActivationPlanGenerated: boolean;
+  trafficSwitchSafetyMatrixGenerated: boolean;
+  canaryPercentageSimulationGenerated: boolean;
+  legacyReversionPlanGenerated: boolean;
+  canaryAbortCriteriaGenerated: boolean;
+  decisionCheckpointMatrixGenerated: boolean;
+  dependencyMatrixGenerated: boolean;
+  go: boolean;
+  noGo: boolean;
+  blockers: string[];
+  warnings: string[];
+  canaryTrafficSwitchDryRunOnly: true;
+  reversibleActivationSimulationOnly: true;
+  trafficSwitchSimulationOnly: true;
+  realCanaryApproved: false;
+  canaryActivated: false;
+  productionV2Activated: false;
+  routeToV2: false;
+  routeToLegacy: true;
+  trafficChanged: false;
+  reversibleActivationExecuted: false;
+  realLegacyReversionExecuted: false;
+  proxyInstalled: false;
+  middlewareInstalled: false;
+  tapInstalled: false;
+  appUseModified: false;
+  routerUseModified: false;
+  realEndpointCalled: false;
+  legacyHandlerCalled: false;
+  v2HandlerCalled: false;
+  requestCaptured: false;
+  responseCaptured: false;
+  payloadCaptured: false;
+  requestDuplicated: false;
+  realTrafficMirrored: false;
+  shadowTrafficEnabled: false;
+  releaseActivated: false;
+  realDeployExecuted: false;
+  realRolloutExecuted: false;
+  realCutoverApproved: false;
+  cutoverExecuted: false;
+  realRollbackExecuted: false;
+  executableArtifactGenerated: false;
+  realPackagePublished: false;
+  workersCreated: false;
+  schedulersCreated: false;
+  realExecutionGateUnlocked: false;
+  realAuthorizationGranted: false;
+  dmlExecuted: false;
+  ddlExecuted: false;
+  realDatabaseConnected: false;
+  realSefazCalled: false;
+  realCertificateLoaded: false;
+  realPfxRead: false;
+  certificatePasswordRead: false;
+  realCryptoUsed: false;
+  xmlSigned: false;
+  pdfGenerated: false;
+  readOnly: true;
+  governanceOnly: true;
+  simulationOnly: true;
+  activationBlocked: true;
+  payloadIncluded: false;
+  sensitiveDataIncluded: false;
+  approvedForCanaryTrafficSwitchDryRun: true;
+  approvedForReversibleActivationSimulation: true;
+  approvedForRealCanary: false;
+  approvedForRealTrafficSwitch: false;
+  approvedForProductionV2: false;
+  approvedForRealRelease: false;
+  approvedForRealDeploy: false;
+  approvedForRealCutover: false;
+}

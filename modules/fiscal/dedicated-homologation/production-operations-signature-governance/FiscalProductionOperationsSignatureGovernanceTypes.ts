@@ -1,0 +1,142 @@
+export enum FiscalProductionOperationsSignatureGovernanceStatus {
+  PRODUCTION_OPERATIONS_SIGNATURE_GOVERNANCE_BLUEPRINT_READY = 'PRODUCTION_OPERATIONS_SIGNATURE_GOVERNANCE_BLUEPRINT_READY',
+  NON_EXECUTABLE_ACTIVATION_CONSENT_READY = 'NON_EXECUTABLE_ACTIVATION_CONSENT_READY',
+  NON_CRYPTOGRAPHIC_SIGNATURE_ENVELOPE_READY = 'NON_CRYPTOGRAPHIC_SIGNATURE_ENVELOPE_READY',
+  BLOCKED_FOR_REAL_SIGNATURE_OR_GATE_UNLOCK = 'BLOCKED_FOR_REAL_SIGNATURE_OR_GATE_UNLOCK',
+  FAILED_SAFE = 'FAILED_SAFE'
+}
+
+export interface FiscalProductionOperationsSignatureGovernanceInput {
+  requestedBy?: string;
+  companyId?: string;
+  requestId?: string;
+  signaturePurpose?: string;
+  signatureScope?: string;
+  consentScope?: string;
+  signerScope?: string;
+  twoPersonRuleScope?: string;
+  sodScope?: string;
+  evidenceScope?: string;
+  metadata?: any;
+  forceGrantRealSignature?: boolean;
+  forceCollectRealCryptographicSignature?: boolean;
+  forcePersistRealConsent?: boolean;
+  forcePersistRealSignatureRecord?: boolean;
+  forceUnlockRealGate?: boolean;
+  forceGrantRealAuthorization?: boolean;
+  forceActivateProductionV2?: boolean;
+  forceRouteToV2?: boolean;
+  forceDisableLegacyRoute?: boolean;
+  forceChangeTraffic?: boolean;
+  forceExecuteRealOperationsTransition?: boolean;
+  forceActivateRealOperations?: boolean;
+  forceCompleteRealOperationsHandoff?: boolean;
+  forceReadRealCertificate?: boolean;
+  forceReadRealPfx?: boolean;
+  forceReadCertificatePassword?: boolean;
+  forceReadRealSecret?: boolean;
+  forceUseRealCrypto?: boolean;
+  forceSignRealXml?: boolean;
+  forceGenerateRealPdf?: boolean;
+  forceSendWebhook?: boolean;
+  forceSendSlack?: boolean;
+  forceSendWhatsapp?: boolean;
+  forceSendEmail?: boolean;
+  forceSendPager?: boolean;
+  forceConnectRealDatabase?: boolean;
+  forceExecuteDml?: boolean;
+  forceExecuteDdl?: boolean;
+  forceCallRealSefaz?: boolean;
+  forceStartRuntimeExecution?: boolean;
+  forceStartCommandQueue?: boolean;
+  forceEnqueueRealJob?: boolean;
+  forceDispatchRealWorker?: boolean;
+  forceCreateWorker?: boolean;
+  forceCreateScheduler?: boolean;
+  forceCreateCron?: boolean;
+  forceRunCommandRunner?: boolean;
+  forceExecuteShellCommand?: boolean;
+}
+
+export interface FiscalProductionOperationsSignatureGovernanceResult {
+  success: boolean;
+  status: FiscalProductionOperationsSignatureGovernanceStatus | string;
+  validationExecuted: boolean;
+  evaluationExecuted: boolean;
+  decisionSimulated: boolean;
+  signatureGovernanceBlueprintGenerated: boolean;
+  nonExecutableActivationConsentContractGenerated: boolean;
+  authorizedSignerMatrixGenerated: boolean;
+  twoPersonSignatureSimulationGenerated: boolean;
+  signatureSoDMatrixGenerated: boolean;
+  nonCryptographicSignatureEnvelopeGenerated: boolean;
+  signatureEvidenceNoPersistencePlanGenerated: boolean;
+  noRealSignatureEvidenceGenerated: boolean;
+  noGateUnlockEvidenceGenerated: boolean;
+  dependencyMatrixGenerated: boolean;
+  blockersGenerated: boolean;
+  risksGenerated: boolean;
+  go: boolean;
+  noGo: boolean;
+  blockers: string[];
+  warnings: string[];
+  productionOperationsSignatureGovernanceBlueprintOnly: true;
+  nonExecutableActivationConsentOnly: true;
+  nonCryptographicSignatureEnvelopeOnly: true;
+  realSignatureGranted: false;
+  realCryptographicSignatureCollected: false;
+  realConsentPersisted: false;
+  realSignatureRecordPersisted: false;
+  realAuthorizationGranted: false;
+  realExecutionGateUnlocked: false;
+  realOperationsTransitionExecuted: false;
+  realOperationsActivated: false;
+  realOperationsHandoffCompleted: false;
+  productionV2Activated: false;
+  routeToV2: false;
+  routeToLegacy: true;
+  trafficChanged: false;
+  realCertificateRead: false;
+  realPfxRead: false;
+  certificatePasswordRead: false;
+  realSecretRead: false;
+  realCryptoUsed: false;
+  xmlSigned: false;
+  pdfGenerated: false;
+  webhookSent: false;
+  slackSent: false;
+  whatsappSent: false;
+  emailSent: false;
+  pagerSent: false;
+  realDatabaseConnected: false;
+  dmlExecuted: false;
+  ddlExecuted: false;
+  realSefazCalled: false;
+  runtimeExecutionStarted: false;
+  commandQueueStarted: false;
+  realJobEnqueued: false;
+  realWorkerDispatched: false;
+  workersCreated: false;
+  schedulersCreated: false;
+  cronCreated: false;
+  commandRunnerExecuted: false;
+  shellCommandExecuted: false;
+  readOnly: true;
+  governanceOnly: true;
+  simulationOnly: true;
+  activationBlocked: true;
+  payloadIncluded: false;
+  sensitiveDataIncluded: false;
+  approvedForSignatureGovernanceBlueprint: true;
+  approvedForNonExecutableActivationConsent: true;
+  approvedForNonCryptographicSignatureEnvelope: true;
+  approvedForRealSignature: false;
+  approvedForRealGateUnlock: false;
+  approvedForRealAuthorization: false;
+  approvedForRealOperationsActivation: false;
+  approvedForProductionV2: false;
+  approvedForRouteToV2: false;
+  approvedForRealDatabaseConnection: false;
+  approvedForRealSefazCall: false;
+  approvedForRealSigning: false;
+}

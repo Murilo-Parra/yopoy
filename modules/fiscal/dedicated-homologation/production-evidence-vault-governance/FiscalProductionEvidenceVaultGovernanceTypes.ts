@@ -1,0 +1,141 @@
+export enum FiscalProductionEvidenceVaultGovernanceStatus {
+  PRODUCTION_EVIDENCE_VAULT_GOVERNANCE_BLUEPRINT_READY = 'PRODUCTION_EVIDENCE_VAULT_GOVERNANCE_BLUEPRINT_READY',
+  NO_PERSISTENCE_AUDIT_BOUNDARY_READY = 'NO_PERSISTENCE_AUDIT_BOUNDARY_READY',
+  IN_MEMORY_AUDIT_ONLY_READY = 'IN_MEMORY_AUDIT_ONLY_READY',
+  BLOCKED_FOR_REAL_EVIDENCE_PERSISTENCE = 'BLOCKED_FOR_REAL_EVIDENCE_PERSISTENCE',
+  FAILED_SAFE = 'FAILED_SAFE'
+}
+
+export interface FiscalProductionEvidenceVaultGovernanceInput {
+  requestedBy?: string;
+  companyId?: string;
+  requestId?: string;
+  vaultPurpose?: string;
+  evidenceScope?: string;
+  retentionScope?: string;
+  hashingScope?: string;
+  accessScope?: string;
+  exportScope?: string;
+  auditScope?: string;
+  metadata?: any;
+  forceCreateRealEvidenceVault?: boolean;
+  forcePersistRealEvidence?: boolean;
+  forcePersistRealAuditRecord?: boolean;
+  forceWriteFileSystem?: boolean;
+  forceWriteDatabase?: boolean;
+  forceUploadExternalStorage?: boolean;
+  forceExportRealEvidence?: boolean;
+  forceReadRealPayload?: boolean;
+  forceReadRealXml?: boolean;
+  forceReadRealPdf?: boolean;
+  forceReadRealPfx?: boolean;
+  forceReadRealCertificate?: boolean;
+  forceReadCertificatePassword?: boolean;
+  forceReadRealSecret?: boolean;
+  forceReadPrivateKey?: boolean;
+  forceReadToken?: boolean;
+  forceUseRealCrypto?: boolean;
+  forceHashRealPayload?: boolean;
+  forceSignRealXml?: boolean;
+  forceGenerateRealPdf?: boolean;
+  forceCallRealSefaz?: boolean;
+  forceConnectRealDatabase?: boolean;
+  forceExecuteDml?: boolean;
+  forceExecuteDdl?: boolean;
+  forceUnlockRealGate?: boolean;
+  forceGrantRealAuthorization?: boolean;
+  forceIssueRealAuthorizationToken?: boolean;
+  forceActivateProductionV2?: boolean;
+  forceRouteToV2?: boolean;
+  forceDisableLegacyRoute?: boolean;
+  forceChangeTraffic?: boolean;
+  forceSendWebhook?: boolean;
+  forceSendSlack?: boolean;
+  forceSendWhatsapp?: boolean;
+  forceSendEmail?: boolean;
+  forceSendPager?: boolean;
+  forceSendPagerDuty?: boolean;
+  forceSendOpsgenie?: boolean;
+}
+
+export interface FiscalProductionEvidenceVaultGovernanceResult {
+  success: boolean;
+  status: FiscalProductionEvidenceVaultGovernanceStatus | string;
+  validationExecuted: boolean;
+  evaluationExecuted: boolean;
+  decisionSimulated: boolean;
+  vaultBlueprintGenerated: boolean;
+  noPersistenceAuditBoundaryContractGenerated: boolean;
+  evidenceClassificationMatrixGenerated: boolean;
+  evidenceRetentionNoOpPlanGenerated: boolean;
+  evidenceHashingNoCryptoPlanGenerated: boolean;
+  evidenceAccessNoReadMatrixGenerated: boolean;
+  evidenceExportNoOpPlanGenerated: boolean;
+  auditTrailInMemoryOnlyPlanGenerated: boolean;
+  dependencyMatrixGenerated: boolean;
+  blockersGenerated: boolean;
+  risksGenerated: boolean;
+  go: boolean;
+  noGo: boolean;
+  blockers: string[];
+  warnings: string[];
+  productionEvidenceVaultGovernanceBlueprintOnly: true;
+  noPersistenceAuditBoundaryOnly: true;
+  auditTrailInMemoryOnly: true;
+  realEvidenceVaultCreated: false;
+  realEvidencePersisted: false;
+  realAuditRecordPersisted: false;
+  fileSystemWritten: false;
+  databaseWritten: false;
+  externalStorageUploaded: false;
+  realEvidenceExported: false;
+  realPayloadRead: false;
+  realXmlRead: false;
+  realPdfRead: false;
+  realPfxRead: false;
+  realCertificateRead: false;
+  certificatePasswordRead: false;
+  realSecretRead: false;
+  privateKeyRead: false;
+  tokenRead: false;
+  realCryptoUsed: false;
+  realPayloadHashed: false;
+  xmlSigned: false;
+  pdfGenerated: false;
+  realSefazCalled: false;
+  realDatabaseConnected: false;
+  dmlExecuted: false;
+  ddlExecuted: false;
+  realExecutionGateUnlocked: false;
+  realAuthorizationGranted: false;
+  realAuthorizationTokenIssued: false;
+  productionV2Activated: false;
+  routeToV2: false;
+  routeToLegacy: true;
+  trafficChanged: false;
+  webhookSent: false;
+  slackSent: false;
+  whatsappSent: false;
+  emailSent: false;
+  pagerSent: false;
+  pagerDutySent: false;
+  opsgenieSent: false;
+  readOnly: true;
+  governanceOnly: true;
+  simulationOnly: true;
+  activationBlocked: true;
+  payloadIncluded: false;
+  sensitiveDataIncluded: false;
+  approvedForEvidenceVaultBlueprint: true;
+  approvedForNoPersistenceAuditBoundary: true;
+  approvedForInMemoryAuditOnly: true;
+  approvedForRealEvidenceVaultCreation: false;
+  approvedForRealEvidencePersistence: false;
+  approvedForRealAuditPersistence: false;
+  approvedForRealPayloadRead: false;
+  approvedForRealCrypto: false;
+  approvedForRealDatabaseWrite: false;
+  approvedForExternalStorageUpload: false;
+  approvedForProductionV2: false;
+  approvedForRouteToV2: false;
+}

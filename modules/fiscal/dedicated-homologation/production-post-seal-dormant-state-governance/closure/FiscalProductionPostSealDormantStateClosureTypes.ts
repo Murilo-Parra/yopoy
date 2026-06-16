@@ -1,0 +1,148 @@
+export enum FiscalProductionPostSealDormantStateClosureStatus {
+  PRODUCTION_POST_SEAL_DORMANT_STATE_CLOSURE_READY = 'PRODUCTION_POST_SEAL_DORMANT_STATE_CLOSURE_READY',
+  FINAL_NO_REENTRY_EVIDENCE_READY = 'FINAL_NO_REENTRY_EVIDENCE_READY',
+  FINAL_NO_RESUMPTION_EVIDENCE_READY = 'FINAL_NO_RESUMPTION_EVIDENCE_READY',
+  BLOCKED_FOR_REAL_CLOSURE_OR_HANDOFF = 'BLOCKED_FOR_REAL_CLOSURE_OR_HANDOFF',
+  FAILED_SAFE = 'FAILED_SAFE'
+}
+
+export interface FiscalProductionPostSealDormantStateClosureInput {
+  requestedBy?: string;
+  companyId?: string;
+  requestId?: string;
+  closureScope?: string;
+  evidencePackageScope?: string;
+  handoffScope?: string;
+  dependencyScope?: string;
+  auditScope?: string;
+  metadata?: any;
+  forceExecuteRealClosure?: boolean;
+  forceConcludeRealHandoff?: boolean;
+  forceCreateRealReentry?: boolean;
+  forceUnlockRealResumption?: boolean;
+  forceResumeRealAuthority?: boolean;
+  forceResumeRealActivation?: boolean;
+  forceCreateRealExecutiveApproval?: boolean;
+  forceCollectRealSignature?: boolean;
+  forceCreateRealLegalEffect?: boolean;
+  forceUnlockRealGate?: boolean;
+  forceIssueRealAuthorizationToken?: boolean;
+  forceActivateProductionV2?: boolean;
+  forceRouteToV2?: boolean;
+  forceDisableLegacyRoute?: boolean;
+  forceChangeRealTraffic?: boolean;
+  forceStartRealRuntime?: boolean;
+  forceConnectRealDatabase?: boolean;
+  forceOpenRealTransaction?: boolean;
+  forceExecuteDml?: boolean;
+  forceExecuteDdl?: boolean;
+  forceRunRealMigration?: boolean;
+  forceCallRealSefaz?: boolean;
+  forceCallRealExternalApi?: boolean;
+  forceSendRealWebhook?: boolean;
+  forceReadRealPayload?: boolean;
+  forceReadRealXml?: boolean;
+  forceReadRealPdf?: boolean;
+  forceReadRealTenantData?: boolean;
+  forceReadRealFiscalDocument?: boolean;
+  forceReadToken?: boolean;
+  forceReadRealSecret?: boolean;
+  forceReadApiKey?: boolean;
+  forceReadClientSecret?: boolean;
+  forceReadAuthorizationHeader?: boolean;
+  forceReadDatabaseUrl?: boolean;
+  forceReadConnectionString?: boolean;
+  forceReadRealCertificate?: boolean;
+  forceReadRealPfx?: boolean;
+  forceReadPrivateKey?: boolean;
+  forceUseRealCrypto?: boolean;
+  forceSignRealXml?: boolean;
+  forceWriteFilesystem?: boolean;
+  forceUploadStorage?: boolean;
+  forceWriteDatabase?: boolean;
+}
+
+export interface FiscalProductionPostSealDormantStateClosureResult {
+  success: boolean;
+  status: FiscalProductionPostSealDormantStateClosureStatus | string;
+  validationExecuted: boolean;
+  evaluationExecuted: boolean;
+  decisionSimulated: boolean;
+  closureInventoryGenerated: boolean;
+  finalChecklistGenerated: boolean;
+  evidencePackageGenerated: boolean;
+  noReentryNoResumptionHandoffGenerated: boolean;
+  noAuthorityNoActivationHandoffGenerated: boolean;
+  noRuntimeNoDatabaseHandoffGenerated: boolean;
+  noExternalIntegrationNoSensitiveDataHandoffGenerated: boolean;
+  postClosureRoadmapGenerated: boolean;
+  dependencyMatrixGenerated: boolean;
+  blockersGenerated: boolean;
+  risksGenerated: boolean;
+  go: boolean;
+  noGo: boolean;
+  blockers: string[];
+  warnings: string[];
+  readOnly: true;
+  governanceOnly: true;
+  simulationOnly: true;
+  activationBlocked: true;
+  payloadIncluded: false;
+  sensitiveDataIncluded: false;
+  productionPostSealDormantStateClosureOnly: true;
+  finalNoReentryEvidenceOnly: true;
+  finalNoResumptionEvidenceOnly: true;
+  noReentryNoResumptionHandoffOnly: true;
+  noAuthorityNoActivationHandoffOnly: true;
+  noRuntimeNoDatabaseHandoffOnly: true;
+  noExternalIntegrationNoSensitiveDataHandoffOnly: true;
+  realClosureExecuted: false;
+  realHandoffConcluded: false;
+  realReentryCreated: false;
+  realResumptionUnlocked: false;
+  realAuthorityResumed: false;
+  realActivationResumed: false;
+  realExecutiveApprovalCreated: false;
+  realAcknowledgementCollected: false;
+  realSignatureCollected: false;
+  realLegalEffectCreated: false;
+  realExecutionGateUnlocked: false;
+  realAuthorizationTokenIssued: false;
+  productionV2Activated: false;
+  routeToV2: false;
+  routeToLegacy: true;
+  realTrafficChanged: false;
+  realRuntimeStarted: false;
+  realDatabaseConnected: false;
+  dmlExecuted: false;
+  ddlExecuted: false;
+  realSefazCalled: false;
+  realExternalApiCalled: false;
+  realWebhookSent: false;
+  realPayloadRead: false;
+  realXmlRead: false;
+  realPdfRead: false;
+  realTenantDataRead: false;
+  realFiscalDocumentRead: false;
+  tokenRead: false;
+  realSecretRead: false;
+  realCertificateRead: false;
+  realPfxRead: false;
+  privateKeyRead: false;
+  realCryptoUsed: false;
+  xmlSigned: false;
+  realFilesystemWritten: false;
+  realStorageUploaded: false;
+  realDatabaseWritten: false;
+  approvedForRealReentry: false;
+  approvedForRealResumption: false;
+  approvedForRealAuthorityResumption: false;
+  approvedForRealActivationResumption: false;
+  approvedForProductionV2: false;
+  approvedForRouteToV2: false;
+  approvedForRealExport: false;
+  approvedForRealHandoff: false;
+  lintGlobalKnownIssueAcknowledged: true;
+  ts2308KnownIssueAcknowledged: true;
+  namespaceOverlapIntroducedByModule46_5: false;
+}

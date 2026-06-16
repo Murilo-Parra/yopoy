@@ -1,0 +1,145 @@
+export enum FiscalProductionExecutionBoundaryStatus {
+  PRODUCTION_EXECUTION_BOUNDARY_BLUEPRINT_READY = 'PRODUCTION_EXECUTION_BOUNDARY_BLUEPRINT_READY',
+  NO_OP_ACTIVATION_GATE_READY = 'NO_OP_ACTIVATION_GATE_READY',
+  AUTHORIZATION_BOUNDARY_CONTRACT_READY = 'AUTHORIZATION_BOUNDARY_CONTRACT_READY',
+  BLOCKED_FOR_REAL_PRODUCTION_EXECUTION = 'BLOCKED_FOR_REAL_PRODUCTION_EXECUTION',
+  FAILED_SAFE = 'FAILED_SAFE'
+}
+
+export interface FiscalProductionExecutionBoundaryInput {
+  requestedBy?: string;
+  companyId?: string;
+  requestId?: string;
+  boundaryPurpose?: string;
+  targetTeam?: string;
+  targetTenantScope?: string;
+  metadata?: any;
+  forceUnlockRealGate?: boolean;
+  forceGrantRealAuthorization?: boolean;
+  forceApproveRealDeploy?: boolean;
+  forceExecuteRealDeploy?: boolean;
+  forceExecuteRealRelease?: boolean;
+  forceExecuteRealRollout?: boolean;
+  forceActivateRealCanary?: boolean;
+  forceApproveRealCutover?: boolean;
+  forceExecuteRealCutover?: boolean;
+  forceExecuteRealRollback?: boolean;
+  forcePublishRealPackage?: boolean;
+  forceGenerateExecutableArtifact?: boolean;
+  forceActivateProductionV2?: boolean;
+  forceChangeTraffic?: boolean;
+  forceRouteToV2?: boolean;
+  forceDisableLegacyRoute?: boolean;
+  forceInstallProxy?: boolean;
+  forceInstallMiddleware?: boolean;
+  forceInstallTap?: boolean;
+  forceModifyAppUse?: boolean;
+  forceModifyRouterUse?: boolean;
+  forceCallRealEndpoint?: boolean;
+  forceCallLegacyHandler?: boolean;
+  forceCallV2Handler?: boolean;
+  forceCaptureRequest?: boolean;
+  forceCaptureResponse?: boolean;
+  forceCapturePayload?: boolean;
+  forceDuplicateRequest?: boolean;
+  forceMirrorRealTraffic?: boolean;
+  forceEnableShadowTraffic?: boolean;
+  forceCreateWorker?: boolean;
+  forceCreateScheduler?: boolean;
+  forceConnectRealDatabase?: boolean;
+  forceExecuteDml?: boolean;
+  forceExecuteDdl?: boolean;
+  forceCallRealSefaz?: boolean;
+  forceLoadRealCertificate?: boolean;
+  forceReadRealPfx?: boolean;
+  forceReadCertificatePassword?: boolean;
+  forceUseRealCrypto?: boolean;
+  forceSignRealXml?: boolean;
+  forceGenerateRealPdf?: boolean;
+}
+
+export interface FiscalProductionExecutionBoundaryResult {
+  success: boolean;
+  status: FiscalProductionExecutionBoundaryStatus | string;
+  validationExecuted: boolean;
+  evaluationExecuted: boolean;
+  decisionSimulated: boolean;
+  boundaryBlueprintGenerated: boolean;
+  noOpActivationGateGenerated: boolean;
+  authorizationContractGenerated: boolean;
+  eligibilityMatrixGenerated: boolean;
+  dependencyInventoryGenerated: boolean;
+  prerequisiteChecklistGenerated: boolean;
+  noSideEffectEvidenceGenerated: boolean;
+  blockersGenerated: boolean;
+  risksGenerated: boolean;
+  go: boolean;
+  noGo: boolean;
+  blockers: string[];
+  warnings: string[];
+  productionExecutionBoundaryOnly: true;
+  noOpActivationGateOnly: true;
+  authorizationBoundaryBlueprintOnly: true;
+  realExecutionGateUnlocked: false;
+  realAuthorizationGranted: false;
+  realDeployApproved: false;
+  realDeployExecuted: false;
+  releaseActivated: false;
+  realRolloutExecuted: false;
+  executableArtifactGenerated: false;
+  realPackagePublished: false;
+  realCutoverApproved: false;
+  cutoverExecuted: false;
+  realRollbackExecuted: false;
+  realCanaryApproved: false;
+  canaryActivated: false;
+  reversibleActivationExecuted: false;
+  realLegacyReversionExecuted: false;
+  productionV2Activated: false;
+  routeToV2: false;
+  routeToLegacy: true;
+  trafficChanged: false;
+  proxyInstalled: false;
+  middlewareInstalled: false;
+  tapInstalled: false;
+  appUseModified: false;
+  routerUseModified: false;
+  realEndpointCalled: false;
+  legacyHandlerCalled: false;
+  v2HandlerCalled: false;
+  requestCaptured: false;
+  responseCaptured: false;
+  payloadCaptured: false;
+  requestDuplicated: false;
+  realTrafficMirrored: false;
+  shadowTrafficEnabled: false;
+  workersCreated: false;
+  schedulersCreated: false;
+  dmlExecuted: false;
+  ddlExecuted: false;
+  realDatabaseConnected: false;
+  realSefazCalled: false;
+  realCertificateLoaded: false;
+  realPfxRead: false;
+  certificatePasswordRead: false;
+  realCryptoUsed: false;
+  xmlSigned: false;
+  pdfGenerated: false;
+  readOnly: true;
+  governanceOnly: true;
+  simulationOnly: true;
+  activationBlocked: true;
+  payloadIncluded: false;
+  sensitiveDataIncluded: false;
+  approvedForExecutionBoundaryBlueprint: true;
+  approvedForNoOpActivationGate: true;
+  approvedForAuthorizationBoundaryContract: true;
+  approvedForRealGateUnlock: false;
+  approvedForRealAuthorization: false;
+  approvedForRealDeploy: false;
+  approvedForRealRelease: false;
+  approvedForRealCanary: false;
+  approvedForRealCutover: false;
+  approvedForRealRollback: false;
+  approvedForProductionV2: false;
+}

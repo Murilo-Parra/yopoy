@@ -1,0 +1,144 @@
+export enum FiscalProductionEvidenceIntakeStatus {
+  PRODUCTION_EVIDENCE_INTAKE_DRY_RUN_READY = 'PRODUCTION_EVIDENCE_INTAKE_DRY_RUN_READY',
+  SANITIZED_METADATA_CLASSIFICATION_READY = 'SANITIZED_METADATA_CLASSIFICATION_READY',
+  NO_STORAGE_EVIDENCE_READY = 'NO_STORAGE_EVIDENCE_READY',
+  BLOCKED_FOR_REAL_EVIDENCE_INTAKE = 'BLOCKED_FOR_REAL_EVIDENCE_INTAKE',
+  FAILED_SAFE = 'FAILED_SAFE'
+}
+
+export interface FiscalProductionEvidenceIntakeInput {
+  requestedBy?: string;
+  companyId?: string;
+  requestId?: string;
+  intakePurpose?: string;
+  evidenceScope?: string;
+  metadataScope?: string;
+  classificationScope?: string;
+  custodyScope?: string;
+  retentionScope?: string;
+  auditScope?: string;
+  metadata?: any;
+  forcePersistRealEvidence?: boolean;
+  forcePersistRealAuditRecord?: boolean;
+  forceReadRealPayload?: boolean;
+  forceReadRealXml?: boolean;
+  forceReadRealPdf?: boolean;
+  forceReadRealPfx?: boolean;
+  forceReadRealCertificate?: boolean;
+  forceReadCertificatePassword?: boolean;
+  forceReadRealSecret?: boolean;
+  forceReadPrivateKey?: boolean;
+  forceReadToken?: boolean;
+  forceWriteFileSystem?: boolean;
+  forceWriteDatabase?: boolean;
+  forceUploadExternalStorage?: boolean;
+  forceExportRealEvidence?: boolean;
+  forceUseRealCrypto?: boolean;
+  forceHashRealPayload?: boolean;
+  forceVerifyRealSourceAuthenticity?: boolean;
+  forcePersistChainOfCustody?: boolean;
+  forceCreateRetentionRecord?: boolean;
+  forceSignRealXml?: boolean;
+  forceGenerateRealPdf?: boolean;
+  forceCallRealSefaz?: boolean;
+  forceConnectRealDatabase?: boolean;
+  forceExecuteDml?: boolean;
+  forceExecuteDdl?: boolean;
+  forceUnlockRealGate?: boolean;
+  forceGrantRealAuthorization?: boolean;
+  forceIssueRealAuthorizationToken?: boolean;
+  forceActivateProductionV2?: boolean;
+  forceRouteToV2?: boolean;
+  forceDisableLegacyRoute?: boolean;
+  forceChangeTraffic?: boolean;
+  forceSendWebhook?: boolean;
+  forceSendSlack?: boolean;
+  forceSendWhatsapp?: boolean;
+  forceSendEmail?: boolean;
+  forceSendPager?: boolean;
+  forceSendPagerDuty?: boolean;
+  forceSendOpsgenie?: boolean;
+}
+
+export interface FiscalProductionEvidenceIntakeResult {
+  success: boolean;
+  status: FiscalProductionEvidenceIntakeStatus | string;
+  validationExecuted: boolean;
+  evaluationExecuted: boolean;
+  decisionSimulated: boolean;
+  intakeBlueprintGenerated: boolean;
+  metadataSanitizationPlanGenerated: boolean;
+  payloadExclusionContractGenerated: boolean;
+  classificationDryRunMatrixGenerated: boolean;
+  sourceAuthenticityNoVerifyPlanGenerated: boolean;
+  chainOfCustodyNoPersistencePlanGenerated: boolean;
+  deduplicationNoHashPlanGenerated: boolean;
+  retentionTaggingNoOpPlanGenerated: boolean;
+  noStorageEvidenceGenerated: boolean;
+  dependencyMatrixGenerated: boolean;
+  blockersGenerated: boolean;
+  risksGenerated: boolean;
+  go: boolean;
+  noGo: boolean;
+  blockers: string[];
+  warnings: string[];
+  productionEvidenceIntakeDryRunOnly: true;
+  sanitizedMetadataClassificationOnly: true;
+  noStorageEvidenceOnly: true;
+  realEvidencePersisted: false;
+  realAuditRecordPersisted: false;
+  realPayloadRead: false;
+  realXmlRead: false;
+  realPdfRead: false;
+  realPfxRead: false;
+  realCertificateRead: false;
+  certificatePasswordRead: false;
+  realSecretRead: false;
+  privateKeyRead: false;
+  tokenRead: false;
+  fileSystemWritten: false;
+  databaseWritten: false;
+  externalStorageUploaded: false;
+  realEvidenceExported: false;
+  realCryptoUsed: false;
+  realPayloadHashed: false;
+  realSourceAuthenticityVerified: false;
+  chainOfCustodyPersisted: false;
+  retentionRecordCreated: false;
+  xmlSigned: false;
+  pdfGenerated: false;
+  realSefazCalled: false;
+  realDatabaseConnected: false;
+  dmlExecuted: false;
+  ddlExecuted: false;
+  realExecutionGateUnlocked: false;
+  realAuthorizationGranted: false;
+  realAuthorizationTokenIssued: false;
+  productionV2Activated: false;
+  routeToV2: false;
+  routeToLegacy: true;
+  trafficChanged: false;
+  webhookSent: false;
+  slackSent: false;
+  whatsappSent: false;
+  emailSent: false;
+  pagerSent: false;
+  pagerDutySent: false;
+  opsgenieSent: false;
+  readOnly: true;
+  governanceOnly: true;
+  simulationOnly: true;
+  activationBlocked: true;
+  payloadIncluded: false;
+  sensitiveDataIncluded: false;
+  approvedForEvidenceIntakeDryRun: true;
+  approvedForSanitizedMetadataClassification: true;
+  approvedForNoStorageEvidence: true;
+  approvedForRealEvidencePersistence: false;
+  approvedForRealPayloadRead: false;
+  approvedForRealHashing: false;
+  approvedForRealStorage: false;
+  approvedForRealSourceVerification: false;
+  approvedForProductionV2: false;
+  approvedForRouteToV2: false;
+}

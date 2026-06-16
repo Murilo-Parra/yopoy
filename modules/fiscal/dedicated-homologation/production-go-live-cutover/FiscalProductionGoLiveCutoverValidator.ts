@@ -1,0 +1,62 @@
+import { FiscalProductionGoLiveCutoverInput } from './FiscalProductionGoLiveCutoverTypes';
+
+export class FiscalProductionGoLiveCutoverValidator {
+  public static validate(input: FiscalProductionGoLiveCutoverInput): string[] {
+    const errors: string[] = [];
+    if (input.forceExecuteRealGoLive) errors.push('forceExecuteRealGoLive is not allowed');
+    if (input.forceExecuteRealCutover) errors.push('forceExecuteRealCutover is not allowed');
+    if (input.forceActivateProductionV2) errors.push('forceActivateProductionV2 is not allowed');
+    if (input.forceRouteToV2) errors.push('forceRouteToV2 is not allowed');
+    if (input.forceDisableLegacyRoute) errors.push('forceDisableLegacyRoute is not allowed');
+    if (input.forceChangeRealTraffic) errors.push('forceChangeRealTraffic is not allowed');
+    if (input.forceInstallRealProxy) errors.push('forceInstallRealProxy is not allowed');
+    if (input.forceInstallRealMiddleware) errors.push('forceInstallRealMiddleware is not allowed');
+    if (input.forceInstallRealTap) errors.push('forceInstallRealTap is not allowed');
+    if (input.forceEnableRealShadowTraffic) errors.push('forceEnableRealShadowTraffic is not allowed');
+    if (input.forceUnlockRealGate) errors.push('forceUnlockRealGate is not allowed');
+    if (input.forceGrantRealAuthorization) errors.push('forceGrantRealAuthorization is not allowed');
+    if (input.forceIssueRealAuthorizationToken) errors.push('forceIssueRealAuthorizationToken is not allowed');
+    if (input.forceExecuteRealDeploy) errors.push('forceExecuteRealDeploy is not allowed');
+    if (input.forceExecuteRealRelease) errors.push('forceExecuteRealRelease is not allowed');
+    if (input.forceExecuteRealRollout) errors.push('forceExecuteRealRollout is not allowed');
+    if (input.forceActivateRealCanary) errors.push('forceActivateRealCanary is not allowed');
+    if (input.forceExecuteRealRollback) errors.push('forceExecuteRealRollback is not allowed');
+    if (input.forceExecuteRealShutdown) errors.push('forceExecuteRealShutdown is not allowed');
+    if (input.forceStartRealRuntime) errors.push('forceStartRealRuntime is not allowed');
+    if (input.forceStartRealQueue) errors.push('forceStartRealQueue is not allowed');
+    if (input.forceEnqueueRealJob) errors.push('forceEnqueueRealJob is not allowed');
+    if (input.forceDispatchRealWorker) errors.push('forceDispatchRealWorker is not allowed');
+    if (input.forceExecuteShellCommand) errors.push('forceExecuteShellCommand is not allowed');
+    if (input.forceConnectRealDatabase) errors.push('forceConnectRealDatabase is not allowed');
+    if (input.forceExecuteDml) errors.push('forceExecuteDml is not allowed');
+    if (input.forceExecuteDdl) errors.push('forceExecuteDdl is not allowed');
+    if (input.forceCallRealSefaz) errors.push('forceCallRealSefaz is not allowed');
+    if (input.forceReadRealPayload) errors.push('forceReadRealPayload is not allowed');
+    if (input.forceReadRealXml) errors.push('forceReadRealXml is not allowed');
+    if (input.forceReadRealPdf) errors.push('forceReadRealPdf is not allowed');
+    if (input.forceReadRealPfx) errors.push('forceReadRealPfx is not allowed');
+    if (input.forceReadRealCertificate) errors.push('forceReadRealCertificate is not allowed');
+    if (input.forceReadCertificatePassword) errors.push('forceReadCertificatePassword is not allowed');
+    if (input.forceReadRealSecret) errors.push('forceReadRealSecret is not allowed');
+    if (input.forceReadPrivateKey) errors.push('forceReadPrivateKey is not allowed');
+    if (input.forceReadToken) errors.push('forceReadToken is not allowed');
+    if (input.forceUseRealCrypto) errors.push('forceUseRealCrypto is not allowed');
+    if (input.forceCalculateRealHash) errors.push('forceCalculateRealHash is not allowed');
+    if (input.forceSignRealXml) errors.push('forceSignRealXml is not allowed');
+    if (input.forceGenerateRealPdf) errors.push('forceGenerateRealPdf is not allowed');
+    if (input.forceWriteFileSystem) errors.push('forceWriteFileSystem is not allowed');
+    if (input.forceUploadExternalStorage) errors.push('forceUploadExternalStorage is not allowed');
+    if (input.forceSendWebhook) errors.push('forceSendWebhook is not allowed');
+    if (input.forceSendSlack) errors.push('forceSendSlack is not allowed');
+    if (input.forceSendWhatsapp) errors.push('forceSendWhatsapp is not allowed');
+    if (input.forceSendEmail) errors.push('forceSendEmail is not allowed');
+    if (input.forceSendPager) errors.push('forceSendPager is not allowed');
+    if (input.forceSendPagerDuty) errors.push('forceSendPagerDuty is not allowed');
+    if (input.forceSendOpsgenie) errors.push('forceSendOpsgenie is not allowed');
+    if (input.forceNotifyRealStakeholder) errors.push('forceNotifyRealStakeholder is not allowed');
+    if (input.forceNotifyRealApprover) errors.push('forceNotifyRealApprover is not allowed');
+    if (input.forceNotifyRealCustomer) errors.push('forceNotifyRealCustomer is not allowed');
+    if (input.forceNotifyRealOperator) errors.push('forceNotifyRealOperator is not allowed');
+    return errors;
+  }
+}

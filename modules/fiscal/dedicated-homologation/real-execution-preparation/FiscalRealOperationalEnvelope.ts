@@ -1,0 +1,162 @@
+export class FiscalRealOperationalEnvelope {
+  public static getEnvelope() {
+    return [
+      {
+        id: 'OE-01',
+        domain: 'IAC_PREP',
+        label: 'IAC_STATE_BACKEND',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'Env not activated for real IaC execution'
+      },
+      {
+        id: 'OE-02',
+        domain: 'INFRASTRUCTURE',
+        label: 'CLOUD_PROVIDER_ACCESS',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'Execution blocked by governance policies'
+      },
+      {
+        id: 'OE-03',
+        domain: 'DATABASE',
+        label: 'DEDICATED_DATABASE_PLAN',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'Database provisioning restricted'
+      },
+      {
+        id: 'OE-04',
+        domain: 'SECRET_VAULT',
+        label: 'DEDICATED_VAULT_PLAN',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'Vault provisioning blocked'
+      },
+      {
+        id: 'OE-05',
+        domain: 'CERTIFICATE',
+        label: 'CERTIFICATE_A1_PLAN',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'Real certificate load strictly prevented'
+      },
+      {
+        id: 'OE-06',
+        domain: 'SEFAZ',
+        label: 'SEFAZ_HOMOLOGATION_ENDPOINT_PLAN',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'Sefaz calls disabled at preparation phase'
+      },
+      {
+        id: 'OE-07',
+        domain: 'XML_SIGNER',
+        label: 'XML_SIGNER_PLAN',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'Real XML signing currently blocked'
+      },
+      {
+        id: 'OE-08',
+        domain: 'DANFE',
+        label: 'DANFE_RENDERER_PLAN',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'No real PDF is generated'
+      },
+      {
+        id: 'OE-09',
+        domain: 'EXECUTION_PREPARATION',
+        label: 'OBSERVABILITY_PLAN',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'Observability tools blocked from attaching to real systems'
+      },
+      {
+        id: 'OE-10',
+        domain: 'EXECUTION_PREPARATION',
+        label: 'ROLLBACK_PLAN',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'Rollback plan simulation only'
+      },
+      {
+        id: 'OE-11',
+        domain: 'EXECUTION_PREPARATION',
+        label: 'CHANGE_WINDOW_PLAN',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'Change windows cannot be opened currently'
+      },
+      {
+        id: 'OE-12',
+        domain: 'EXECUTION_PREPARATION',
+        label: 'DUAL_APPROVAL_PLAN',
+        requiredForFutureExecution: true,
+        availableNowForSimulation: true,
+        executableNow: false,
+        realCommandGenerated: false,
+        containsSecret: false,
+        containsPayload: false,
+        requiresNewExplicitModule: true,
+        blockerReason: 'Waiting for authorization module'
+      }
+    ];
+  }
+}

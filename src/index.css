@@ -1,0 +1,215 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+body {
+  overflow-x: hidden; /* PHASE 3 - ELIMINAR SCROLL HORIZONTAL */
+  width: 100%;
+  position: relative;
+}
+
+@media (max-width: 767px) {
+  /* PHASE 6 - BOTÕES/INPUTS */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="password"],
+  input[type="date"],
+  select,
+  textarea {
+    min-height: 44px; /* Acessibilidade Touch */
+    font-size: 16px !important; /* Previne zoom no iOS */
+  }
+
+  button {
+    min-height: 44px; /* Acessibilidade Touch */
+  }
+
+  /* Converter formulários horizontais para usar espaço todo no mobile */
+  .form-group-row {
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  
+  .form-group-row > div {
+    width: 100% !important;
+  }
+}
+
+/* Modal Fullscreen (Phase 7) */
+@media (max-width: 767px) {
+  .mobile-fullscreen-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Glow animation for scanning */
+@keyframes scanning {
+  0% { top: 0%; opacity: 0.8; }
+  50% { top: 100%; opacity: 0.8; }
+  100% { top: 0%; opacity: 0.8; }
+}
+
+.animate-scanline {
+  animation: scanning 3s infinite linear;
+}
+
+/* Accessibility Contrast Improvements for Light Mode */
+html.light, .light {
+  /* Elevate light-gray/slate-400 grays to slate-600 level for maximum readability */
+  .text-gray-400,
+  .text-slate-400,
+  .text-slate-450,
+  .text-slate-455,
+  .text-slate-500,
+  .text-gray-500,
+  .text-neutral-400,
+  .text-neutral-500,
+  .text-zinc-400,
+  .text-zinc-500,
+  .text-\[\#94a3b8\],
+  .text-slate-405,
+  .text-gray-405 {
+    color: #334155 !important; /* slate-700 - Highly readable on white/light grey */
+  }
+
+  /* Deepen labels and helper subtitles */
+  .text-gray-500,
+  .text-slate-500,
+  .text-zinc-500,
+  .text-neutral-500 {
+    color: #1e293b !important; /* slate-800 - Deep charcoal contrast */
+  }
+
+  /* Make borders more defined and distinct against white backgrounds */
+  .border-slate-100,
+  .border-slate-200,
+  .border-slate-205,
+  .border-slate-250,
+  .border-gray-100,
+  .border-gray-200 {
+    border-color: #cbd5e1 !important; /* slate-300 */
+  }
+
+  /* Make background headers/sub-rows slightly darker so they frame card elements perfectly */
+  .bg-slate-50,
+  .bg-gray-50 {
+    background-color: #f1f5f9 !important; /* slate-100 */
+  }
+
+  .bg-slate-100,
+  .bg-gray-100 {
+    background-color: #e2e8f0 !important; /* slate-200 */
+  }
+}
+
+/* FASE 4 — REESTRUTURAR TABELAS PARA CARDS NO MOBILE */
+@media (max-width: 767px) {
+  /* Prevent horizontal container scrolling */
+  div.overflow-x-auto, .overflow-x-auto {
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+  }
+  
+  table:not(.no-responsive) {
+    display: block !important;
+    width: 100% !important;
+    border: none !important;
+    background: transparent !important;
+  }
+  
+  table:not(.no-responsive) thead {
+    display: none !important; /* Esconde cabeçalhos em mobile */
+  }
+  
+  table:not(.no-responsive) tbody {
+    display: block !important;
+    width: 100% !important;
+  }
+  
+  table:not(.no-responsive) tr {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 16px !important;
+    padding: 14px 16px !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+  }
+  
+  html.dark table:not(.no-responsive) tr {
+    border-color: #222228 !important;
+    background-color: #141416 !important;
+  }
+  
+  table:not(.no-responsive) td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 10px 0 !important;
+    border-bottom: 1px dashed rgba(0,0,0,0.06) !important;
+    width: 100% !important;
+    text-align: right !important;
+    font-size: 13px !important;
+  }
+
+  html.dark table:not(.no-responsive) td {
+    border-bottom-color: rgba(255,255,255,0.04) !important;
+  }
+  
+  table:not(.no-responsive) td:last-child {
+    border-bottom: none !important;
+  }
+
+  /* Criar rótulos baseados nas posições se data-label não estiver presente */
+  table:not(.no-responsive) td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    text-align: left;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+  
+  html.dark table:not(.no-responsive) td::before {
+    color: #94a3b8;
+  }
+}
+
+

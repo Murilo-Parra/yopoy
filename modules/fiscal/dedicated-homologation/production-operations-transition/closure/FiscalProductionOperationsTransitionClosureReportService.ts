@@ -1,0 +1,9 @@
+export class FiscalProductionOperationsTransitionClosureReportService {
+  public static getReport() {
+    return {
+      reportType: 'PRODUCTION_OPERATIONS_TRANSITION_CLOSURE',
+      status: 'PRODUCTION_OPERATIONS_TRANSITION_CLOSURE_READY',
+      message: 'O Módulo 29.5 foi encerrado em modo read-only/production-operations-transition-closure-only/final-no-activation-evidence-package-only/no-activation-handoff-only/governance-only/simulation-only. Apenas inventário de closure, checklist final, pacote de evidências de não ativação, handoff sem autorização, roadmap pós-closure, blockers finais e riscos finais foram preparados. Nenhuma autorização real foi concedida, nenhum gate real foi destravado, nenhuma Produção V2 foi ativada, nenhuma rota foi direcionada para V2, o legado permanece como rota obrigatória, nenhum tráfego real foi alterado, nenhum proxy/middleware/tap/mirror/sniffer/shadow traffic real foi instalado, nenhuma request real foi capturada, nenhuma response real foi capturada, nenhum payload real foi capturado, nenhuma request real foi duplicada, nenhum tráfego real foi espelhado, nenhum endpoint real foi chamado, nenhum handler legado real foi chamado como side-effect, nenhum handler V2 operacional foi chamado, nenhum go-live real foi executado, nenhum deploy/release/cutover/rollback/canary/rollout real foi executado, nenhum runtime/queue/worker/scheduler/cron/command runner/shell real foi executado, nenhum banco real foi conectado, nenhuma transação real foi aberta, nenhum DDL/DML real foi executado, nenhuma SEFAZ real foi chamada, nenhum certificado/PFX/senha/crypto real foi usado, nenhum XML real foi assinado, nenhum PDF real foi gerado, nenhuma notificação real foi enviada, nenhum pacote real foi publicado e nenhum artefato executável real foi gerado.'
+    };
+  }
+}

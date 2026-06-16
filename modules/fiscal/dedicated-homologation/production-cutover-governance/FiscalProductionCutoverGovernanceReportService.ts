@@ -1,0 +1,12 @@
+export class FiscalProductionCutoverGovernanceReportService {
+  public static getReport() {
+    return {
+      reportType: 'PRODUCTION_CUTOVER_GOVERNANCE_BLUEPRINT',
+      message: 'O Módulo 27.1 foi encerrado em modo read-only/production-cutover-governance-blueprint-only/reversible-golive-no-op-contract-only/legacy-preservation-only/governance-only/simulation-only. Apenas blueprint administrativo de cutover produtivo futuro, contrato de go-live reversível no-op, plano de janela de corte, preservação legada, switch de tráfego no-op, plano de reversão, critérios de abort, readiness, dependências, blockers e riscos foram preparados. Nenhum cutover real foi aprovado, nenhum cutover real foi executado, nenhum go-live real foi executado, nenhuma Produção V2 foi ativada, nenhuma rota foi direcionada para V2, o legado permanece como rota obrigatória, nenhum tráfego real foi alterado, nenhum proxy real foi instalado, nenhum middleware real foi instalado, nenhum tap real foi instalado, nenhum mirror/sniffer real foi instalado, nenhum app.use legado foi modificado, nenhum router.use real foi modificado, nenhum endpoint real foi chamado, nenhum handler legado real foi chamado, nenhum handler V2 operacional foi chamado, nenhuma request real foi capturada, nenhuma response real foi capturada, nenhum payload real foi capturado, nenhuma request real foi duplicada, nenhum tráfego real foi espelhado, nenhum shadow traffic real foi executado, nenhuma execução real de runtime foi iniciada, nenhuma queue real foi destravada, nenhum job real foi enfileirado, nenhum worker real foi criado ou despachado, nenhum command runner real foi executado, nenhum shell command real foi executado, nenhuma transação real de banco foi aberta, nenhum banco real foi conectado, nenhum DDL/DML real foi executado, nenhuma SEFAZ real foi chamada, nenhum certificado real foi carregado, nenhum PFX real foi lido, nenhuma senha de certificado foi lida, nenhuma biblioteca criptográfica real foi acionada, nenhum XML real foi assinado, nenhum PDF real foi gerado, nenhuma autorização real foi concedida, nenhum gate real foi destravado, nenhum deploy/release/rollout/canary/rollback real foi executado, nenhum pacote real foi publicado e nenhum artefato executável real foi gerado.',
+      status: 'LEGACY_PRESERVATION_PLAN_READY',
+      simulationOnly: true,
+      payloadIncluded: false,
+      sensitiveDataIncluded: false
+    };
+  }
+}

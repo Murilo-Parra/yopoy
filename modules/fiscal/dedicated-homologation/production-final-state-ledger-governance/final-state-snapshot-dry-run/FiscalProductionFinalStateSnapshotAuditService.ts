@@ -1,0 +1,52 @@
+import { FiscalProductionFinalStateSnapshotResult } from './FiscalProductionFinalStateSnapshotTypes';
+
+export class FiscalProductionFinalStateSnapshotAuditService {
+  public static generateAuditRecord(result: FiscalProductionFinalStateSnapshotResult) {
+    return {
+      auditId: `AUD-SNAPSHOT-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      action: 'SIMULATE_FINAL_STATE_SNAPSHOT',
+      outcome: result.success ? 'SUCCESS' : 'FAILED',
+      realSnapshotCreated: false,
+      realLedgerEntryCreated: false,
+      realSnapshotPersisted: false,
+      realAttestationPersisted: false,
+      realLegalProofCreated: false,
+      realCryptographicProofCreated: false,
+      realHashGenerated: false,
+      realSignatureGenerated: false,
+      realFilesystemWritten: false,
+      realStorageUploaded: false,
+      realDatabaseWritten: false,
+      realLedgerCreated: false,
+      realLedgerRecordPersisted: false,
+      realLegalActivationRecordCreated: false,
+      realClosureExecuted: false,
+      realOperationalHandoffConcluded: false,
+      realGoLiveApproved: false,
+      realGoLiveExecuted: false,
+      realActivationCommandExecuted: false,
+      nonBindingDecisionConvertedToBinding: false,
+      realExecutiveSignOffConcluded: false,
+      realSignatureCollected: false,
+      realActivationAuthorityGranted: false,
+      realExecutionGateUnlocked: false,
+      realAuthorizationTokenIssued: false,
+      productionV2Activated: false,
+      routeToV2: false,
+      routeToLegacy: true,
+      realTrafficChanged: false,
+      realRollbackExecuted: false,
+      realAbortExecuted: false,
+      realFallbackExecuted: false,
+      realShutdownExecuted: false,
+      realKillSwitchActivated: false,
+      realTrafficReverted: false,
+      realRuntimeStarted: false,
+      realDatabaseConnected: false,
+      realSefazCalled: false,
+      realExternalApiCalled: false,
+      note: 'Audit record is purely administrative and not persisted.'
+    };
+  }
+}

@@ -1,0 +1,127 @@
+import { FiscalSandboxClosureDomain, FiscalSandboxClosureInventoryItem } from './FiscalSandboxClosureTypes';
+
+export class FiscalSandboxClosureInventory {
+  public static getInventory(): FiscalSandboxClosureInventoryItem[] {
+    return [
+      {
+        domain: FiscalSandboxClosureDomain.SANDBOX_PERSISTENCE,
+        implemented: true,
+        hasRoutes: true,
+        hasSchema: true,
+        readOnly: false, // persistence does write to sandbox, but not prod
+        sandboxOnly: true,
+        productionWrite: false,
+        simulationOnly: true,
+        activationBlocked: true,
+        hasWorker: false,
+        hasCron: false,
+        hasSefaz: false,
+        hasXmlSigning: false,
+        hasPdfGeneration: false,
+        notes: 'Dedicated table fiscal_v2_sandbox_snapshots created with RLS.'
+      },
+      {
+        domain: FiscalSandboxClosureDomain.SANDBOX_REPLAY_BRIDGE,
+        implemented: true,
+        hasRoutes: true,
+        hasSchema: false,
+        readOnly: false,
+        sandboxOnly: true,
+        productionWrite: false,
+        simulationOnly: true,
+        activationBlocked: true,
+        hasWorker: false,
+        hasCron: false,
+        hasSefaz: false,
+        hasXmlSigning: false,
+        hasPdfGeneration: false,
+        notes: 'Batch and manual inputs converted to sandbox snapshots securely.'
+      },
+      {
+        domain: FiscalSandboxClosureDomain.SANDBOX_REVIEW_RETENTION,
+        implemented: true,
+        hasRoutes: true,
+        hasSchema: false,
+        readOnly: false,
+        sandboxOnly: true,
+        productionWrite: false,
+        simulationOnly: true,
+        activationBlocked: true,
+        hasWorker: false,
+        hasCron: false,
+        hasSefaz: false,
+        hasXmlSigning: false,
+        hasPdfGeneration: false,
+        notes: 'Status updates and manual cleanups permitted only inside sandbox.'
+      },
+      {
+        domain: FiscalSandboxClosureDomain.SANDBOX_INTEGRITY_METRICS,
+        implemented: true,
+        hasRoutes: true,
+        hasSchema: false,
+        readOnly: true,
+        sandboxOnly: true,
+        productionWrite: false,
+        simulationOnly: true,
+        activationBlocked: true,
+        hasWorker: false,
+        hasCron: false,
+        hasSefaz: false,
+        hasXmlSigning: false,
+        hasPdfGeneration: false,
+        notes: 'Fully read-only queries with SELECT only.'
+      },
+      {
+        domain: FiscalSandboxClosureDomain.SANDBOX_EVIDENCE_CERTIFICATION,
+        implemented: true,
+        hasRoutes: true,
+        hasSchema: false,
+        readOnly: true,
+        sandboxOnly: true,
+        productionWrite: false,
+        simulationOnly: true,
+        activationBlocked: true,
+        hasWorker: false,
+        hasCron: false,
+        hasSefaz: false,
+        hasXmlSigning: false,
+        hasPdfGeneration: false,
+        notes: 'Generates textual and JSON proofs safely.'
+      },
+      {
+        domain: FiscalSandboxClosureDomain.RLS,
+        implemented: true,
+        hasRoutes: false,
+        hasSchema: true,
+        readOnly: true,
+        sandboxOnly: true,
+        productionWrite: false,
+        simulationOnly: true,
+        activationBlocked: true,
+        hasWorker: false,
+        hasCron: false,
+        hasSefaz: false,
+        hasXmlSigning: false,
+        hasPdfGeneration: false,
+        notes: 'Row Level Security applied using company_id uniformly.'
+      },
+      {
+        domain: FiscalSandboxClosureDomain.SEFAZ_ISOLATION,
+        implemented: true,
+        hasRoutes: false,
+        hasSchema: false,
+        readOnly: true,
+        sandboxOnly: true,
+        productionWrite: false,
+        simulationOnly: true,
+        activationBlocked: true,
+        hasWorker: false,
+        hasCron: false,
+        hasSefaz: false,
+        hasXmlSigning: false,
+        hasPdfGeneration: false,
+        notes: 'No SEFAZ connector executed in the entire Module 6.'
+      }
+    ];
+  }
+}

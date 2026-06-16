@@ -1,0 +1,46 @@
+{
+  "summary": {
+    "status": "read-only, governance-only, simulation-only",
+    "productionV2Activated": false,
+    "realSefazCalled": false,
+    "realDatabaseConnected": false,
+    "realRuntimeStarted": false,
+    "realTrafficChanged": false,
+    "routeToV2": false,
+    "routeToLegacy": true,
+    "activationBlocked": true
+  },
+  "domains": [
+    { "domain": "28", "name": "Base Fiscal / Homologação Dedicada", "status": "Concluído", "mode": "Simulation-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "29", "name": "Governança Inicial", "status": "Concluído", "mode": "Governance-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "30", "name": "Isolamento Fiscal", "status": "Concluído", "mode": "Read-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "34", "name": "Physical Execution Firewall", "status": "Concluído", "mode": "Gatekeeper-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "35", "name": "Evidence Vault Governance", "status": "Concluído", "mode": "Read-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "36", "name": "Compliance Audit Governance", "status": "Concluído", "mode": "Simulation-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "37", "name": "Go-Live Cutover Governance", "status": "Concluído", "mode": "Simulation-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "38", "name": "Post-Go-Live Stabilization", "status": "Concluído", "mode": "Read-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "39", "name": "Traffic Architecture Governance", "status": "Concluído", "mode": "Simulation-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "40", "name": "Runtime Orchestration Governance", "status": "Concluído", "mode": "Read-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "41", "name": "Final Go-Live Command Center", "status": "Concluído", "mode": "Simulation-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "42", "name": "Final State Ledger Governance", "status": "Concluído", "mode": "Read-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "43", "name": "Corporate Governance Archive", "status": "Concluído", "mode": "Governance-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "44", "name": "Retention Dormancy Governance", "status": "Concluído", "mode": "Read-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "45", "name": "System-Wide Non-Operational Seal", "status": "Concluído", "mode": "Simulation-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "46", "name": "Post-Seal Dormant State Governance", "status": "Concluído", "mode": "Simulation-only", "goNoGo": "NO-GO Execução" },
+    { "domain": "T1", "name": "Pipeline Technical Remediation", "status": "Concluído", "mode": "Technical-Fix", "goNoGo": "GO (Saneamento)" }
+  ],
+  "t1_remediation": {
+    "eslint_flat_config": "corrigido via eslint.config.js",
+    "ts2308_namespace_overlap": "resolvido via remoção de exports perigosos e uso de caminhos explícitos",
+    "npm_run_lint": "passou",
+    "npm_run_typecheck": "passou",
+    "npm_run_build": "passou"
+  },
+  "readiness": {
+    "go_for_documented_governance": true,
+    "go_for_real_production": false,
+    "go_for_real_readiness_phase": true,
+    "go_for_v2_activation": false,
+    "go_for_real_sefaz": false
+  }
+}

@@ -1,0 +1,9 @@
+export class FiscalProductionTrafficSwitchReportService {
+  public static getReport() {
+    return {
+      reportType: 'TRAFFIC_SWITCH_DRY_RUN',
+      status: 'TRAFFIC_SWITCH_DRY_RUN_READY',
+      message: 'O Módulo 29.4 foi encerrado em modo read-only/traffic-switch-dry-run-only/route-activation-gate-no-op-only/reversible-golive-no-op-only/governance-only/simulation-only. Apenas simulação de traffic switch, gate de ativação de rota como no-op, continuidade obrigatória do legado, ativação V2 inerte, rampa percentual simulada, promoção canary no-op, go-live reversível no-op, matriz de abort/reversão, evidência de ausência de mutação de tráfego, dependências, blockers e riscos foram preparados. Nenhum tráfego real foi alterado, nenhuma rota foi direcionada para V2, o legado permanece como rota obrigatória, nenhuma Produção V2 foi ativada, nenhum proxy/middleware/tap/mirror/sniffer/shadow traffic real foi instalado, nenhuma request real foi capturada, nenhuma response real foi capturada, nenhum payload real foi capturado, nenhuma request real foi duplicada, nenhum tráfego real foi espelhado, nenhum endpoint real foi chamado, nenhum handler legado real foi chamado como side-effect, nenhum handler V2 operacional foi chamado, nenhum go-live real foi executado, nenhum deploy/release/cutover/rollback/canary/rollout real foi executado, nenhuma autorização real foi concedida, nenhum gate real foi destravado, nenhum runtime/queue/worker/scheduler/cron/command runner/shell real foi executado, nenhum banco real foi conectado, nenhuma transação real foi aberta, nenhum DDL/DML real foi executado, nenhuma SEFAZ real foi chamada, nenhum certificado/PFX/senha/crypto real foi usado, nenhum XML real foi assinado, nenhum PDF real foi gerado, nenhum pacote real foi publicado e nenhum artefato executável real foi gerado.'
+    };
+  }
+}

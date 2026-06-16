@@ -1,0 +1,43 @@
+export class FiscalRealApprovalCriteria {
+  public static getCriteria() {
+    return [
+      { id: 'C-RBP-01', description: 'Blueprint de rede criado.', met: true },
+      { id: 'C-RBP-02', description: 'Blueprint de banco criado.', met: true },
+      { id: 'C-RBP-03', description: 'Blueprint de vault criado.', met: true },
+      { id: 'C-RBP-04', description: 'Blueprint de certificado criado.', met: true },
+      { id: 'C-RBP-05', description: 'Blueprint SEFAZ criado.', met: true },
+      { id: 'C-RBP-06', description: 'Blueprint XML signer criado.', met: true },
+      { id: 'C-RBP-07', description: 'Blueprint DANFE criado.', met: true },
+      { id: 'C-RBP-08', description: 'Blueprint observabilidade criado.', met: true },
+      { id: 'C-RBP-09', description: 'Blueprint rollback criado.', met: true },
+      { id: 'C-RBP-10', description: 'Nenhum recurso real foi criado.', met: true },
+      { id: 'C-RBP-11', description: 'Nenhum banco real foi criado.', met: true },
+      { id: 'C-RBP-12', description: 'Nenhum banco real foi conectado.', met: true },
+      { id: 'C-RBP-13', description: 'Nenhum vault real foi criado.', met: true },
+      { id: 'C-RBP-14', description: 'Nenhum secret real foi carregado.', met: true },
+      { id: 'C-RBP-15', description: 'Nenhum certificado real foi carregado.', met: true },
+      { id: 'C-RBP-16', description: 'Nenhum PFX real foi lido.', met: true },
+      { id: 'C-RBP-17', description: 'Nenhuma senha de certificado foi lida.', met: true },
+      { id: 'C-RBP-18', description: 'Nenhuma SEFAZ real foi chamada.', met: true },
+      { id: 'C-RBP-19', description: 'Nenhum XML real foi assinado.', met: true },
+      { id: 'C-RBP-20', description: 'Nenhum PDF real foi gerado.', met: true },
+      { id: 'C-RBP-21', description: 'Nenhuma Produção V2 foi ativada.', met: true },
+      { id: 'C-RBP-22', description: 'Nenhum tráfego real foi alterado.', met: true },
+      { id: 'C-RBP-23', description: 'Nenhum endpoint real foi chamado.', met: true },
+      { id: 'C-RBP-24', description: 'Nenhum handler legado foi chamado.', met: true },
+      { id: 'C-RBP-25', description: 'Nenhum handler V2 operacional foi chamado.', met: true },
+      { id: 'C-RBP-26', description: 'Nenhum worker foi criado.', met: true },
+      { id: 'C-RBP-27', description: 'Nenhum scheduler/cron/setInterval/queue.process foi criado.', met: true },
+      { id: 'C-RBP-28', description: 'Nenhum DML fiscal real ocorreu.', met: true },
+      { id: 'C-RBP-29', description: 'Payload bruto não foi exposto.', met: true },
+      { id: 'C-RBP-30', description: 'Dado sensível não foi exposto.', met: true },
+      { id: 'C-RBP-31', description: 'Boot Policy permanece preservada.', met: true },
+      { id: 'C-RBP-32', description: 'RLS permanece preservado.', met: true },
+      { id: 'C-RBP-33', description: 'Rotas legadas permanecem preservadas.', met: true },
+      { id: 'C-RBP-34', description: 'Respostas legadas permanecem preservadas.', met: true },
+      { id: 'C-RBP-35', description: 'Scripts temporários foram removidos ou justificados.', met: true },
+      { id: 'C-RBP-36', description: 'Blueprint pode ser aprovado documentalmente.', met: true },
+      { id: 'C-RBP-37', description: 'Ativação real permanece bloqueada.', met: true }
+    ];
+  }
+}

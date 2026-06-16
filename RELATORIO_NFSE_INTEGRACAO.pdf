@@ -1,0 +1,448 @@
+%PDF-1.3
+%�߬�
+3 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 4 0 R
+>>
+endobj
+4 0 obj
+<<
+/Length 3078
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 813.5435433070865656 Td
+(======= RELAT�RIO DO M�DULO DE NFS-e \(INTEGRA��O REAL\) =======) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 756.8506299212598378 Td
+(1. MUNIC�PIOS E PROVEDORES SUPORTADOS) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 728.5041732283464171 Td
+(- ISSNet) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 700.15771653543311 Td
+(- WebISS) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 671.8112598425196893 Td
+(- Betha) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 643.4648031496062686 Td
+(- IPM) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 615.1183464566928478 Td
+(- DSF) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 586.7718897637794271 Td
+(- Fiorilli) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 558.42543307086612 Td
+(- Simpliss) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 530.0789763779526993 Td
+(- SigISS) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 501.7325196850393354 Td
+(Todos os 8 provedores tiveram suas rotinas de 'mockNetworkCall' analisadas) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 473.3860629921259147 Td
+(e substituidas por chamadas Axios TLS reais.) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 416.69314960629913 Td
+(2. ASSINATURA DIGITAL ICP-BRASIL) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 388.3466929133857661 Td
+(Foi integrado o modulo XMLDSig \(RSA SHA256\) \(SefazSigner/NfseRealClient\).) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 360.0002362204724022 Td
+(O XML eh assinado com o certificado A1 no padrao Nacional \(InfRps/Rps\).) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 303.3073228346455608 Td
+(3. BANCO DE DADOS \(POSTGRESQL\)) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 274.9608661417322537 Td
+(- nfse_municipalities: armazena configuracoes \(IBGE, URL Prod/Homologacao, Provider\).) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 246.614409448818833 Td
+(- nfse_queue: fila para tolerancia a falhas e reenvios.) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 189.9214960629919915 Td
+(4. FILA DE PROCESSAMENTO SUPERIOR) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 161.5750393700786844 Td
+(- Timeout: Configurado timeout real em httpClient \(15s\).) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 133.2285826771652637 Td
+(- Retry Automatico: Fila via 'nfse_queue' com loop a cada 30s.) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 104.882125984251843 Td
+(- Backoff Exponencial implementado nos retries.) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 76.5356692913385359 Td
+(- Circuit Breaker: Desarme provis�rio da fila se provedor falhar > 5 vezes consecutivas.) Tj
+ET
+endstream
+endobj
+5 0 obj
+<</Type /Page
+/Parent 1 0 R
+/Resources 2 0 R
+/MediaBox [0 0 595.2799999999999727 841.8899999999999864]
+/Contents 6 0 R
+>>
+endobj
+6 0 obj
+<<
+/Length 826
+>>
+stream
+0.5670000000000001 w
+0 G
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 813.5435433070865656 Td
+(5. CONSULTAS GEN�RICAS) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 785.1970866141732586 Td
+(Foram atualizadas as funcoes para contemplar as buscas Avancadas \(Por Numero, Protocolo, Periodo, Documento\).) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 728.5041732283464171 Td
+(6. TESTES \(HOMOLOGACAO E PRODUCAO\)) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 700.15771653543311 Td
+(- Sucesso: Assinatura XML, Request SOAP, Circuit Breaker Isolado testado.) Tj
+ET
+BT
+/F1 16 Tf
+18.3999999999999986 TL
+0 g
+28.3464566929133888 671.8112598425196893 Td
+(- Substitui�ao Total das 'FakeResponses' e Mock Signatures foi validada na geracao dos Providers.) Tj
+ET
+endstream
+endobj
+1 0 obj
+<</Type /Pages
+/Kids [3 0 R 5 0 R ]
+/Count 2
+>>
+endobj
+7 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+8 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+9 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+10 0 obj
+<<
+/Type /Font
+/BaseFont /Helvetica-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+11 0 obj
+<<
+/Type /Font
+/BaseFont /Courier
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+12 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+13 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-Oblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+14 0 obj
+<<
+/Type /Font
+/BaseFont /Courier-BoldOblique
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+15 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Roman
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+16 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Bold
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+17 0 obj
+<<
+/Type /Font
+/BaseFont /Times-Italic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+18 0 obj
+<<
+/Type /Font
+/BaseFont /Times-BoldItalic
+/Subtype /Type1
+/Encoding /WinAnsiEncoding
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+19 0 obj
+<<
+/Type /Font
+/BaseFont /ZapfDingbats
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+20 0 obj
+<<
+/Type /Font
+/BaseFont /Symbol
+/Subtype /Type1
+/FirstChar 32
+/LastChar 255
+>>
+endobj
+2 0 obj
+<<
+/ProcSet [/PDF /Text /ImageB /ImageC /ImageI]
+/Font <<
+/F1 7 0 R
+/F2 8 0 R
+/F3 9 0 R
+/F4 10 0 R
+/F5 11 0 R
+/F6 12 0 R
+/F7 13 0 R
+/F8 14 0 R
+/F9 15 0 R
+/F10 16 0 R
+/F11 17 0 R
+/F12 18 0 R
+/F13 19 0 R
+/F14 20 0 R
+>>
+/XObject <<
+>>
+>>
+endobj
+21 0 obj
+<<
+/Producer (jsPDF 4.2.1)
+/CreationDate (D:20260604065356-00'00')
+>>
+endobj
+22 0 obj
+<<
+/Type /Catalog
+/Pages 1 0 R
+/OpenAction [3 0 R /FitH null]
+/PageLayout /OneColumn
+>>
+endobj
+xref
+0 23
+0000000000 65535 f 
+0000004296 00000 n 
+0000006121 00000 n 
+0000000015 00000 n 
+0000000152 00000 n 
+0000003282 00000 n 
+0000003419 00000 n 
+0000004359 00000 n 
+0000004484 00000 n 
+0000004614 00000 n 
+0000004747 00000 n 
+0000004885 00000 n 
+0000005009 00000 n 
+0000005138 00000 n 
+0000005270 00000 n 
+0000005406 00000 n 
+0000005534 00000 n 
+0000005661 00000 n 
+0000005790 00000 n 
+0000005923 00000 n 
+0000006025 00000 n 
+0000006371 00000 n 
+0000006457 00000 n 
+trailer
+<<
+/Size 23
+/Root 22 0 R
+/Info 21 0 R
+/ID [ <C3804F54480356ACB557141B77FA1EB2> <C3804F54480356ACB557141B77FA1EB2> ]
+>>
+startxref
+6561
+%%EOF

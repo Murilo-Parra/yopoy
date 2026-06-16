@@ -1,0 +1,6 @@
+{
+  "name": "Auxiliar Contábil e Logístico",
+  "description": "yopoy ERP: Sistema de auxílio empresarial com organizador financeiro (caixa, recibos inteligentes, funcionários) e controle logístico de mercadorias (scan, validade, lote e alertas de vencimento).",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

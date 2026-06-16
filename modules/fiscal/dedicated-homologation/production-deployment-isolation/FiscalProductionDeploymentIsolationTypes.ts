@@ -1,0 +1,137 @@
+export enum FiscalProductionDeploymentIsolationStatus {
+  PRODUCTION_ACTIVATION_BLUEPRINT_READY = 'PRODUCTION_ACTIVATION_BLUEPRINT_READY',
+  RELEASE_DEPLOYMENT_ISOLATION_READY = 'RELEASE_DEPLOYMENT_ISOLATION_READY',
+  BLOCKED_FOR_REAL_PRODUCTION_ACTIVATION = 'BLOCKED_FOR_REAL_PRODUCTION_ACTIVATION',
+  FAILED_SAFE = 'FAILED_SAFE'
+}
+
+export interface FiscalProductionDeploymentIsolationInput {
+  requestedBy?: string;
+  companyId?: string;
+  requestId?: string;
+  deploymentPurpose?: string;
+  targetTeam?: string;
+  targetTenantScope?: string;
+  metadata?: any;
+  forceActivateProductionV2?: boolean;
+  forceExecuteRealRelease?: boolean;
+  forceExecuteRealDeploy?: boolean;
+  forceExecuteRealRollout?: boolean;
+  forceActivateCanary?: boolean;
+  forceExecuteRealCutover?: boolean;
+  forceChangeTraffic?: boolean;
+  forceRouteToV2?: boolean;
+  forceDisableLegacyRoute?: boolean;
+  forceInstallProxy?: boolean;
+  forceInstallMiddleware?: boolean;
+  forceInstallTap?: boolean;
+  forceModifyAppUse?: boolean;
+  forceModifyRouterUse?: boolean;
+  forceCallRealEndpoint?: boolean;
+  forceCallLegacyHandler?: boolean;
+  forceCallV2Handler?: boolean;
+  forceCaptureRequest?: boolean;
+  forceCaptureResponse?: boolean;
+  forceCapturePayload?: boolean;
+  forceDuplicateRequest?: boolean;
+  forceMirrorRealTraffic?: boolean;
+  forceEnableShadowTraffic?: boolean;
+  forceCreateRealSandbox?: boolean;
+  forceCreateWalledGarden?: boolean;
+  forceProvisionNetwork?: boolean;
+  forceProvisionDatabase?: boolean;
+  forceCreateTenantIsolation?: boolean;
+  forceCreateWorker?: boolean;
+  forceCreateScheduler?: boolean;
+  forceUnlockGate?: boolean;
+  forceGrantRealAuthorization?: boolean;
+  forceConnectRealDatabase?: boolean;
+  forceExecuteDml?: boolean;
+  forceExecuteDdl?: boolean;
+  forceCallRealSefaz?: boolean;
+  forceLoadRealCertificate?: boolean;
+  forceReadRealPfx?: boolean;
+  forceReadCertificatePassword?: boolean;
+  forceUseRealCrypto?: boolean;
+  forceSignRealXml?: boolean;
+  forceGenerateRealPdf?: boolean;
+}
+
+export interface FiscalProductionDeploymentIsolationResult {
+  success: boolean;
+  status: FiscalProductionDeploymentIsolationStatus | string;
+  validationExecuted: boolean;
+  evaluationExecuted: boolean;
+  decisionSimulated: boolean;
+  productionActivationBlueprintGenerated: boolean;
+  releaseDeploymentIsolationContractGenerated: boolean;
+  releaseArtifactInventoryGenerated: boolean;
+  deploymentBoundaryPlanGenerated: boolean;
+  trafficNonActivationPlanGenerated: boolean;
+  rolloutIsolationPlanGenerated: boolean;
+  rollbackIsolationPlanGenerated: boolean;
+  dependencyMatrixGenerated: boolean;
+  go: boolean;
+  noGo: boolean;
+  blockers: string[];
+  warnings: string[];
+  productionActivationBlueprintOnly: true;
+  releaseDeploymentIsolationOnly: true;
+  deploymentBoundaryOnly: true;
+  productionV2Activated: false;
+  releaseActivated: false;
+  realDeployExecuted: false;
+  realRolloutExecuted: false;
+  canaryActivated: false;
+  cutoverExecuted: false;
+  realRouteTransitionExecuted: false;
+  routeToV2: false;
+  routeToLegacy: true;
+  trafficChanged: false;
+  proxyInstalled: false;
+  middlewareInstalled: false;
+  tapInstalled: false;
+  appUseModified: false;
+  routerUseModified: false;
+  realRouteExecuted: false;
+  realEndpointCalled: false;
+  legacyHandlerCalled: false;
+  v2HandlerCalled: false;
+  requestCaptured: false;
+  responseCaptured: false;
+  payloadCaptured: false;
+  requestDuplicated: false;
+  realTrafficMirrored: false;
+  shadowTrafficEnabled: false;
+  sandboxCreated: false;
+  walledGardenCreated: false;
+  networkProvisioned: false;
+  databaseProvisioned: false;
+  tenantIsolationCreated: false;
+  workersCreated: false;
+  schedulersCreated: false;
+  realExecutionGateUnlocked: false;
+  realAuthorizationGranted: false;
+  dmlExecuted: false;
+  ddlExecuted: false;
+  realDatabaseConnected: false;
+  realSefazCalled: false;
+  realCertificateLoaded: false;
+  realPfxRead: false;
+  certificatePasswordRead: false;
+  realCryptoUsed: false;
+  xmlSigned: false;
+  pdfGenerated: false;
+  readOnly: true;
+  governanceOnly: true;
+  simulationOnly: true;
+  activationBlocked: true;
+  payloadIncluded: false;
+  sensitiveDataIncluded: false;
+  approvedForProductionDeploymentBlueprint: true;
+  approvedForReleaseDeploymentIsolation: true;
+  approvedForRealProductionActivation: false;
+  approvedForRealRelease: false;
+  approvedForRealDeploy: false;
+  approvedForProductionV2: false;
+}

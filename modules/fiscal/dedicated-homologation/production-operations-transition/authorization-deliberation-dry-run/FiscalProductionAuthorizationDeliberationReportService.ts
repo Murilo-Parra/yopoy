@@ -1,0 +1,9 @@
+export class FiscalProductionAuthorizationDeliberationReportService {
+  public static getReport() {
+    return {
+      reportType: 'AUTHORIZATION_DELIBERATION_DRY_RUN',
+      status: 'AUTHORIZATION_DELIBERATION_DRY_RUN_READY',
+      message: 'O Módulo 29.3 foi encerrado em modo read-only/authorization-deliberation-dry-run-only/gate-precondition-evidence-only/non-persistent-authorization-review-only/governance-only/simulation-only. Apenas deliberação administrativa de autorização operacional, simulação de quórum, votos simulados, revisão documental de pré-condições do gate, revisão de evidências do consentimento dry-run, revalidação de segregação de funções, aceite de risco no-op, evidência de não persistência, dependências, blockers e riscos foram preparados. Nenhuma autorização real foi concedida, nenhum gate real foi destravado, nenhuma deliberação real foi concluída, nenhuma deliberação real foi persistida, nenhum consentimento dry-run foi convertido em autorização real, nenhuma assinatura real foi coletada, nenhuma aprovação real de duas pessoas foi concluída, nenhum risco real foi aceito, nenhum waiver real foi concedido, nenhum aprovador real foi notificado, nenhum Slack/WhatsApp/e-mail/webhook/pager real foi enviado, nenhuma Produção V2 foi ativada, nenhuma rota foi direcionada para V2, o legado permanece como rota obrigatória, nenhum tráfego real foi alterado, nenhum deploy/release/cutover/rollback/canary/rollout/go-live real foi executado, nenhum proxy/middleware/tap/mirror/sniffer/shadow traffic real foi instalado, nenhum runtime/queue/worker/scheduler/cron/command runner/shell real foi executado, nenhum banco real foi conectado, nenhuma transação real foi aberta, nenhum DDL/DML real foi executado, nenhuma SEFAZ real foi chamada, nenhum certificado/PFX/senha/crypto real foi usado, nenhum XML real foi assinado, nenhum PDF real foi gerado, nenhum pacote real foi publicado e nenhum artefato executável real foi gerado.'
+    };
+  }
+}

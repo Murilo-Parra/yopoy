@@ -1,0 +1,40 @@
+export class FiscalProductionPostSealDormantStateBlockerRegister {
+  public static getBlockers(): string[] {
+    return [
+      'B-PPSDS-01: Retomada real de autoridade bloqueada.',
+      'B-PPSDS-02: Retomada real de ativação bloqueada.',
+      'B-PPSDS-03: Retomada real de roteamento bloqueada.',
+      'B-PPSDS-04: Retomada real de runtime bloqueada.',
+      'B-PPSDS-05: Retomada real de banco bloqueada.',
+      'B-PPSDS-06: Retomada real de integração externa bloqueada.',
+      'B-PPSDS-07: Retomada real de acesso a dados sensíveis bloqueada.',
+      'B-PPSDS-08: Caminho real de reentrada bloqueado.',
+      'B-PPSDS-09: Caminho real de ativação bloqueado.',
+      'B-PPSDS-10: Caminho real para Produção V2 bloqueado.',
+      'B-PPSDS-11: Registro real de dormência bloqueado.',
+      'B-PPSDS-12: Registro legal/operacional real bloqueado.',
+      'B-PPSDS-13: Hash, assinatura e proof reais bloqueados.',
+      'B-PPSDS-14: PDF/ZIP/JSON/CSV reais bloqueados.',
+      'B-PPSDS-15: Exportação e envio real de pacote bloqueados.',
+      'B-PPSDS-16: Notificação real bloqueada.',
+      'B-PPSDS-17: Go-live real bloqueado.',
+      'B-PPSDS-18: Cutover real bloqueado.',
+      'B-PPSDS-19: Autoridade real de ativação bloqueada.',
+      'B-PPSDS-20: Gate e token reais bloqueados.',
+      'B-PPSDS-21: Produção V2 e routeToV2 bloqueados.',
+      'B-PPSDS-22: Legado obrigatório preservado.',
+      'B-PPSDS-23: Tráfego, load balancer e DNS reais bloqueados.',
+      'B-PPSDS-24: Proxy, middleware, tap, mirror, sniffer e shadow traffic reais bloqueados.',
+      'B-PPSDS-25: Runtime, queue, job, worker, scheduler, cron e shell reais bloqueados.',
+      'B-PPSDS-26: Banco, transação, DML, DDL e migration reais bloqueados.',
+      'B-PPSDS-27: SEFAZ, API externa, webhook e callback reais bloqueados.',
+      'B-PPSDS-28: Payload, XML, PDF, tenant data e documento fiscal reais bloqueados.',
+      'B-PPSDS-29: Token, API key, secret, certificate, PFX e private key bloqueados.',
+      'B-PPSDS-30: Crypto e assinatura XML reais bloqueadas.',
+      'B-PPSDS-31: Filesystem, storage e banco escrito bloqueados.',
+      'B-PPSDS-32: Lint global com ESLint v9 flat config reconhecido como pendência.',
+      'B-PPSDS-33: TS2308/namespace overlap preexistente reconhecido como pendência.',
+      'B-PPSDS-34: Namespace overlap introduzido pelo 46.1 bloqueado.'
+    ];
+  }
+}

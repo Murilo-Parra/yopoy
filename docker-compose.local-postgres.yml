@@ -1,0 +1,15 @@
+services:
+  yopoy-postgres:
+    image: postgres:17
+    container_name: yopoy-postgres-local
+    ports:
+      - "54329:5432"
+    environment:
+      POSTGRES_USER: yopoy_dev
+      POSTGRES_PASSWORD: yopoy_dev_password
+      POSTGRES_DB: yopoy_dev_local
+    volumes:
+      - yopoy_postgres_local_data:/var/lib/postgresql/data
+
+volumes:
+  yopoy_postgres_local_data:

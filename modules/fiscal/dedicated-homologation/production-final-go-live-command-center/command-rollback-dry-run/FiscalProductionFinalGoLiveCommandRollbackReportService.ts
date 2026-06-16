@@ -1,0 +1,15 @@
+import { FiscalProductionFinalGoLiveCommandRollbackResult } from './FiscalProductionFinalGoLiveCommandRollbackTypes';
+
+export class FiscalProductionFinalGoLiveCommandRollbackReportService {
+  public static generateReport(result: FiscalProductionFinalGoLiveCommandRollbackResult) {
+    return {
+      reportId: `REP-CMD-RBK-${Date.now()}`,
+      generatedAt: new Date().toISOString(),
+      scenario: 'PRODUCTION_FINAL_GO_LIVE_COMMAND_ROLLBACK',
+      result,
+      message: 'O Módulo 41.4 foi encerrado em modo read-only/production-final-go-live-command-rollback-scenario-only/command-abort-path-no-op-only/post-command-event-horizon-simulation-only/rollback-execution-denial-only/abort-execution-denial-only/fallback-execution-denial-only/traffic-reversion-denial-only/runtime-containment-denial-only/governance-only/simulation-only. Apenas blueprint de cenário de rollback por comando, plano de abort no-op, matriz de horizonte pós-comando, matrizes de negação de rollback e abort, plano de negação de fallback, matriz de negação de reversão de tráfego, plano de negação de contenção runtime, plano de emergency hold sem ativação, plano de continuidade legada após comando negado, matriz de shutdown V2 sem execução, evidências de nenhum rollback real, nenhum abort real, nenhum fallback real e nenhuma reversão real de tráfego, dependências, blockers e riscos foram preparados. Nenhum go-live real foi aprovado, nenhum go-live real foi executado, nenhum comando real de ativação foi executado, nenhum rollback real foi executado, nenhum abort real foi executado, nenhum fallback real foi executado, nenhum shutdown real foi executado, nenhum kill-switch real foi ativado, nenhum tráfego real foi revertido, nenhum executive sign-off real foi concluído, nenhuma assinatura real foi coletada, nenhuma autoridade real de ativação foi concedida, nenhum gate real foi destravado, nenhum token real foi emitido, nenhuma Produção V2 foi ativada, nenhuma rota foi direcionada para V2, o legado permanece como rota obrigatória, nenhum tráfego real foi alterado, nenhum load balancer real foi alterado, nenhum DNS real foi alterado, nenhum proxy/middleware/tap/mirror/sniffer/shadow traffic real foi instalado ou ativado, nenhuma request/response/payload real foi capturada, nenhum runtime/queue/job/worker/scheduler/cron/shell/command runner/process manager/lifecycle runner real foi iniciado ou executado, nenhum banco real foi conectado, nenhuma transação/query/DML/DDL/migration/repository write real ocorreu, nenhuma SEFAZ real foi chamada, nenhuma API externa real foi chamada, nenhum webhook real foi enviado, nenhuma notificação real foi enviada, nenhum token/API key/client secret/authorization header/segredo real foi lido, nenhum certificado/PFX/senha/chave privada real foi lido, nenhuma crypto real foi usada, nenhum XML real foi assinado, nenhum PDF real foi gerado, nenhum payload/XML/PDF/tenant data/documento fiscal real foi lido.',
+      governanceOnly: true,
+      simulationOnly: true
+    };
+  }
+}

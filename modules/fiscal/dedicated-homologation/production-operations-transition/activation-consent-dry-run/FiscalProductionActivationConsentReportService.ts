@@ -1,0 +1,9 @@
+export class FiscalProductionActivationConsentReportService {
+  public static getReport() {
+    return {
+      reportType: 'ACTIVATION_CONSENT_DRY_RUN',
+      status: 'ACTIVATION_CONSENT_REQUEST_INTAKE_READY',
+      message: 'O Módulo 29.2 foi encerrado em modo read-only/activation-consent-request-dry-run-only/explicit-consent-envelope-only/two-person-authorization-simulation-only/governance-only/simulation-only. Apenas intake de solicitação explícita de consentimento, sanitização de metadados, envelope não executável de consentimento, matriz de elegibilidade dos signatários, simulação de aprovação por duas pessoas, revisão de segregação de funções, escopo de autorização no-op, evidência de não notificação, dependências, blockers e riscos foram preparados. Nenhuma autorização real foi concedida, nenhum consentimento real foi persistido, nenhuma assinatura real foi coletada, nenhuma aprovação real de duas pessoas foi concluída, nenhum aprovador real foi notificado, nenhum Slack/WhatsApp/e-mail/webhook/pager real foi enviado, nenhum gate real foi destravado, nenhuma Produção V2 foi ativada, nenhuma rota foi direcionada para V2, o legado permanece como rota obrigatória, nenhum tráfego real foi alterado, nenhum deploy/release/cutover/rollback/canary/rollout/go-live real foi executado, nenhum proxy/middleware/tap/mirror/sniffer/shadow traffic real foi instalado, nenhum runtime/queue/worker/scheduler/cron/command runner/shell real foi executado, nenhum banco real foi conectado, nenhuma transação real foi aberta, nenhum DDL/DML real foi executado, nenhuma SEFAZ real foi chamada, nenhum certificado/PFX/senha/crypto real foi usado, nenhum XML real foi assinado, nenhum PDF real foi gerado, nenhum pacote real foi publicado e nenhum artefato executável real foi gerado.'
+    };
+  }
+}

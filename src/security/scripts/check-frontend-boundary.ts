@@ -40,6 +40,8 @@ const PROHIBITED_PATHS = [
   'infrastructure/fiscal',
   'infrastructure/payment',
   'infrastructure/auth',
+  'application/auth/use-cases',
+  'application/auth/testing',
   'BcryptPasswordHasher',
   'NodeCryptoSessionTokenService',
   'security/server',

@@ -106,4 +106,32 @@ O Yopoy introduz serviços criptográficos de ponta para a proteção das creden
    - **Mitigação de Timing Attacks:** A comparação e validação do token fornecido com o hash armazenado no banco de dados emprega `crypto.timingSafeEqual`, protegendo o fluxo de verificação contra análises estatísticas de tempo de processamento.
    - **Limites de Ciclo de Vida:** O tempo de vida (TTL) é monitorado de forma restrita (padrão de 7 dias, mínimo superior a zero e máximo limite de 30 dias).
 
+## 6. Casos de Uso Internos de Autenticação (Auth Use Cases)
+
+O sistema de autenticação e sessão do Yopoy ERP é estruturado com base em casos de uso desacoplados focados no ecossistema de aplicação segura, agindo sem exposição direta para o exterior por rotas Http, middlewares ou cookies neste submódulo.
+
+### Descrições Operacionais
+
+1. **`RegisterCompanyUseCase`**:
+   - Centraliza o registro atômico de uma nova organização, seu respectivo usuário gestor e a membership obrigatória associada ao papel de `owner`.
+   - Força a verificação da política de senhas redundantes `PasswordPolicy` e hashea via `PasswordHasher` antes de acionar a persistência.
+   - Audita o sucesso da operação através do evento `company_registered`.
+
+2. **`LoginUseCase`**:
+   - Verifica credenciais sem vazamento informacional de e-mails em mensagens de erro públicas.
+   - Gerencia a proteção brute-force rastreando e incrementando as tentativas falhas de login (`failed_login_attempts`), disparando um banimento computacional de `15 minutos` via `locked_until` ao atingir `5 tentativas`.
+   - Gera um token criptograficamente seguro e grava exclusivamente o seu hash `session_token_hash`. Dispara o evento de auditoria `login_success` ou `login_failed`.
+
+3. **`LogoutUseCase`**:
+   - Invalida fisicamente a sessão ativa do usuário através do preenchimento e atribuição do campo `revoked_at` sem expor segredos criptográficos ou purgar histórico transacional.
+   - Audita o encerramento seguro sob a tipagem `logout`.
+
+4. **`ValidateSessionUseCase`**:
+   - Valida de forma determinística os tokens brutos procedentes do cliente, verificando expirações temporárias no banco e mapeando os acessos para o formato composto `AuthenticatedSession`.
+   - Atualiza a marcação de atividade no banco de dados (`touchSession`) a cada validação executada com absoluto selo de timing-safe.
+
+5. **`RequirePermissionUseCase`**:
+   - Intersecta as sessões ativas contra as permissões funcionais parametrizadas no ERP, bloqueando violações no nível de aplicação, disparando o evento forense `permission_denied` e mitigando decisões lógicas inseguras de front-end.
+
+
 

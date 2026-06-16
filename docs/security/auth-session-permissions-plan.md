@@ -87,3 +87,23 @@ As tabelas de autenticação foram fisicamente incorporadas no banco de dados lo
 - O script automatizado local `src/security/scripts/check-rls-schema.ts` audita a totalidade de arquivos de script SQL para certificar que todas as 9 tabelas do sistema estão cobertas com `ENABLE ROW LEVEL SECURITY`, `FORCE ROW LEVEL SECURITY` e cláusulas específicas de `USING` e `WITH CHECK`.
 - O isolamento físico de dados é testado de ponta a ponta no arquivo `src/infrastructure/postgres-native/tests/native-auth-rls.test.ts`.
 
+---
+
+## 5. PasswordHasher e SessionTokenService
+
+O Yopoy introduz serviços criptográficos de ponta para a proteção das credenciais dos usuários e integridade operacional das sessões ativas no ecossistema ERP.
+
+### Visão Geral de Segurança Criptográfica
+
+1. **PasswordHasher (`BcryptPasswordHasher`):**
+   - **Prevenção de Senha Pura:** O sistema nunca armazena senhas em texto puro. Elas são convertidas em um hash irreversível utilizando o algoritmo **bcryptjs** (salt rounds padrão de `12` para servidores de produção, configurável para salt rounds de `4` exclusivamente em ambientes de teste para otimizar velocidade).
+   - **Força de Senha Obrigatória:** Antes de qualquer processo de hash, o sistema avalia a senha através da camada de política `PasswordPolicy`, lançando uma exceção segura caso a senha não atenda aos critérios estruturais (por exemplo, tamanho insuficiente, falta de símbolos, ou presença de palavras comuns). O texto de erro da exceção nunca expõe a senha em texto limpo.
+   - **Segurança de Fronteira:** Interfaces de hash não importam e nem expõem dependências de bibliotecas de criptografia baseadas em Node para o frontend React.
+
+2. **SessionTokenService (`NodeCryptoSessionTokenService`):**
+   - **Tokens de Sessão Seguros:** Os tokens são gerados utilizando `node:crypto.randomBytes` de `48` bytes para altíssima entropia e convertidos em strings seguras no formato `base64url`.
+   - **Armazenamento Seguro de Tokens (Prevenção de Roubo de Banco):** O token em formato limpo (`rawToken`) só existe no retorno imediato para ser entregue graficamente ao cliente. O banco persiste estritamente o hash versionado do token prefixado com `sha256:` (por exemplo, `sha256:<hex-hash>`).
+   - **Mitigação de Timing Attacks:** A comparação e validação do token fornecido com o hash armazenado no banco de dados emprega `crypto.timingSafeEqual`, protegendo o fluxo de verificação contra análises estatísticas de tempo de processamento.
+   - **Limites de Ciclo de Vida:** O tempo de vida (TTL) é monitorado de forma restrita (padrão de 7 dias, mínimo superior a zero e máximo limite de 30 dias).
+
+

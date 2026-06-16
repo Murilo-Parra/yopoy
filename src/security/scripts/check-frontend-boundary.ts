@@ -28,13 +28,20 @@ const PROHIBITED_MODULES = [
   'child_process',
   'node-forge',
   'xml-crypto',
-  '@xmldom/xmldom'
+  '@xmldom/xmldom',
+  'bcrypt',
+  'bcryptjs',
+  'crypto',
+  'node:crypto'
 ];
 
 const PROHIBITED_PATHS = [
   'infrastructure/postgres',
   'infrastructure/fiscal',
   'infrastructure/payment',
+  'infrastructure/auth',
+  'BcryptPasswordHasher',
+  'NodeCryptoSessionTokenService',
   'security/server',
   'composition/createAppContainer',
   'composition/createServerAppContainer'

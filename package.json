@@ -25,7 +25,7 @@
     "db:native:guard": "tsx src/infrastructure/postgres/scripts/assert-native-local-db.ts",
     "db:native:migrate": "tsx src/infrastructure/postgres/scripts/run-native-local-migrations.ts",
     "db:native:reset": "tsx src/infrastructure/postgres/scripts/reset-native-local-db.ts",
-    "db:native:test": "vitest run src/infrastructure/postgres-native/tests"
+    "db:native:test": "vitest run src/infrastructure/postgres-native/tests --fileParallelism=false"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",

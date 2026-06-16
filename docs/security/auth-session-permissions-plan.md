@@ -133,5 +133,27 @@ O sistema de autenticação e sessão do Yopoy ERP é estruturado com base em ca
 5. **`RequirePermissionUseCase`**:
    - Intersecta as sessões ativas contra as permissões funcionais parametrizadas no ERP, bloqueando violações no nível de aplicação, disparando o evento forense `permission_denied` e mitigando decisões lógicas inseguras de front-end.
 
+---
+
+## 7. Repositórios de Autenticação PostgreSQL (PostgreSQL Auth Repositories)
+
+O Yopoy estende o módulo de segurança com implementações físicas reais dos repositórios sobre o banco de dados PostgreSQL, seguindo a diretriz Backend-First e as regras estritas de Row-Level Security (RLS).
+
+### Classes de Produção Implementadas:
+1. **`PostgresAuthUserRepository` (impl `AuthUserRepository`):**
+   - Gerencia a consulta global ou contextual por e-mail e ID, o cadastro seguro de credenciais, o incremento seguro de tentativas falhas de login, o registro de bloqueio temporário por brute-force (`locked_until`), e os resets de contadores.
+2. **`PostgresCompanyAuthRepository` (impl `CompanyAuthRepository` e `CompanyRepository`):**
+   - Gerencia estados operacionais de tenants (se ativo ou suspenso) e recupera dados de tiers de assinatura, além de persistir e buscar registros base sobre a tabela `companies`.
+3. **`PostgresMembershipRepository` (impl `MembershipRepository`):**
+   - Cria e atualiza associações de usuários a empresas com restrições rigorosas de papéis operacionais (`owner`, `admin`, etc.).
+4. **`PostgresAuthSessionRepository` (impl `AuthSessionRepository`):**
+   - Persiste as chaves de acesso ativas em formato de hash prefixado, gerencia a expiração, e realiza a remoção em lote de sessões expiradas ou revogadas (`deleteExpiredSessions`).
+5. **`PostgresAuthAuditRepository` (impl `AuthAuditRepository`):**
+   - Grava e lista os históricos forenses de auditoria em conformidade com as regras de tenants (`company_id`).
+
+### Estratégia de Resolução de Bootstrapping de Tenant
+No Yopoy, os repositórios PostgreSQL de autenticação nunca desativam RLS. Operações de autenticação que acessam dados sensíveis devem ocorrer dentro de uma transação com app.current_company_id ativo na mesma conexão. O backend deve resolver o companyId antes de chamar os repositórios PostgreSQL de Auth.
+
+
 
 

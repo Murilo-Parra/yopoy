@@ -125,3 +125,9 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS failed_login_attempts integer NOT NUL
 ALTER TABLE users ADD COLUMN IF NOT EXISTS locked_until timestamptz NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login timestamptz NULL;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
+
+-- 6. Alter table companies to add security, active status and subscription tier
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'ACTIVE';
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS subscription_tier text NULL DEFAULT 'premium';
+ALTER TABLE companies ADD COLUMN IF NOT EXISTS active boolean NOT NULL DEFAULT true;
+

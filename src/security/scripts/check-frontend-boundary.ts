@@ -36,6 +36,7 @@ const PROHIBITED_MODULES = [
 ];
 
 const PROHIBITED_PATHS = [
+  'infrastructure/postgres/auth',
   'infrastructure/postgres',
   'infrastructure/fiscal',
   'infrastructure/payment',

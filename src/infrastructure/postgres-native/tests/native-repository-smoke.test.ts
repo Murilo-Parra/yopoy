@@ -11,11 +11,15 @@ describe('Native Postgres Sandbox - Repository Smoke', () => {
   let hasDb = false;
   let dbUrl: string;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     dbUrl = process.env.DATABASE_URL || '';
     if (dbUrl) {
       try {
         assertLocalDatabaseUrl(dbUrl);
+        const { Client } = await import('pg');
+        const client = new Client({ connectionString: dbUrl, connectionTimeoutMillis: 1000 });
+        await client.connect();
+        await client.end();
         hasDb = true;
       } catch (err) {
         hasDb = false;

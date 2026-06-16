@@ -9,11 +9,15 @@ describe('Native Postgres Sandbox - Schema Test', () => {
   let pool: Pool;
   let hasDb = false;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     const dbUrl = process.env.DATABASE_URL;
     if (dbUrl) {
       try {
         assertLocalDatabaseUrl(dbUrl);
+        const { Client } = await import('pg');
+        const client = new Client({ connectionString: dbUrl, connectionTimeoutMillis: 1000 });
+        await client.connect();
+        await client.end();
         pool = new Pool({ connectionString: dbUrl });
         hasDb = true;
       } catch (err) {

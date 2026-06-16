@@ -5,6 +5,7 @@ const SECURITY_CHECKS = [
   { name: 'Secret Leak Scanner', cmd: 'npx tsx src/security/scripts/check-secret-leaks.ts' },
   { name: 'Production Locks Audit', cmd: 'npx tsx src/security/scripts/check-production-locks.ts' },
   { name: 'RLS Schema Gate', cmd: 'npx tsx src/security/scripts/check-rls-schema.ts' },
+  { name: 'RLS Bypass Scanner', cmd: 'npx tsx src/security/scripts/check-rls-bypass.ts' },
   { name: 'Dependency Audit Gate', cmd: 'npx tsx src/security/scripts/check-dependency-audit.ts' }
 ];
 

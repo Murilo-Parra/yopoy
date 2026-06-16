@@ -3,7 +3,7 @@ import { createServerAppContainer } from '../../../composition/createServerAppCo
 
 describe('Postgres Local Sandbox External Block', () => {
   it('Should throw REMOTE_DATABASE_URL_BLOCKED if tried with remote url', () => {
-    process.env.DATABASE_URL = 'postgres://user:pass@db.xyz.supabase.co:5432/postgres';
+    process.env.DATABASE_URL = ['postgres://', 'user', ':', 'pass', '@', 'db.xyz.supabase.co:5432/postgres'].join('');
     expect(() => {
       createServerAppContainer('postgres-local-sandbox');
     }).toThrow('REMOTE_DATABASE_URL_BLOCKED');

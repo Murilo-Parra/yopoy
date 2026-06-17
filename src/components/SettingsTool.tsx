@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import PermissionGate from '../frontend/auth/PermissionGate';
+import { MODULE_PERMISSIONS } from '../frontend/auth/modulePermissions';
+import AccessDenied from '../frontend/auth/AccessDenied';
 import { 
   Building, 
   MapPin, 
@@ -475,12 +478,10 @@ export default function SettingsTool({
 
     localStorage.setItem('cfg_partners', JSON.stringify(partners));
 
-    // Salvar no backend via cookie HttpOnly; autorização real é validada no backend
+    // Salvar no Postgres remoto de forma multi-tenant segura se logado
     authFetch('/api/auth/company-update', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           corporate_name: corporateName,
           trade_name: tradeName,
@@ -2235,7 +2236,8 @@ export default function SettingsTool({
 
         {/* SUBTAB 6: REINICIALIZAÇÃO DE DADOS */}
         {activeSubTab === 'reset' && (
-          <div className="space-y-6">
+          <PermissionGate permission={MODULE_PERMISSIONS.system.factoryReset} fallback={<AccessDenied />}>
+            <div className="space-y-6">
             <div className="flex items-center gap-2 pb-3 border-b border-rose-500/10">
               <ShieldAlert className="w-4.5 h-4.5 text-rose-500" />
               <h3 className={`text-xs font-extrabold tracking-wider uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
@@ -2364,7 +2366,8 @@ export default function SettingsTool({
                 </div>
               </div>
             )}
-          </div>
+            </div>
+          </PermissionGate>
         )}
 
       </div>

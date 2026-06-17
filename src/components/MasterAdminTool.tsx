@@ -1197,7 +1197,7 @@ export default function MasterAdminTool({ theme }: MasterAdminToolProps) {
                       <button 
                          onClick={async () => {
                            if (confirm("Confirmar exclusão?")) {
-                             await authFetch(`/api/admin/custom-providers/${p.id}`, { method: 'DELETE', headers: {}});
+                             await authFetch(`/api/admin/custom-providers/${p.id}`, { method: 'DELETE', headers: { }});
                              setRefreshTrigger(prev => prev + 1);
                            }
                          }}

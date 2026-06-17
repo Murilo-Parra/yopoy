@@ -24,6 +24,8 @@ import {
   BookOpen
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import PermissionGate from '../frontend/auth/PermissionGate';
+import { MODULE_PERMISSIONS } from '../frontend/auth/modulePermissions';
 import { Product } from '../types';
 import { XmlGenerator, XmlValidator } from '../utils/xmlGenerator';
 import { authFetch } from '../frontend/auth/authFetch';
@@ -190,7 +192,8 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
 
     try {
       const response = await authFetch(`/api/nfe?${query.toString()}`, {
-        headers: {}
+        headers: {
+        }
       });
       const data = await response.json();
       if (data.success) {
@@ -403,8 +406,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
     try {
       const saveRes = await authFetch('/api/nfe', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ doc: docPayload })
       });
       const saveData = await saveRes.json();
@@ -430,8 +432,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       
       const signRes = await authFetch(`/api/nfe/${uniqueDocId}/status`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'SIGNED',
           fields: { xml_signed: signedXmlValue }
@@ -462,8 +463,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
 
       const transmitRes = await authFetch(`/api/nfe/${uniqueDocId}/status`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status: 'AUTHORIZED',
           fields: {
@@ -520,8 +520,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
     try {
       const response = await authFetch('/api/nfe', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ doc: dupPayload })
       });
       const data = await response.json();
@@ -1395,14 +1394,23 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                   </div>
 
                   <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={handleEmitNfe}
-                      className="w-full bg-indigo-650 hover:bg-indigo-750 text-white font-black py-3 px-4 rounded-xl text-xs uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer shadow-lg hover:shadow-indigo-500/20 active:scale-95 transition-all"
+                    <PermissionGate
+                      permission={MODULE_PERMISSIONS.fiscal.emit}
+                      fallback={
+                        <div className="p-3 bg-red-500/10 border border-red-500/25 text-red-500 text-center font-bold text-[10px] rounded-xl uppercase tracking-wider">
+                          Sem permissão para transmitir nota fiscal
+                        </div>
+                      }
                     >
-                      <Send className="w-4 h-4" />
-                      Validar, Assinar e Transmitir
-                    </button>
+                      <button
+                        type="button"
+                        onClick={handleEmitNfe}
+                        className="w-full bg-indigo-650 hover:bg-indigo-750 text-white font-black py-3 px-4 rounded-xl text-xs uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer shadow-lg hover:shadow-indigo-500/20 active:scale-95 transition-all"
+                      >
+                        <Send className="w-4 h-4" />
+                        Validar, Assinar e Transmitir
+                      </button>
+                    </PermissionGate>
                   </div>
                 </div>
               </div>

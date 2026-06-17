@@ -56,6 +56,9 @@ import MasterAdminTool from './components/MasterAdminTool';
 import NfcePosTool from './components/NfcePosTool';
 import YopoyLogo from './components/YopoyLogo';
 import { useAuth } from './frontend/auth/AuthContext';
+import ProtectedModule from './frontend/auth/ProtectedModule';
+import PermissionGate from './frontend/auth/PermissionGate';
+import { MODULE_PERMISSIONS } from './frontend/auth/modulePermissions';
 
 export default function App() {
   const { authenticated, loading: authLoading, user: authUser, companyId, logout: apiLogout, refreshSession } = useAuth();
@@ -1911,115 +1914,123 @@ export default function App() {
 
             {/* TAB 2: AUXILIAR DE CONTABILIDADE E CAIXA */}
             {activeTab === 'finance' && (
-              <div id="finance-tab-view" className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Módulo de Organização Contábil & Caixa</h2>
-                    <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Gerenciamento de contas a pagar, faturamento de notas fiscais, controle de equipe e faturamento de salários.</p>
+              <ProtectedModule permission={MODULE_PERMISSIONS.finance.view}>
+                <div id="finance-tab-view" className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Módulo de Organização Contábil & Caixa</h2>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Gerenciamento de contas a pagar, faturamento de notas fiscais, controle de equipe e faturamento de salários.</p>
+                    </div>
+                    <button
+                      onClick={() => setIsExpanded(!isExpanded)}
+                      title={isExpanded ? "Recolher Tela Cheia" : "Maximizar para Tela Cheia"}
+                      className={`border py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto ${
+                        theme === 'dark' 
+                          ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/25 hover:bg-indigo-650/20' 
+                          : 'bg-indigo-50 text-indigo-700 border-indigo-150 hover:bg-indigo-100'
+                      }`}
+                    >
+                      {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                      <span>{isExpanded ? "Recolher Foco" : "Expandir Tela"}</span>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    title={isExpanded ? "Recolher Tela Cheia" : "Maximizar para Tela Cheia"}
-                    className={`border py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto ${
-                      theme === 'dark' 
-                        ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/25 hover:bg-indigo-650/20' 
-                        : 'bg-indigo-50 text-indigo-700 border-indigo-150 hover:bg-indigo-100'
-                    }`}
-                  >
-                    {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-                    <span>{isExpanded ? "Recolher Foco" : "Expandir Tela"}</span>
-                  </button>
+                  <FinanceTool 
+                    transactions={transactions}
+                    setTransactions={setTransactions}
+                    employees={employees}
+                    setEmployees={setEmployees}
+                    cashBalance={cashBalance}
+                    setCashBalance={setCashBalance}
+                    products={products}
+                    selectedPlan={selectedPlan}
+                  />
                 </div>
-                <FinanceTool 
-                  transactions={transactions}
-                  setTransactions={setTransactions}
-                  employees={employees}
-                  setEmployees={setEmployees}
-                  cashBalance={cashBalance}
-                  setCashBalance={setCashBalance}
-                  products={products}
-                  selectedPlan={selectedPlan}
-                />
-              </div>
+              </ProtectedModule>
             )}
 
             {/* TAB 3: CONTROLE DE LOGÍSTICA DE MERCADORIAS */}
             {activeTab === 'logistics' && (
-              <div id="logistics-tab-view" className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Logística de Cadastro & Endereçamento Físico</h2>
-                    <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Simule escaneamentos de produtos, localize endereços de prateleiras físicas no armazém e emita alertas automáticos.</p>
+              <ProtectedModule permission={MODULE_PERMISSIONS.logistics.view}>
+                <div id="logistics-tab-view" className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Logística de Cadastro & Endereçamento Físico</h2>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Simule escaneamentos de produtos, localize endereços de prateleiras físicas no armazém e emita alertas automáticos.</p>
+                    </div>
+                    <button
+                      onClick={() => setIsExpanded(!isExpanded)}
+                      title={isExpanded ? "Recolher Tela Cheia" : "Maximizar para Tela Cheia"}
+                      className={`border py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto ${
+                        theme === 'dark' 
+                          ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/25 hover:bg-indigo-650/20' 
+                          : 'bg-indigo-50 text-indigo-700 border-indigo-150 hover:bg-indigo-100'
+                      }`}
+                    >
+                      {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                      <span>{isExpanded ? "Recolher Foco" : "Expandir Tela"}</span>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    title={isExpanded ? "Recolher Tela Cheia" : "Maximizar para Tela Cheia"}
-                    className={`border py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto ${
-                      theme === 'dark' 
-                        ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/25 hover:bg-indigo-650/20' 
-                        : 'bg-indigo-50 text-indigo-700 border-indigo-150 hover:bg-indigo-100'
-                    }`}
-                  >
-                    {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-                    <span>{isExpanded ? "Recolher Foco" : "Expandir Tela"}</span>
-                  </button>
+                  <LogisticsTool 
+                    products={products}
+                    setProducts={setProducts}
+                    theme={theme}
+                    employees={employees}
+                    tasks={tasks}
+                    setTasks={setTasks}
+                    transactions={transactions}
+                    setTransactions={setTransactions}
+                    userPlan={selectedPlan}
+                  />
                 </div>
-                <LogisticsTool 
-                  products={products}
-                  setProducts={setProducts}
-                  theme={theme}
-                  employees={employees}
-                  tasks={tasks}
-                  setTasks={setTasks}
-                  transactions={transactions}
-                  setTransactions={setTransactions}
-                  userPlan={selectedPlan}
-                />
-              </div>
+              </ProtectedModule>
             )}
 
             {/* TAB EXTRA: EMISSÃO DE NOTAS FISCAIS (SEBRAE INTEGRADO) */}
             {activeTab === 'invoice' && (
-              <div id="invoice-tab-view" className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Emissão de Notas Fiscais (NF-e)</h2>
-                    <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Emita e controle guias fiscais para mercadorias (NF-e), formate o DANFE para produtos e direcione suas emissões oficiais.</p>
+              <ProtectedModule permission={MODULE_PERMISSIONS.fiscal.view}>
+                <div id="invoice-tab-view" className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Emissão de Notas Fiscais (NF-e)</h2>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Emita e controle guias fiscais para mercadorias (NF-e), formate o DANFE para produtos e direcione suas emissões oficiais.</p>
+                    </div>
+                    <button
+                      onClick={() => setIsExpanded(!isExpanded)}
+                      title={isExpanded ? "Recolher Tela Cheia" : "Maximizar para Tela Cheia"}
+                      className={`border py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto ${
+                        theme === 'dark' 
+                          ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/25 hover:bg-indigo-650/20' 
+                          : 'bg-indigo-50 text-indigo-700 border-indigo-150 hover:bg-indigo-100'
+                      }`}
+                    >
+                      {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                      <span>{isExpanded ? "Recolher Foco" : "Expandir Tela"}</span>
+                    </button>
                   </div>
-                  <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    title={isExpanded ? "Recolher Tela Cheia" : "Maximizar para Tela Cheia"}
-                    className={`border py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto ${
-                      theme === 'dark' 
-                        ? 'bg-indigo-600/10 text-indigo-400 border-indigo-500/25 hover:bg-indigo-650/20' 
-                        : 'bg-indigo-50 text-indigo-700 border-indigo-150 hover:bg-indigo-100'
-                    }`}
-                  >
-                    {isExpanded ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
-                    <span>{isExpanded ? "Recolher Foco" : "Expandir Tela"}</span>
-                  </button>
+                  <InvoiceTool 
+                    products={products}
+                    transactions={transactions}
+                    setTransactions={setTransactions}
+                    theme={theme}
+                    selectedPlan={selectedPlan}
+                  />
                 </div>
-                <InvoiceTool 
-                  products={products}
-                  transactions={transactions}
-                  setTransactions={setTransactions}
-                  theme={theme}
-                  selectedPlan={selectedPlan}
-                />
-              </div>
+              </ProtectedModule>
             )}
 
             {/* TAB NOVA: MÓDULO DE SERVIÇOS MUNICIPAL NFS-E */}
             {activeTab === 'nfse_module' && (
-              <div id="nfse-tab-view" className="space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div>
-                    <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Emissão de Notas Fiscais de Serviço (NFS-e)</h2>
-                    <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Módulo profissional de faturamento de serviços municipais, suportando integração com diversos provedores de tecnologia.</p>
+              <ProtectedModule permission={MODULE_PERMISSIONS.fiscal.view}>
+                <div id="nfse-tab-view" className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                      <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Emissão de Notas Fiscais de Serviço (NFS-e)</h2>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Módulo profissional de faturamento de serviços municipais, suportando integração com diversos provedores de tecnologia.</p>
+                    </div>
                   </div>
+                  <NfseTool theme={theme} />
                 </div>
-                <NfseTool theme={theme} />
-              </div>
+              </ProtectedModule>
             )}
 
             {/* TAB 4: MÓDULO DE ORIENTAÇÃO E CONSULTORIA FISCAL IA (CHAT) */}
@@ -2064,52 +2075,58 @@ export default function App() {
 
             {/* TAB 6: ABA DE CONFIGURAÇÕES CADASTRAIS, REGIME FISCAL, CERTIFICADOS E SÓCIOS */}
             {activeTab === 'settings' && (
-              <div id="settings-tab-view" className="space-y-4 w-full">
-                <SettingsTool 
-                  theme={theme} 
-                  isExpanded={isExpanded}
-                  onToggleExpand={() => setIsExpanded(!isExpanded)}
-                  selectedPlan={selectedPlan}
-                  currentUser={currentUser}
-                />
-              </div>
+              <ProtectedModule permission={MODULE_PERMISSIONS.settings.view}>
+                <div id="settings-tab-view" className="space-y-4 w-full">
+                  <SettingsTool 
+                    theme={theme} 
+                    isExpanded={isExpanded}
+                    onToggleExpand={() => setIsExpanded(!isExpanded)}
+                    selectedPlan={selectedPlan}
+                    currentUser={currentUser}
+                  />
+                </div>
+              </ProtectedModule>
             )}
 
             {activeTab === 'nfce_pos' && (
-              <div id="nfce-pos-tab-view" className="space-y-4 w-full">
-                <NfcePosTool 
-                  theme={theme}
-                  currentUser={currentUser}
-                  corporateName={corporateName || 'Yopoy Ltda'}
-                  cnpj={cnpj || '00.000.000/0001-99'}
-                  onNfceIssued={(doc) => {
-                    const amt = parseFloat(doc.total_value);
-                    const newTransaction: Transaction = {
-                      id: `t_nfce_${Date.now()}`,
-                      establishmentName: `Venda Consumidor NFC-e Nº ${doc.number}`,
-                      amount: amt,
-                      date: new Date().toISOString().substring(0, 10),
-                      category: 'Outros',
-                      status: 'Confirmado',
-                      notes: `NFC-e autorizada e emitida de forma integrada pelo PDV. Chave: ${doc.access_key}`,
-                      type: 'Receita'
-                    };
-                    const updatedTxList = [newTransaction, ...transactions];
-                    setTransactions(updatedTxList);
-                    localStorage.setItem('biz_simulated_transactions', JSON.stringify(updatedTxList));
-                    
-                    const nextCash = cashBalance + amt;
-                    setCashBalance(nextCash);
-                    localStorage.setItem('biz_simulated_cash_balance', String(nextCash));
-                  }}
-                />
-              </div>
+              <ProtectedModule permission={MODULE_PERMISSIONS.fiscal.view}>
+                <div id="nfce-pos-tab-view" className="space-y-4 w-full">
+                  <NfcePosTool 
+                    theme={theme}
+                    currentUser={currentUser}
+                    corporateName={corporateName || 'Yopoy Ltda'}
+                    cnpj={cnpj || '00.000.000/0001-99'}
+                    onNfceIssued={(doc) => {
+                      const amt = parseFloat(doc.total_value);
+                      const newTransaction: Transaction = {
+                        id: `t_nfce_${Date.now()}`,
+                        establishmentName: `Venda Consumidor NFC-e Nº ${doc.number}`,
+                        amount: amt,
+                        date: new Date().toISOString().substring(0, 10),
+                        category: 'Outros',
+                        status: 'Confirmado',
+                        notes: `NFC-e autorizada e emitida de forma integrada pelo PDV. Chave: ${doc.access_key}`,
+                        type: 'Receita'
+                      };
+                      const updatedTxList = [newTransaction, ...transactions];
+                      setTransactions(updatedTxList);
+                      localStorage.setItem('biz_simulated_transactions', JSON.stringify(updatedTxList));
+                      
+                      const nextCash = cashBalance + amt;
+                      setCashBalance(nextCash);
+                      localStorage.setItem('biz_simulated_cash_balance', String(nextCash));
+                    }}
+                  />
+                </div>
+              </ProtectedModule>
             )}
 
             {activeTab === 'master_admin' && (
-              <div id="master-admin-tab-view" className="space-y-4 w-full">
-                <MasterAdminTool theme={theme} />
-              </div>
+              <ProtectedModule permission={MODULE_PERMISSIONS.admin.view}>
+                <div id="master-admin-tab-view" className="space-y-4 w-full">
+                  <MasterAdminTool theme={theme} />
+                </div>
+              </ProtectedModule>
             )}
 
           </main>

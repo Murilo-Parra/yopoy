@@ -1,13 +1,3 @@
-/**
- * Browser-safe authenticated fetch helper.
- *
- * This helper never reads tokens and never touches HttpOnly cookies directly.
- * Authentication is handled by the backend through the yopoy_session cookie.
- *
- * companyId in sessionStorage is only a UI/session hint.
- * It is not authorization. The backend validates tenant, session, and permissions.
- */
-
 export const YOPOY_COMPANY_ID_STORAGE_KEY = 'yopoy_company_id';
 
 export function getYopoyCompanyIdHint(): string | null {

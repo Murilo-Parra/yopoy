@@ -118,7 +118,8 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
       if (filterStatus) qNfe.set('status', filterStatus);
 
       const nfeRes = await authFetch(`/api/nfe?${qNfe.toString()}`, {
-        headers: {}
+        headers: {
+        }
       });
       const nfeData = await nfeRes.json();
       if (nfeData.success) {
@@ -127,7 +128,8 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
 
       // Fetch DANFEs history
       const danfeRes = await authFetch('/api/danfe', {
-        headers: {}
+        headers: {
+        }
       });
       const danfeData = await danfeRes.json();
       if (danfeData.success) {
@@ -150,8 +152,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
     try {
       const response = await authFetch('/api/danfe', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nfe_id: nfeId })
       });
       const data = await response.json();
@@ -171,8 +172,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
     try {
       await authFetch(`/api/danfe/${danfeId}/audit`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',},
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action })
       });
     } catch (err) {
@@ -184,7 +184,8 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
   const handleViewDanfe = async (danfeDoc: DanfeDocument) => {
     try {
       const response = await authFetch(`/api/danfe/${danfeDoc.id}`, {
-        headers: {}
+        headers: {
+        }
       });
       const data = await response.json();
       if (data.success) {

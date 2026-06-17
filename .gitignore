@@ -6,14 +6,3 @@ coverage/
 *.log
 .env*
 !.env.example
-
-.env
-.env.local
-node_modules/
-dist/
-*.pfx
-*.key
-*.pem
-*.crt
-*.cer
-*.zip

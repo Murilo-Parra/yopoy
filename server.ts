@@ -14,6 +14,12 @@ import { AuditLogger } from "./shared/audit";
 import { LegacyAuditSink } from "./infrastructure/audit";
 import { authRoutes } from "./modules/auth";
 import { companyRoutes, CompanyController, adminCompanyRoutes, adminUserRoutes } from "./modules/companies";
+
+import { LocalPostgresSqlExecutor } from "./src/infrastructure/postgres/executor/LocalPostgresSqlExecutor";
+import { LocalPostgresUnitOfWork } from "./src/infrastructure/postgres/unit-of-work/LocalPostgresUnitOfWork";
+import { createAdminUsersOperations } from "./src/backend/auth/createAdminUsersOperations";
+import { AdminUsersHttpHandlers } from "./src/backend/auth/AdminUsersHttpHandlers";
+import { registerAdminUsersRoutes } from "./src/backend/auth/registerAdminUsersRoutes";
 // import { fiscalRoutes, FiscalShadowRouter, FiscalShadowOperation } from "./modules/fiscal";
 import { 
   saveSyncKey, 
@@ -370,6 +376,21 @@ app.use("/api/auth", authRoutes);
 
 // Ativação do módulo modularized company routes para obter e atualizar dados empresariais
 app.use("/api/auth", companyRoutes);
+
+// Composição Módulo 48.2-J-F: Admin Users
+const adminUsersDatabaseUrl = process.env.DATABASE_URL;
+
+if (!adminUsersDatabaseUrl) {
+  throw new Error("DATABASE_URL é obrigatório para registrar /api/admin/users.");
+}
+
+const adminUsersExecutor = new LocalPostgresSqlExecutor(adminUsersDatabaseUrl);
+const adminUsersUnitOfWork = new LocalPostgresUnitOfWork(adminUsersExecutor);
+const adminUsersOperations = createAdminUsersOperations(adminUsersUnitOfWork);
+const adminUsersHandlers = new AdminUsersHttpHandlers(adminUsersOperations);
+const adminUsersRouter = registerAdminUsersRoutes(adminUsersHandlers);
+
+app.use("/api/admin", adminUsersRouter);
 
 // Rotas fiscais modulares de leitura em modo paralelo. Não substituem rotas fiscais legadas nesta Sprint.
 app.use("/api/fiscal-v2", fiscalRoutes);

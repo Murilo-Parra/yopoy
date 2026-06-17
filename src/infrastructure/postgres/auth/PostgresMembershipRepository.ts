@@ -11,6 +11,7 @@ export class PostgresMembershipRepository implements MembershipRepository {
       userId: row.user_id,
       companyId: row.company_id,
       role: row.role as AuthRole,
+      permissions: row.permissions || [],
       isActive: row.active,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
@@ -85,6 +86,27 @@ export class PostgresMembershipRepository implements MembershipRepository {
       params: [membershipId],
       mode: 'real',
       label: 'disableMembership'
+    });
+  }
+
+async updateMembershipStatus(membershipId: string, active: boolean): Promise<void> {
+    await this.executor.execute({
+      sql: 'UPDATE memberships SET active = $1, updated_at = NOW() WHERE id = $2',
+      params: [active, membershipId],
+      mode: 'real',
+      label: 'updateMembershipStatus'
+    });
+  }
+
+  async updatePermissions(
+    membershipId: string,
+    permissions: import("../../../application/auth/types").AuthPermission[]
+  ): Promise<void> {
+    await this.executor.execute({
+      sql: 'UPDATE memberships SET permissions = $1, updated_at = NOW() WHERE id = $2',
+      params: [permissions, membershipId],
+      mode: 'real',
+      label: 'updatePermissions'
     });
   }
 }

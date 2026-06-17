@@ -1,5 +1,5 @@
 import { AuthUserRepository } from '../../../application/auth/contracts/AuthUserRepository';
-import { AuthUser } from '../../../application/auth/types';
+import { AuthUser, SafeAuthUser } from '../../../application/auth/types';
 import { SqlExecutor } from '../executor/SqlExecutor';
 
 export class PostgresAuthUserRepository implements AuthUserRepository {
@@ -43,6 +43,49 @@ export class PostgresAuthUserRepository implements AuthUserRepository {
 
     if (rows.length === 0) return null;
     return this.toDomain(rows[0]);
+  }
+
+  async listCompanyUsers(companyId: string): Promise<SafeAuthUser[]> {
+    const rows = await this.executor.execute<any[]>({
+      sql: 'SELECT id, email, company_id, created_at, updated_at, failed_login_attempts, locked_until, last_login FROM users WHERE company_id = $1 ORDER BY created_at DESC',
+      params: [companyId],
+      mode: 'real',
+      label: 'listCompanyUsers'
+    });
+
+    return rows.map((row) => ({
+      id: row.id,
+      email: row.email,
+      companyId: row.company_id,
+      createdAt: new Date(row.created_at),
+      updatedAt: row.updated_at ? new Date(row.updated_at) : new Date(row.created_at),
+      failedLoginAttempts: row.failed_login_attempts || 0,
+      lockedUntil: row.locked_until ? new Date(row.locked_until) : null,
+      lastLoginAt: row.last_login ? new Date(row.last_login) : null,
+    }));
+  }
+
+  async findByEmailWithinCompany(email: string, companyId: string): Promise<AuthUser | null> {
+    const cleanEmail = email.trim().toLowerCase();
+
+    const rows = await this.executor.execute<any[]>({
+      sql: 'SELECT * FROM users WHERE LOWER(email) = LOWER($1) AND company_id = $2 LIMIT 1',
+      params: [cleanEmail, companyId],
+      mode: 'real',
+      label: 'findByEmailWithinCompany'
+    });
+
+    if (rows.length === 0) return null;
+    return this.toDomain(rows[0]);
+  }
+
+  async updateUserStatus(userId: string, companyId: string, active: boolean): Promise<void> {
+    await this.executor.execute({
+      sql: 'UPDATE users SET active = $1, updated_at = NOW() WHERE id = $2 AND company_id = $3',
+      params: [active, userId, companyId],
+      mode: 'real',
+      label: 'updateUserStatus'
+    });
   }
 
   async createUser(input: Omit<AuthUser, 'id' | 'createdAt' | 'updatedAt' | 'failedLoginAttempts' | 'lockedUntil' | 'lastLoginAt'>): Promise<AuthUser> {

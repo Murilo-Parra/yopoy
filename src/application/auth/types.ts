@@ -69,6 +69,7 @@ export interface Membership {
   userId: string;
   companyId: string;
   role: AuthRole;
+  permissions?: AuthPermission[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

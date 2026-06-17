@@ -1,5 +1,5 @@
 import { MembershipRepository } from '../contracts/MembershipRepository';
-import { Membership, AuthRole } from '../types';
+import { Membership, AuthRole, AuthPermission } from '../types';
 
 export class InMemoryMembershipRepository implements MembershipRepository {
   public memberships: Membership[] = [];
@@ -45,6 +45,22 @@ export class InMemoryMembershipRepository implements MembershipRepository {
     const index = this.memberships.findIndex((m) => m.id === membershipId);
     if (index !== -1) {
       this.memberships[index].isActive = false;
+      this.memberships[index].updatedAt = new Date();
+    }
+  }
+
+async updateMembershipStatus(membershipId: string, active: boolean): Promise<void> {
+    const index = this.memberships.findIndex((m) => m.id === membershipId);
+    if (index !== -1) {
+      this.memberships[index].isActive = active;
+      this.memberships[index].updatedAt = new Date();
+    }
+  }
+
+  async updatePermissions(membershipId: string, permissions: AuthPermission[]): Promise<void> {
+    const index = this.memberships.findIndex((m) => m.id === membershipId);
+    if (index !== -1) {
+      this.memberships[index].permissions = permissions;
       this.memberships[index].updatedAt = new Date();
     }
   }

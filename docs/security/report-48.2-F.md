@@ -60,6 +60,7 @@ const options: {
 
 ### C. Cadastro Seguro de Empresas sob RLS
 O fluxo de cadastro é blindado:
+- O identificador provisório `com_temp_bootstrap_guard` é usado para a transação inicial, limitando o escopo contra bypasses de controle.
 - Se o banco de dados apresentar restrições estritas de política de RLS que impeçam inserções novas voluntárias sem chave, o sistema cai em fallback seguro emitindo `501 BOOTSTRAP_NOT_IMPLEMENTED_SAFELY` sem desativar RLS.
 
 ---

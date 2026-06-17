@@ -26,6 +26,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
 import { XmlGenerator, XmlValidator } from '../utils/xmlGenerator';
+import { authFetch } from '../frontend/auth/authFetch';
 
 interface Customer {
   id: string;
@@ -180,8 +181,6 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
   // Load NFe List
   const fetchNfeList = async () => {
     setLoadingList(true);
-    const token = localStorage.getItem('token');
-    
     // Build query params
     const query = new URLSearchParams();
     if (filters.invoice_number) query.set('invoice_number', filters.invoice_number);
@@ -190,10 +189,8 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
     if (filters.status) query.set('status', filters.status);
 
     try {
-      const response = await fetch(`/api/nfe?${query.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await authFetch(`/api/nfe?${query.toString()}`, {
+        headers: {}
       });
       const data = await response.json();
       if (data.success) {
@@ -392,8 +389,6 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
 
     // Save initial NFe document as DRAFT layout
     const uniqueDocId = 'nfe_' + Math.floor(Math.random() * 10000000);
-    const token = localStorage.getItem('token');
-    
     const docPayload = {
       id: uniqueDocId,
       invoice_number: xmlInput.documentNumber,
@@ -406,12 +401,10 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
     };
 
     try {
-      const saveRes = await fetch('/api/nfe', {
+      const saveRes = await authFetch('/api/nfe', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          'Content-Type': 'application/json',},
         body: JSON.stringify({ doc: docPayload })
       });
       const saveData = await saveRes.json();
@@ -435,12 +428,10 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       // Assina o XML no modo de contingência/fallback visual
       signedXmlValue = originalXmlString.replace('</infNFe>', '  <Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha256" /></SignedInfo><SignatureValue>MIIBygYJKoZIhvcNAQcCoIIBuzCC...</SignatureValue></Signature></infNFe>');
       
-      const signRes = await fetch(`/api/nfe/${uniqueDocId}/status`, {
+      const signRes = await authFetch(`/api/nfe/${uniqueDocId}/status`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          'Content-Type': 'application/json',},
         body: JSON.stringify({
           status: 'SIGNED',
           fields: { xml_signed: signedXmlValue }
@@ -469,12 +460,10 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       
       let authorizedXmlValue = signedXmlValue.replace('</infNFe>', `</infNFe><protNFe><infProt><tpAmb>2</tpAmb><verAplic>GO4.0</verAplic><chNFe>${accessKey}</chNFe><dhRecbto>${new Date().toISOString()}</dhRecbto><nProt>${protNum}</nProt><cStat>100</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo></infProt></protNFe>`);
 
-      const transmitRes = await fetch(`/api/nfe/${uniqueDocId}/status`, {
+      const transmitRes = await authFetch(`/api/nfe/${uniqueDocId}/status`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          'Content-Type': 'application/json',},
         body: JSON.stringify({
           status: 'AUTHORIZED',
           fields: {
@@ -514,7 +503,6 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
 
   // Duplicate draft logic
   const handleDuplicateDraft = async (nfe: NfeDocument) => {
-    const token = localStorage.getItem('token');
     const newDocId = 'nfe_' + Math.floor(Math.random() * 10000000);
     const nextMax = Math.max(...nfeList.map(d => d.invoice_number), 0) + 1;
 
@@ -530,12 +518,10 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
     };
 
     try {
-      const response = await fetch('/api/nfe', {
+      const response = await authFetch('/api/nfe', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          'Content-Type': 'application/json',},
         body: JSON.stringify({ doc: dupPayload })
       });
       const data = await response.json();

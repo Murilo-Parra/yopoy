@@ -55,32 +55,17 @@ import ElparrarLandingPage from './components/ElparrarLandingPage';
 import MasterAdminTool from './components/MasterAdminTool';
 import NfcePosTool from './components/NfcePosTool';
 import YopoyLogo from './components/YopoyLogo';
+import { useAuth } from './frontend/auth/AuthContext';
 
 export default function App() {
+  const { authenticated, loading: authLoading, user: authUser, companyId, logout: apiLogout, refreshSession } = useAuth();
+
   // Controle de Tela Ativa: 'landing' (Página Inicial de Planos de Elparrar) ou 'erp' (Sistema Integrado)
-  const [currentUser, setCurrentUser] = useState<any>(() => {
-    const saved = localStorage.getItem('biz_current_user');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { return null; }
-    }
-    return null;
-  });
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
-  const [viewMode, setViewMode] = useState<'landing' | 'erp'>(() => {
-    const saved = localStorage.getItem('biz_current_user');
-    return saved ? 'erp' : 'landing';
-  });
+  const [viewMode, setViewMode] = useState<'landing' | 'erp'>('landing');
 
-  const [selectedPlan, setSelectedPlan] = useState<'micro' | 'pequena' | 'media' | 'corporativo'>(() => {
-    const saved = localStorage.getItem('biz_current_user');
-    if (saved) {
-      try {
-        const u = JSON.parse(saved);
-        return u.plan || 'media';
-      } catch (e) {}
-    }
-    return 'media';
-  });
+  const [selectedPlan, setSelectedPlan] = useState<'micro' | 'pequena' | 'media' | 'corporativo'>('media');
 
   // Controle de Abas Principais da Barra Lateral
   // 'dashboard' (Central), 'finance' (Contábil), 'logistics' (Estoque), 'advisor' (ChatGPT do Negócio), 'hierarchy' (Organograma), 'invoice' (Emitir Nota), 'settings' (Configurações), 'master_admin' (Super Administrador)
@@ -123,37 +108,22 @@ export default function App() {
     }
   }, [theme]);
 
-  // Validação em segundo plano do token Bearer no banco PostgreSQL/Cache local
+  // Sincronização automatizada e reativa do estado de autenticação real (Módulo 48.2-H)
   useEffect(() => {
-    const token = localStorage.getItem('biz_token');
-    if (token) {
-      fetch('/api/auth/session', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      .then(res => {
-        if (res.ok) {
-          return res.json();
-        } else {
-          throw new Error('Sessão expirada');
-        }
-      })
-      .then(data => {
-        if (data.success && data.user) {
-          setCurrentUser(data.user);
-          setCorporateName(data.user.corporateName || data.user.corporate_name || corporateName);
-          setTradeName(data.user.tradeName || data.user.trade_name || tradeName);
-          setCnpj(data.user.cnpj || cnpj);
-          localStorage.setItem('biz_current_user', JSON.stringify(data.user));
-        }
-      })
-      .catch(err => {
-        console.warn("Validação da sessão no PostgreSQL:", err.message);
-        handleLogout();
-      });
+    if (authenticated && authUser) {
+      setViewMode('erp');
+      setCurrentUser(authUser);
+      setSelectedPlan(authUser.plan || 'media');
+
+      const corpName = authUser.tradeName || authUser.corporateName || authUser.name || 'Empresa Distribuidora';
+      setCorporateName(authUser.corporateName || corpName);
+      setTradeName(authUser.tradeName || corpName);
+      setCnpj(authUser.cnpj || '00.000.000/0000-00');
+    } else if (!authLoading && !authenticated) {
+      setViewMode('landing');
+      setCurrentUser(null);
     }
-  }, []);
+  }, [authenticated, authUser, authLoading]);
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
@@ -245,18 +215,12 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    const token = localStorage.getItem('biz_token');
-    if (token) {
-      fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }).catch(err => console.warn('Erro ao revogar sessão Remota:', err));
-    }
+    // Chamar logout da API segura via cookie HTTP-Only (Módulo 48.2-H)
+    apiLogout().catch(err => {
+      console.warn("Erro ao deslogar sessão segura no backend:", err);
+    });
 
     localStorage.removeItem('biz_current_user');
-    localStorage.removeItem('biz_token');
     
     // Retorna e restaura os estados ao inicial do landing sem recarregar a página
     setCurrentUser(null);

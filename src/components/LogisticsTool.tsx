@@ -45,6 +45,7 @@ import { Product, Employee, Task, Transaction } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportProductsCSV, exportProductsPDF } from '../utils/exportUtils';
 import StockDistributionChart from './StockDistributionChart';
+import { authFetch } from '../frontend/auth/authFetch';
 
 export interface Supplier {
   name: string;
@@ -255,12 +256,10 @@ export default function LogisticsTool({
 
   const logFiscalAlteration = async (action: string, details: string) => {
     try {
-      const token = localStorage.getItem('biz_token');
-      await fetch('/api/audit/log', {
+      await authFetch('/api/audit/log', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
         body: JSON.stringify({ action, details })
       });

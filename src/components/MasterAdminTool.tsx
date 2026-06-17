@@ -32,6 +32,7 @@ import {
   Download
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
+import { authFetch } from '../frontend/auth/authFetch';
 
 interface MasterAdminToolProps {
   theme: 'light' | 'dark';
@@ -77,19 +78,18 @@ export default function MasterAdminTool({ theme }: MasterAdminToolProps) {
   // Funções de busca e alimentação de API
   useEffect(() => {
     setLoading(true);
-    const token = localStorage.getItem('biz_token');
-    const headers = { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+    const headers = { 'Content-Type': 'application/json' };
 
     Promise.all([
-      fetch('/api/admin/stats', { headers }).then(r => r.json()),
-      fetch('/api/admin/companies', { headers }).then(r => r.json()),
-      fetch('/api/admin/users', { headers }).then(r => r.json()),
-      fetch('/api/admin/affiliates', { headers }).then(r => r.json()),
-      fetch('/api/admin/commissions', { headers }).then(r => r.json()),
-      fetch('/api/admin/support', { headers }).then(r => r.json()),
-      fetch('/api/admin/audit-logs', { headers }).then(r => r.json()),
-      fetch('/api/admin/system', { headers }).then(r => r.json()),
-      fetch('/api/admin/custom-providers', { headers }).then(r => r.json())
+      authFetch('/api/admin/stats', { headers }).then(r => r.json()),
+      authFetch('/api/admin/companies', { headers }).then(r => r.json()),
+      authFetch('/api/admin/users', { headers }).then(r => r.json()),
+      authFetch('/api/admin/affiliates', { headers }).then(r => r.json()),
+      authFetch('/api/admin/commissions', { headers }).then(r => r.json()),
+      authFetch('/api/admin/support', { headers }).then(r => r.json()),
+      authFetch('/api/admin/audit-logs', { headers }).then(r => r.json()),
+      authFetch('/api/admin/system', { headers }).then(r => r.json()),
+      authFetch('/api/admin/custom-providers', { headers }).then(r => r.json())
     ])
     .then(([statsData, comps, usrs, affs, comms, tickets, logs, sys, providers]) => {
       setStats(statsData);
@@ -127,11 +127,9 @@ export default function MasterAdminTool({ theme }: MasterAdminToolProps) {
   const handleUpdateCompany = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editCompanyModal) return;
-    const token = localStorage.getItem('biz_token');
-
-    fetch(`/api/admin/companies/${editCompanyModal.id}/update`, {
+    authFetch(`/api/admin/companies/${editCompanyModal.id}/update`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editCompanyModal)
     })
     .then(res => {
@@ -150,11 +148,9 @@ export default function MasterAdminTool({ theme }: MasterAdminToolProps) {
 
   const handleDeleteCompany = (id: string, name: string) => {
     if (!confirm(`TEM CERTEZA ABSOLUTA que deseja excluir a empresa "${name}" permanente? Todos os produtos, lançamentos financeiros e dados multi-tenant vinculados de forma relacional serão removidos em cascata de forma irrecuperável!`)) return;
-    const token = localStorage.getItem('biz_token');
-
-    fetch(`/api/admin/companies/${id}/delete`, {
+    authFetch(`/api/admin/companies/${id}/delete`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' }
     })
     .then(res => {
       if (!res.ok) throw new Error("Erro de deleção");
@@ -173,11 +169,9 @@ export default function MasterAdminTool({ theme }: MasterAdminToolProps) {
   const handleUpdateUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editUserModal) return;
-    const token = localStorage.getItem('biz_token');
-
-    fetch(`/api/admin/users/${editUserModal.id}/update`, {
+    authFetch(`/api/admin/users/${editUserModal.id}/update`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(editUserModal)
     })
     .then(res => {
@@ -197,11 +191,9 @@ export default function MasterAdminTool({ theme }: MasterAdminToolProps) {
   // Mutações: Afiliados
   const handleCreateAffiliate = (e: React.FormEvent) => {
     e.preventDefault();
-    const token = localStorage.getItem('biz_token');
-
-    fetch('/api/admin/affiliates/create', {
+    authFetch('/api/admin/affiliates/create', {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(affiliateForm)
     })
     .then(res => {
@@ -221,11 +213,9 @@ export default function MasterAdminTool({ theme }: MasterAdminToolProps) {
 
   const handlePayCommission = (id: string) => {
     if (!confirm("Confirmar a realização do pagamento em conta desse afiliado e liquidar comissão pendente?")) return;
-    const token = localStorage.getItem('biz_token');
-
-    fetch(`/api/admin/commissions/${id}/pay`, {
+    authFetch(`/api/admin/commissions/${id}/pay`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json' }
     })
     .then(res => res.json())
     .then(data => {
@@ -241,11 +231,9 @@ export default function MasterAdminTool({ theme }: MasterAdminToolProps) {
   const handleReplyTicket = (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyTicketModal || !supportReplyText.trim()) return;
-    const token = localStorage.getItem('biz_token');
-
-    fetch(`/api/admin/support/${replyTicketModal.id}/reply`, {
+    authFetch(`/api/admin/support/${replyTicketModal.id}/reply`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: supportReplyText.trim(), status: ticketStatusUpdate })
     })
     .then(res => res.json())
@@ -1209,7 +1197,7 @@ export default function MasterAdminTool({ theme }: MasterAdminToolProps) {
                       <button 
                          onClick={async () => {
                            if (confirm("Confirmar exclusão?")) {
-                             await fetch(`/api/admin/custom-providers/${p.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${localStorage.getItem('biz_token')}` }});
+                             await authFetch(`/api/admin/custom-providers/${p.id}`, { method: 'DELETE', headers: {}});
                              setRefreshTrigger(prev => prev + 1);
                            }
                          }}
@@ -1568,10 +1556,9 @@ export default function MasterAdminTool({ theme }: MasterAdminToolProps) {
                 <button 
                   onClick={async () => {
                      try {
-                        const token = localStorage.getItem('biz_token');
-                        const res = await fetch('/api/admin/custom-providers', {
+                        const res = await authFetch('/api/admin/custom-providers', {
                            method: 'POST',
-                           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                           headers: { 'Content-Type': 'application/json' },
                            body: JSON.stringify(providerForm)
                         });
                         const data = await res.json();

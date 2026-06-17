@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
+import { authFetch } from '../frontend/auth/authFetch';
 
 interface Customer {
   id: string;
@@ -99,8 +100,6 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
   const printAreaRef = useRef<HTMLDivElement>(null);
 
   // Load token for request
-  const token = localStorage.getItem('token');
-
   // Helper trigger feedback
   const showFeedback = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
     setFeedback({ message, type });
@@ -118,10 +117,8 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
       if (filterCustomerId) qNfe.set('customer_id', filterCustomerId);
       if (filterStatus) qNfe.set('status', filterStatus);
 
-      const nfeRes = await fetch(`/api/nfe?${qNfe.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const nfeRes = await authFetch(`/api/nfe?${qNfe.toString()}`, {
+        headers: {}
       });
       const nfeData = await nfeRes.json();
       if (nfeData.success) {
@@ -129,10 +126,8 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
       }
 
       // Fetch DANFEs history
-      const danfeRes = await fetch('/api/danfe', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const danfeRes = await authFetch('/api/danfe', {
+        headers: {}
       });
       const danfeData = await danfeRes.json();
       if (danfeData.success) {
@@ -153,12 +148,10 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
   // Handle Generate/Regenerate DANFE
   const handleGenerateDanfe = async (nfeId: string) => {
     try {
-      const response = await fetch('/api/danfe', {
+      const response = await authFetch('/api/danfe', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          'Content-Type': 'application/json',},
         body: JSON.stringify({ nfe_id: nfeId })
       });
       const data = await response.json();
@@ -176,12 +169,10 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
   // Log specific client action to the Audit logs
   const logAuditAction = async (danfeId: string, action: 'VIEW' | 'DOWNLOAD' | 'PRINT' | 'REPRINT') => {
     try {
-      await fetch(`/api/danfe/${danfeId}/audit`, {
+      await authFetch(`/api/danfe/${danfeId}/audit`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+          'Content-Type': 'application/json',},
         body: JSON.stringify({ action })
       });
     } catch (err) {
@@ -192,10 +183,8 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
   // Open Document Modal Viewer
   const handleViewDanfe = async (danfeDoc: DanfeDocument) => {
     try {
-      const response = await fetch(`/api/danfe/${danfeDoc.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await authFetch(`/api/danfe/${danfeDoc.id}`, {
+        headers: {}
       });
       const data = await response.json();
       if (data.success) {
@@ -216,7 +205,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
 
   // Trigger PDF file download
   const handleDownloadPDF = (danfeId: string) => {
-    const downloadUrl = `/api/danfe/${danfeId}/download?token=${encodeURIComponent(token || '')}`;
+    const downloadUrl = `/api/danfe/${danfeId}/download`;
     
     // Create transient anchor for download to bypass nested iframe blockers
     const link = document.createElement('a');

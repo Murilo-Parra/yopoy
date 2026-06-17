@@ -25,6 +25,7 @@ import {
   Activity,
   Globe
 } from 'lucide-react';
+import { authFetch } from '../frontend/auth/authFetch';
 
 interface Partner {
   id: string;
@@ -474,14 +475,11 @@ export default function SettingsTool({
 
     localStorage.setItem('cfg_partners', JSON.stringify(partners));
 
-    // Salvar no Postgres remoto de forma multi-tenant segura se logado
-    const token = localStorage.getItem('biz_token');
-    if (token) {
-      fetch('/api/auth/company-update', {
+    // Salvar no backend via cookie HttpOnly; autorização real é validada no backend
+    authFetch('/api/auth/company-update', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           corporate_name: corporateName,
@@ -510,9 +508,8 @@ export default function SettingsTool({
         }
       })
       .catch(err => {
-        console.error("Falha ao salvar especificações corporativas no banco do Supabase:", err);
+        console.error("Falha ao salvar especificações corporativas no backend:", err);
       });
-    }
 
     // Despachar evento para notificar o resto do sistema
     window.dispatchEvent(new Event('storage'));

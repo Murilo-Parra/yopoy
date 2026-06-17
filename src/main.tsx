@@ -4,6 +4,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { YopoyClientProvider } from './frontend-api';
+import { AuthProvider } from './frontend/auth/AuthContext';
 
 async function startApp() {
   try {
@@ -20,13 +21,9 @@ async function startApp() {
     }
 
     // 2. Buscar dados unificados e sincronizados do servidor
-    const token = getOriginalItem('biz_token') || '';
     const headers: Record<string, string> = {};
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
-    }
 
-    const res = await fetch(`/api/sync/load?identifier=${encodeURIComponent(identifier)}`, { headers });
+    const res = await fetch(`/api/sync/load?identifier=${encodeURIComponent(identifier)}`, { headers, credentials: 'include' });
     if (res.ok) {
       const data = await res.json();
       
@@ -56,7 +53,9 @@ async function startApp() {
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
       <YopoyClientProvider>
-        <App />
+        <AuthProvider>
+          <App />
+        </AuthProvider>
       </YopoyClientProvider>
     </StrictMode>
   );

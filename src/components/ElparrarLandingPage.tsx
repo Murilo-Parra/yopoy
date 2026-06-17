@@ -1,6 +1,7 @@
 import React, { useState, useEffect, FormEvent } from 'react';
 import YopoyLogo from './YopoyLogo';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '../frontend/auth/AuthContext';
 import { 
   DollarSign, 
   Layers, 
@@ -40,10 +41,28 @@ interface ElparrarLandingPageProps {
 }
 
 export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, onLoginSuccess }: ElparrarLandingPageProps) {
+  const { login, registerCompany } = useAuth();
   const [mode, setMode] = useState<'landing' | 'login' | 'register' | 'forgot' | 'reset'>('landing');
   const [registerStep, setRegisterStep] = useState<1 | 2 | 3>(1);
 
-  // Estados dos novos campos simplificados para cadastro multi-tenant
+  // Estados dos novos campos robustos e seguros de empresa (Módulo 48.2-H)
+  const [companyRazaoSocial, setCompanyRazaoSocial] = useState('');
+  const [companyNomeFantasia, setCompanyNomeFantasia] = useState('');
+  const [companyCnpj, setCompanyCnpj] = useState('');
+  const [companyEmail, setCompanyEmail] = useState('');
+  const [companyTelefone, setCompanyTelefone] = useState('');
+  const [companyRua, setCompanyRua] = useState('');
+  const [companyNumero, setCompanyNumero] = useState('');
+  const [companyCidade, setCompanyCidade] = useState('');
+  const [companyUf, setCompanyUf] = useState('');
+  const [companyRegimeTributario, setCompanyRegimeTributario] = useState('simples_nacional');
+
+  const [adminNomeCompleto, setAdminNomeCompleto] = useState('');
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminSenha, setAdminSenha] = useState('');
+  const [adminConfirmarSenha, setAdminConfirmarSenha] = useState('');
+
+  // Estados dos novos campos simplificados para cadastro multi-tenant (compatibilidade)
   const [regCompanyName, setRegCompanyName] = useState('');
   const [regAdminName, setRegAdminName] = useState('');
   const [regEmail, setRegEmail] = useState('');
@@ -112,6 +131,7 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
   const [errorMessage, setErrorMessage] = useState('');
 
   // States for Login form
+  const [loginCompanyId, setLoginCompanyId] = useState('');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -177,15 +197,37 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
     }
   ];
 
-  // Validation Checks for Page 1 of Signup
-  // Validações locais da primeira página de cadastro simplificado
-  const isSimplifiedStep1Valid = regCompanyName.trim() !== '' &&
-                                 regAdminName.trim() !== '' &&
-                                 regEmail.trim() !== '' &&
-                                 regPassword.trim() !== '' &&
-                                 regConfirmPassword.trim() !== '' &&
-                                 regPassword === regConfirmPassword &&
-                                 regPassword.length >= 6;
+  // Helper para força de senha do administrador (Módulo 48.2-H)
+  const getPasswordStrength = (pass: string) => {
+    if (!pass) return { score: 0, text: '', color: 'bg-transparent', textColor: 'text-gray-400' };
+    if (pass.length < 6) return { score: 1, text: 'Senha Fraca (mínimo 6 caracteres)', color: 'bg-red-500 w-1/3', textColor: 'text-red-400' };
+    
+    const hasNumbers = /\d/.test(pass);
+    const hasUpper = /[A-Z]/.test(pass);
+    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
+    
+    if (hasNumbers && (hasUpper || hasSpecial)) {
+      return { score: 3, text: 'Senha Forte (Excelente!)', color: 'bg-emerald-500 w-full', textColor: 'text-emerald-400' };
+    }
+    return { score: 2, text: 'Senha Média (adicione letras maiúsculas/números/especiais)', color: 'bg-amber-500 w-2/3', textColor: 'text-amber-400' };
+  };
+
+  // Validation Checks for Page 1 of Signup (Módulo 48.2-H)
+  const isRobustStep1Valid = 
+    companyRazaoSocial.trim() !== '' &&
+    companyCnpj.replace(/\D/g, '').length === 14 &&
+    companyEmail.trim().includes('@') &&
+    companyRua.trim() !== '' &&
+    companyNumero.trim() !== '' &&
+    companyCidade.trim() !== '' &&
+    companyUf.trim().length === 2 &&
+    adminNomeCompleto.trim() !== '' &&
+    adminEmail.trim().includes('@') &&
+    adminSenha.trim().length >= 6 &&
+    adminSenha === adminConfirmarSenha;
+
+  // Manter para compatibilidade legada se necessário
+  const isSimplifiedStep1Valid = isRobustStep1Valid;
 
   // Validation Checks for Page 3 Payment Form
   const isPaymentValid = () => {
@@ -208,39 +250,49 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
     setRegisterStep(1); // Page 1 comes first anyway
   };
 
+  // UUID Validation helper
+  const isUuid = (str: string) => {
+    const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return regex.test(str);
+  };
+
   // Submit Sign In Form (unified custom check + backend postgres verification)
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoginError('');
+
+    if (!loginCompanyId.trim()) {
+      setLoginError('ID da empresa é obrigatório.');
+      return;
+    }
+
+    if (!isUuid(loginCompanyId.trim())) {
+      setLoginError('O ID da empresa deve ser um UUID válido (ex: 88888888-4444-4444-4444-121212121212).');
+      return;
+    }
+
+    if (!loginEmail.trim() || !loginEmail.includes('@')) {
+      setLoginError('Insira um e-mail válido.');
+      return;
+    }
+
+    if (!loginPass.trim()) {
+      setLoginError('A senha é obrigatória.');
+      return;
+    }
+
     setProcessingAuth(true);
 
     try {
-      const resp = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: loginEmail,
-          password: loginPass
-        })
-      });
-
-      const data = await resp.json();
+      await login(loginCompanyId.trim(), loginEmail.trim(), loginPass);
       setProcessingAuth(false);
-
-      if (resp.ok && data.success) {
-        // Enforce storing the secure session token
-        localStorage.setItem('biz_token', data.token);
-        
-        // Pass the user object to onLoginSuccess
-        onLoginSuccess(data.user);
-      } else {
-        setLoginError(data.error || 'Erro ao realizar login. Verifique suas credenciais.');
-      }
+      onLoginSuccess({
+        companyId: loginCompanyId.trim(),
+        email: loginEmail.trim()
+      });
     } catch (err: any) {
       setProcessingAuth(false);
-      setLoginError('Não foi possível conectar ao servidor de autenticação. Tente novamente.');
+      setLoginError(err.message || 'Erro ao realizar login. Verifique suas credenciais.');
     }
   };
 
@@ -250,45 +302,89 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
     setProcessingAuth(true);
     setLoadingStepLabel('Criando empresa multi-tenant no PostgreSQL...');
 
+    // Front-end Validations
+    if (!companyRazaoSocial.trim()) {
+      setErrorMessage('Razão social é obrigatória.');
+      setProcessingAuth(false);
+      return;
+    }
+    if (!companyCnpj.trim() || companyCnpj.replace(/\D/g, '').length !== 14) {
+      setErrorMessage('CNPJ inválido. Digite 14 números.');
+      setProcessingAuth(false);
+      return;
+    }
+    if (!companyEmail.trim() || !companyEmail.includes('@')) {
+      setErrorMessage('E-mail principal da empresa é obrigatório e deve ser válido.');
+      setProcessingAuth(false);
+      return;
+    }
+    if (!companyRua.trim() || !companyNumero.trim() || !companyCidade.trim() || companyUf.trim().length !== 2) {
+      setErrorMessage('Preencha todo o endereço corretamente (UF com 2 letras).');
+      setProcessingAuth(false);
+      return;
+    }
+    if (!adminNomeCompleto.trim()) {
+      setErrorMessage('Nome completo do administrador é obrigatório.');
+      setProcessingAuth(false);
+      return;
+    }
+    if (!adminEmail.trim() || !adminEmail.includes('@')) {
+      setErrorMessage('E-mail do administrador é obrigatório e deve ser válido.');
+      setProcessingAuth(false);
+      return;
+    }
+    if (!adminSenha || adminSenha.length < 6) {
+      setErrorMessage('A senha do administrador deve ter no mínimo 6 caracteres.');
+      setProcessingAuth(false);
+      return;
+    }
+    if (adminSenha !== adminConfirmarSenha) {
+      setErrorMessage('A confirmação de senha não coincide.');
+      setProcessingAuth(false);
+      return;
+    }
+
     try {
-      const resp = await fetch('/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
+      await registerCompany({
+        company: {
+          razaoSocial: companyRazaoSocial.trim(),
+          nomeFantasia: companyNomeFantasia.trim() || companyRazaoSocial.trim(),
+          cnpj: companyCnpj.replace(/\D/g, ''),
+          email: companyEmail.trim(),
+          telefone: companyTelefone.trim() || undefined,
+          endereco: {
+            rua: companyRua.trim(),
+            numero: companyNumero.trim(),
+            cidade: companyCidade.trim(),
+            uf: companyUf.trim().toUpperCase()
+          },
+          regimeTributario: companyRegimeTributario
         },
-        body: JSON.stringify({
-          companyName: regCompanyName,
-          adminName: regAdminName,
-          email: regEmail,
-          password: regPassword,
-          confirmPassword: regConfirmPassword,
-          plan: selectedPlanId || 'media'
-        })
+        admin: {
+          nomeCompleto: adminNomeCompleto.trim(),
+          email: adminEmail.trim(),
+          senha: adminSenha,
+          confirmarSenha: adminConfirmarSenha
+        }
       });
 
-      const data = await resp.json();
-      
-      if (resp.ok && data.success) {
-        setLoadingStepLabel('Configurando módulos de faturamento e estoque...');
+      setLoadingStepLabel('Configurando módulos de faturamento e estoque...');
+      setTimeout(() => {
+        setLoadingStepLabel('Tabelas relacionais prontas. Iniciando sessão segura...');
         setTimeout(() => {
-          setLoadingStepLabel('Tabelas relacionais prontas. Iniciando sessão segura...');
-          setTimeout(() => {
-            setProcessingAuth(false);
-            
-            // Gravar token Bearer
-            localStorage.setItem('biz_token', data.token);
-            
-            // Realizar login imediato
-            onLoginSuccess(data.user);
-          }, 600);
-        }, 600);
-      } else {
-        setProcessingAuth(false);
-        setErrorMessage(data.error || 'Erro ao realizar o cadastro. Por favor verifique.');
-      }
+          setProcessingAuth(false);
+          // O próprio AuthContext atualizará o estado para autenticado,
+          // mas chamamos onLoginSuccess por segurança / compatibilidade.
+          onLoginSuccess({
+            cnpj: companyCnpj.replace(/\D/g, ''),
+            corporateName: companyRazaoSocial.trim()
+          });
+        }, 650);
+      }, 650);
+
     } catch (err: any) {
       setProcessingAuth(false);
-      setErrorMessage('Erro de comunicação com o servidor. Tente novamente mais tarde.');
+      setErrorMessage(err.message || 'Erro ao realizar o cadastro. Por favor verifique.');
     }
   };
 
@@ -605,15 +701,39 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
-                    <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1.5">Usuário ou E-mail</label>
+                    <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1.5">ID da Empresa (UUID)</label>
                     <div className="relative">
-                      <Mail className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
+                      <Building className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
                       <input 
                         type="text" 
                         required
+                        value={loginCompanyId}
+                        onChange={(e) => setLoginCompanyId(e.target.value)}
+                        placeholder="Ex: 88888888-4444-4444-4444-121212121212"
+                        className={`w-full text-xs font-semibold pl-10 pr-4 py-3 rounded-xl border focus:outline-hidden transition-all ${
+                          theme === 'dark'
+                            ? 'bg-[#18181c] border-slate-800 focus:border-red-500 text-white'
+                            : 'bg-slate-50 border-slate-200 focus:border-indigo-500 text-slate-900'
+                        }`}
+                      />
+                    </div>
+                    {loginCompanyId && !isUuid(loginCompanyId) && (
+                      <p className="text-[9px] text-[#f87171] font-semibold mt-1">
+                        ⚠️ Formato UUID inválido. Digite um ID padrão.
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1.5">E-mail de Trabalho</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
+                      <input 
+                        type="email" 
+                        required
                         value={loginEmail}
                         onChange={(e) => setLoginEmail(e.target.value)}
-                        placeholder="Insira seu e-mail ou nome cadastrado"
+                        placeholder="Ex: adm@empresa.com"
                         className={`w-full text-xs font-semibold pl-10 pr-4 py-3 rounded-xl border focus:outline-hidden transition-all ${
                           theme === 'dark'
                             ? 'bg-[#18181c] border-slate-800 focus:border-red-500 text-white'
@@ -632,7 +752,7 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
                         required
                         value={loginPass}
                         onChange={(e) => setLoginPass(e.target.value)}
-                        placeholder="Preencha sua senha numérica ou de texto"
+                        placeholder="Preencha sua senha"
                         className={`w-full text-xs font-semibold pl-10 pr-4 py-3 rounded-xl border focus:outline-hidden transition-all ${
                           theme === 'dark'
                             ? 'bg-[#18181c] border-slate-800 focus:border-red-500 text-white'
@@ -982,101 +1102,253 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
                   </div>
                 )}
 
-                {/* STEP 1: DADOS CADASTRAIS (SIMPLIFICADO E SEGURO) */}
+                {/* STEP 1: DADOS CADASTRAIS (COMPLETO E SEGURO - MÓDULO 48.2-H) */}
                 {registerStep === 1 && (
-                  <div className="space-y-4">
+                  <div className="space-y-6">
+                    {/* SEÇÃO 1: DADOS DA EMPRESA */}
                     <div>
-                      <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Nome da Empresa</label>
-                      <input 
-                        type="text" 
-                        required
-                        value={regCompanyName}
-                        onChange={(e) => setRegCompanyName(e.target.value)}
-                        placeholder="Ex: Minha Empresa Distribuidora Ltda"
-                        className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                          theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                        }`}
-                      />
-                    </div>
+                      <h3 className="text-xs font-bold text-rose-500 uppercase tracking-widest border-b border-gray-800 pb-2 mb-4">
+                        1. Dados da Empresa
+                      </h3>
 
-                    <div>
-                      <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Nome Completo do Administrador</label>
-                      <input 
-                        type="text" 
-                        required
-                        value={regAdminName}
-                        onChange={(e) => setRegAdminName(e.target.value)}
-                        placeholder="Insira seu nome e sobrenome"
-                        className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                          theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                        }`}
-                      />
-                    </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Razão Social *</label>
+                          <input 
+                            type="text" 
+                            required
+                            value={companyRazaoSocial}
+                            onChange={(e) => setCompanyRazaoSocial(e.target.value)}
+                            placeholder="Ex: Minha Empresa Distribuidora Ltda"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                        </div>
 
-                    <div>
-                      <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">E-mail de Trabalho</label>
-                      <input 
-                        type="email" 
-                        required
-                        value={regEmail}
-                        onChange={(e) => setRegEmail(e.target.value)}
-                        placeholder="Ex: adm@suaempresa.com"
-                        className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                          theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                        }`}
-                      />
-                    </div>
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Nome Fantasia (Opcional)</label>
+                          <input 
+                            type="text" 
+                            value={companyNomeFantasia}
+                            onChange={(e) => setCompanyNomeFantasia(e.target.value)}
+                            placeholder="Ex: Yopoy Alimentos"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                        </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Senha de Acesso</label>
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">CNPJ (14 dígitos) *</label>
+                          <input 
+                            type="text" 
+                            required
+                            maxLength={18}
+                            value={companyCnpj}
+                            onChange={(e) => {
+                              // Simple CNPJ formatting suggestion
+                              const raw = e.target.value.replace(/\D/g, '');
+                              setCompanyCnpj(raw);
+                            }}
+                            placeholder="Apenas números (ex: 12345678000100)"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                          {companyCnpj && companyCnpj.replace(/\D/g, '').length !== 14 && (
+                            <p className="text-[9px] text-red-400 font-semibold mt-1">⚠️ CNPJ deve conter exatamente 14 números.</p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">E-mail Principal da Empresa *</label>
+                          <input 
+                            type="email" 
+                            required
+                            value={companyEmail}
+                            onChange={(e) => setCompanyEmail(e.target.value)}
+                            placeholder="Ex: financeiro@suaempresa.com"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Telefone de Contato</label>
+                          <input 
+                            type="text" 
+                            value={companyTelefone}
+                            onChange={(e) => setCompanyTelefone(e.target.value)}
+                            placeholder="Ex: 11999999999"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Regime Tributário *</label>
+                          <select
+                            value={companyRegimeTributario}
+                            onChange={(e) => setCompanyRegimeTributario(e.target.value)}
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          >
+                            <option value="simples_nacional">Simples Nacional</option>
+                            <option value="lucro_presumido">Lucro Presumido</option>
+                            <option value="lucro_real">Lucro Real</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* ENDEREÇO */}
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-4">
+                        <div className="sm:col-span-2">
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Logradouro / Rua *</label>
+                          <input 
+                            type="text" 
+                            required
+                            value={companyRua}
+                            onChange={(e) => setCompanyRua(e.target.value)}
+                            placeholder="Ex: Avenida Paulista"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Número *</label>
+                          <input 
+                            type="text" 
+                            required
+                            value={companyNumero}
+                            onChange={(e) => setCompanyNumero(e.target.value)}
+                            placeholder="Ex: 1000"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">UF (Estado) *</label>
+                          <input 
+                            type="text" 
+                            required
+                            maxLength={2}
+                            value={companyUf}
+                            onChange={(e) => setCompanyUf(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))}
+                            placeholder="SP"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border text-center focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-4">
+                        <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Cidade *</label>
                         <input 
-                          type="password" 
+                          type="text" 
                           required
-                          value={regPassword}
-                          onChange={(e) => setRegPassword(e.target.value)}
-                          placeholder="Mínimo 6 caracteres"
+                          value={companyCidade}
+                          onChange={(e) => setCompanyCidade(e.target.value)}
+                          placeholder="Ex: São Paulo"
                           className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
                             theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
                           }`}
                         />
                       </div>
-
-                      <div>
-                        <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Confirmar Senha</label>
-                        <input 
-                          type="password" 
-                          required
-                          value={regConfirmPassword}
-                          onChange={(e) => setRegConfirmPassword(e.target.value)}
-                          placeholder="Repita a senha inserida"
-                          className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                            theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                          }`}
-                        />
-                      </div>
                     </div>
 
-                    {regPassword && regConfirmPassword && regPassword !== regConfirmPassword && (
-                      <p className="text-[11px] text-rose-400 font-semibold mt-1">
-                        ⚠️ Atenção: As senhas inseridas não são idênticas.
-                      </p>
-                    )}
+                    {/* SEÇÃO 2: ADMINISTRADOR PRINCIPAL */}
+                    <div>
+                      <h3 className="text-xs font-bold text-rose-500 uppercase tracking-widest border-b border-gray-800 pb-2 mb-4">
+                        2. Administrador Principal da Conta
+                      </h3>
 
-                    {regPassword && regPassword.length < 6 && (
-                      <p className="text-[11px] text-rose-400 font-semibold mt-1">
-                        ⚠️ Requisito: A senha deve conter no mínimo 6 caracteres por razões de segurança.
-                      </p>
-                    )}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Nome Completo *</label>
+                          <input 
+                            type="text" 
+                            required
+                            value={adminNomeCompleto}
+                            onChange={(e) => setAdminNomeCompleto(e.target.value)}
+                            placeholder="Seu nome completo"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                        </div>
 
-                    {regPassword && regConfirmPassword && regPassword === regConfirmPassword && regPassword.length >= 6 && (
-                      <p className="text-[11px] text-emerald-400 font-semibold mt-1">
-                        ✓ Senha segura e validada com sucesso!
-                      </p>
-                    )}
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">E-mail Administrativo *</label>
+                          <input 
+                            type="email" 
+                            required
+                            value={adminEmail}
+                            onChange={(e) => setAdminEmail(e.target.value)}
+                            placeholder="Ex: admin@seuemail.com"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Senha de Acesso *</label>
+                          <input 
+                            type="password" 
+                            required
+                            value={adminSenha}
+                            onChange={(e) => setAdminSenha(e.target.value)}
+                            placeholder="Mínimo de 6 caracteres"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                          {/* Visual Indicator of strength */}
+                          {adminSenha && (
+                            <div className="mt-2 space-y-1">
+                              <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+                                <div className={`h-full transition-all duration-300 ${getPasswordStrength(adminSenha).color}`} />
+                              </div>
+                              <p className={`text-[10px] font-bold ${getPasswordStrength(adminSenha).textColor}`}>
+                                {getPasswordStrength(adminSenha).text}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Confirmar Senha *</label>
+                          <input 
+                            type="password" 
+                            required
+                            value={adminConfirmarSenha}
+                            onChange={(e) => setAdminConfirmarSenha(e.target.value)}
+                            placeholder="Digite novamente a senha"
+                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
+                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                            }`}
+                          />
+                          {adminSenha && adminConfirmarSenha && adminSenha !== adminConfirmarSenha && (
+                            <p className="text-[10px] text-red-400 font-bold mt-1">⚠️ As senhas não conferem.</p>
+                          )}
+                          {adminSenha && adminConfirmarSenha && adminSenha === adminConfirmarSenha && adminSenha.length >= 6 && (
+                            <p className="text-[10px] text-emerald-400 font-bold mt-1">✓ Senhas idênticas.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
                     {/* DYNAMIC PROGRESS BUTTON */}
-                    {isSimplifiedStep1Valid && (
+                    {isRobustStep1Valid && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -1085,7 +1357,7 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
                         <button
                           type="button"
                           onClick={() => setRegisterStep(2)}
-                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-[#f8fafc] text-xs font-black uppercase py-4 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md transform hover:scale-[1.01] transition-all"
+                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-[#f8fafc] text-xs font-black uppercase py-4 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md transform hover:scale-[1.01] transition-all animate-bounce"
                         >
                           Ir para o Passo 2: Escolha de Planos
                           <ArrowRight className="w-4 h-4" />

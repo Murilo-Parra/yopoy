@@ -30,6 +30,12 @@ export class AuthMembershipNotFoundError extends AuthError {
   }
 }
 
+export class AdminUserNotFoundError extends AuthError {
+  constructor() {
+    super('ADMIN_USER_NOT_FOUND', 'Usuário não encontrado.');
+  }
+}
+
 export class AuthSessionInvalidError extends AuthError {
   constructor() {
     super('AUTH_SESSION_INVALID', 'Sessão inválida ou não encontrada.');

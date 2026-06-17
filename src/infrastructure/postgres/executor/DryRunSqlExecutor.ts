@@ -10,14 +10,14 @@ export class DryRunSqlExecutor implements SqlExecutor {
     
     // Simulate some basic returns based on the label/command structure for testability
     if (command.sql.toLowerCase().includes('returning *')) {
-      return [{ id: 'mocked-id-dry-run' }] as any as T;
+      return [{ id: 'mocked-id-dry-run' }] as unknown as T;
     }
     
     if (command.sql.toLowerCase().includes('select')) {
-      return [] as any as T;
+      return [] as unknown as T;
     }
     
-    return undefined as any as T;
+    return undefined as unknown as T;
   }
 
   getExecutedCommands(): SqlCommand[] {

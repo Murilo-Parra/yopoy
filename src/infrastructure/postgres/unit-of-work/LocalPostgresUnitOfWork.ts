@@ -1,22 +1,33 @@
 import { PoolClient } from 'pg';
 import { UnitOfWork, TransactionContext } from './UnitOfWork';
 import { LocalPostgresSqlExecutor } from '../executor/LocalPostgresSqlExecutor';
+import { SqlExecutor } from '../executor/SqlExecutor';
+import { SqlCommand } from '../executor/SqlCommand';
 
 export class LocalPostgresUnitOfWork implements UnitOfWork {
   constructor(private executor: LocalPostgresSqlExecutor) {}
 
-  async transaction<T>(companyId: string, fn: (tx: TransactionContext) => Promise<T>): Promise<T> {
+  async transaction<T>(
+    companyId: string,
+    fn: (tx: TransactionContext) => Promise<T>
+  ): Promise<T> {
     const client: PoolClient = await this.executor.getClient();
-    
+
     try {
       await client.query('BEGIN');
-      await client.query(`SELECT set_config('app.current_company_id', $1, true)`, [companyId]);
+      await client.query(
+        `SELECT set_config('app.current_company_id', $1, true)`,
+        [companyId]
+      );
 
-      // Create a localized executor that uses this specific client
-      const localizedExecutor = {
-        execute: async (cmd: any) => {
-          const res = await client.query(cmd.sql, cmd.params);
-          return res.rows as any;
+      const localizedExecutor: SqlExecutor = {
+        execute: async <K = unknown>(cmd: SqlCommand): Promise<K> => {
+          const result = await client.query(
+            cmd.sql,
+            cmd.params ? [...cmd.params] : []
+          );
+
+          return result.rows as K;
         }
       };
 
@@ -24,9 +35,9 @@ export class LocalPostgresUnitOfWork implements UnitOfWork {
 
       await client.query('COMMIT');
       return result;
-    } catch (err) {
+    } catch (error) {
       await client.query('ROLLBACK');
-      throw err; // bubble up
+      throw error;
     } finally {
       client.release();
     }

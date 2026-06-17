@@ -109,10 +109,10 @@ describe('Native Postgres Sandbox - Auth RLS Isolation', () => {
 
     // Check Company A Context Isolation
     await uow.transaction(idC1, async (tx) => {
-      const memberships = await tx.executor.execute({ sql: 'SELECT * FROM memberships' });
-      const sessions = await tx.executor.execute({ sql: 'SELECT * FROM auth_sessions' });
-      const auditLogs = await tx.executor.execute({ sql: 'SELECT * FROM auth_audit_logs' });
-      const resetTokens = await tx.executor.execute({ sql: 'SELECT * FROM password_reset_tokens' });
+      const memberships = await tx.executor.execute<Array<{ company_id: string; user_id: string }>>({ sql: 'SELECT * FROM memberships' });
+      const sessions = await tx.executor.execute<Array<{ company_id: string; session_token_hash: string }>>({ sql: 'SELECT * FROM auth_sessions' });
+      const auditLogs = await tx.executor.execute<Array<{ company_id: string; event_type: string }>>({ sql: 'SELECT * FROM auth_audit_logs' });
+      const resetTokens = await tx.executor.execute<Array<{ company_id: string; reset_token_hash: string }>>({ sql: 'SELECT * FROM password_reset_tokens' });
 
       expect(memberships.length).toBe(1);
       expect(memberships[0].company_id).toBe(idC1);
@@ -133,10 +133,10 @@ describe('Native Postgres Sandbox - Auth RLS Isolation', () => {
 
     // Check Company B Context Isolation
     await uow.transaction(idC2, async (tx) => {
-      const memberships = await tx.executor.execute({ sql: 'SELECT * FROM memberships' });
-      const sessions = await tx.executor.execute({ sql: 'SELECT * FROM auth_sessions' });
-      const auditLogs = await tx.executor.execute({ sql: 'SELECT * FROM auth_audit_logs' });
-      const resetTokens = await tx.executor.execute({ sql: 'SELECT * FROM password_reset_tokens' });
+      const memberships = await tx.executor.execute<Array<{ company_id: string; user_id: string }>>({ sql: 'SELECT * FROM memberships' });
+      const sessions = await tx.executor.execute<Array<{ company_id: string; session_token_hash: string }>>({ sql: 'SELECT * FROM auth_sessions' });
+      const auditLogs = await tx.executor.execute<Array<{ company_id: string; event_type: string }>>({ sql: 'SELECT * FROM auth_audit_logs' });
+      const resetTokens = await tx.executor.execute<Array<{ company_id: string; reset_token_hash: string }>>({ sql: 'SELECT * FROM password_reset_tokens' });
 
       expect(memberships.length).toBe(1);
       expect(memberships[0].company_id).toBe(idC2);

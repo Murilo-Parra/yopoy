@@ -1,7 +1,7 @@
-// Empty file just to declare the UnitOfWork types
+import { SqlExecutor } from '../executor/SqlExecutor';
+
 export interface TransactionContext {
-  // Envelopa DB Client cru ou Transaction client base.
-  executor: any;
+  executor: SqlExecutor;
 }
 
 export interface UnitOfWork {

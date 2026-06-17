@@ -24,11 +24,11 @@ export class LocalPostgresSqlExecutor implements SqlExecutor {
 
   async execute<T = unknown>(command: SqlCommand): Promise<T> {
     // We can allow internal command mode flag if we want
-    this.executedCommands.push({ ...command, mode: 'postgres-local-sandbox' as any });
+    this.executedCommands.push({ ...command, mode: 'postgres-local-sandbox' });
 
     try {
       const result = await this.pool.query(command.sql, command.params);
-      return result.rows as any as T;
+      return result.rows as unknown as T;
     } catch (err) {
       console.error('LocalPostgresSqlExecutor Error:', err);
       throw err;

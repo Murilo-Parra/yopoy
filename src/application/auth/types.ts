@@ -14,7 +14,14 @@ export type AuthPermission =
   | 'payments:read'
   | 'inventory:read'
   | 'audit:read'
-  | 'settings:update';
+  | 'settings:update'
+  | 'admin:users:view'
+  | 'admin:users:manage'
+  | 'admin:users:create'
+  | 'admin:users:update'
+  | 'admin:users:permissions:update'
+  | 'admin:users:password:reset'
+  | 'admin:audit:view';
 
 export interface AuthUser {
   id: string;

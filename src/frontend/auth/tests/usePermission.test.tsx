@@ -31,8 +31,8 @@ describe('usePermission Hook Unit Tests', () => {
   });
 
   it('deve iniciar carregando e nao autorizado por seguranca', async () => {
-    let resolvePromise: (value: { allowed: boolean }) => void = () => {};
-    const promise = new Promise<{ allowed: boolean }>((resolve) => { resolvePromise = resolve; });
+    let resolvePromise: (value: any) => void = () => {};
+    const promise = new Promise<any>((resolve) => { resolvePromise = resolve; });
     vi.mocked(PermissionClient.checkPermission).mockReturnValueOnce(promise);
 
     render(<HookConsumer permission="finance:view" />);

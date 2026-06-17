@@ -31,7 +31,12 @@ export const MODULE_PERMISSIONS = {
   admin: {
     view: 'admin:view',
     companiesManage: 'admin:companies:manage',
+    usersView: 'admin:users:view',
     usersManage: 'admin:users:manage',
+    usersCreate: 'admin:users:create',
+    usersUpdate: 'admin:users:update',
+    usersPermissionsUpdate: 'admin:users:permissions:update',
+    usersPasswordReset: 'admin:users:password:reset',
     auditView: 'admin:audit:view',
     supportManage: 'admin:support:manage',
   },
@@ -56,7 +61,12 @@ export type SystemPermission =
   | 'settings:update'
   | 'admin:view'
   | 'admin:companies:manage'
+  | 'admin:users:view'
   | 'admin:users:manage'
+  | 'admin:users:create'
+  | 'admin:users:update'
+  | 'admin:users:permissions:update'
+  | 'admin:users:password:reset'
   | 'admin:audit:view'
   | 'admin:support:manage'
   | 'system:factory_reset';

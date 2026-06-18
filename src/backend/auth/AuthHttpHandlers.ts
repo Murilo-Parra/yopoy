@@ -120,7 +120,7 @@ export class AuthHttpHandlers {
    */
   public handleSession = async (req: Request, res: Response): Promise<void> => {
     try {
-      const companyId = (req.headers['x-yopoy-company-id'] || req.query.companyId) as string;
+      const companyId = req.headers['x-yopoy-company-id'] as string;
       if (!companyId || !AuthRequestValidators.isValidUuid(companyId)) {
         res.status(200).json({ authenticated: false });
         return;
@@ -177,7 +177,7 @@ export class AuthHttpHandlers {
    */
   public handleLogout = async (req: Request, res: Response): Promise<void> => {
     try {
-      const companyId = (req.headers['x-yopoy-company-id'] || req.query.companyId || req.body.companyId) as string;
+      const companyId = req.headers['x-yopoy-company-id'] as string;
       if (!companyId || !AuthRequestValidators.isValidUuid(companyId)) {
         AuthCookieService.clearSessionCookie(req, res);
         res.status(400).json({ ok: false, error: { code: 'INVALID_INPUT', message: 'companyId é obrigatório' } });

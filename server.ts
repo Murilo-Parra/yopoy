@@ -22,6 +22,7 @@ import { AdminUsersHttpHandlers } from "./src/backend/auth/AdminUsersHttpHandler
 import { registerAdminUsersRoutes } from "./src/backend/auth/registerAdminUsersRoutes";
 import { canRunFactoryReset } from "./src/backend/security/DangerousDevToolsGuard";
 import type { DangerousDevToolRequest } from "./src/backend/security/DangerousDevToolsGuard";
+import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
 // import { fiscalRoutes, FiscalShadowRouter, FiscalShadowOperation } from "./modules/fiscal";
 import { 
@@ -209,7 +210,12 @@ app.use(express.urlencoded({ limit: "15mb", extended: true }));
 // Centralized SaaS Multi-tenant AsyncLocalStorage request/thread context middleware
 app.use((req, res, next) => {
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
+  const legacyBearerAllowed = canUseLegacyBearerAuth({
+    nodeEnv: process.env.NODE_ENV,
+    enabledFlag: process.env.YOPOY_ENABLE_LEGACY_BEARER_AUTH
+  });
+
+  if (legacyBearerAllowed && authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.substring(7);
     validateSession(token).then((session) => {
       if (session) {
@@ -388,7 +394,12 @@ app.post("/api/gemini/chat-assistant", async (req: express.Request, res: express
 // Helper para validar sessão via Token Bearer do Header de Autorização
 async function getSessionFromRequest(req: express.Request): Promise<any | null> {
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
+  const legacyBearerAllowed = canUseLegacyBearerAuth({
+    nodeEnv: process.env.NODE_ENV,
+    enabledFlag: process.env.YOPOY_ENABLE_LEGACY_BEARER_AUTH
+  });
+
+  if (legacyBearerAllowed && authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.substring(7);
     const session = await validateSession(token);
     return session;

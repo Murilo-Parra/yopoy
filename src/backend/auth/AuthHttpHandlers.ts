@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { randomUUID } from 'crypto';
+import type { AuthPermission } from '../../application/auth/types';
 import { LocalPostgresUnitOfWork } from '../../infrastructure/postgres/unit-of-work/LocalPostgresUnitOfWork';
 import { PostgresAuthUserRepository } from '../../infrastructure/postgres/auth/PostgresAuthUserRepository';
 import { PostgresMembershipRepository } from '../../infrastructure/postgres/auth/PostgresMembershipRepository';
@@ -29,6 +30,90 @@ import {
 import { AuthCookieService } from './AuthCookieService';
 import { AuthRequestValidators } from './AuthRequestValidators';
 import { AuthHttpErrors } from './AuthHttpErrors';
+
+// Define AuthHttpHandlers helpers
+type ErrorLike = {
+  errorCode?: unknown;
+  code?: unknown;
+  message?: unknown;
+  detail?: unknown;
+};
+
+function getErrorCode(error: unknown): string | undefined {
+  if (typeof error !== 'object' || error === null) {
+    return undefined;
+  }
+  const errObj = error as ErrorLike;
+  if (typeof errObj.errorCode === 'string') return errObj.errorCode;
+  if (typeof errObj.code === 'string') return errObj.code;
+  return undefined;
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'object' && error !== null) {
+    const value = (error as ErrorLike).message;
+    return typeof value === 'string' ? value : '';
+  }
+  return '';
+}
+
+function getErrorDetail(error: unknown): string {
+  if (typeof error !== 'object' || error === null) {
+    return '';
+  }
+  const value = (error as ErrorLike).detail;
+  return typeof value === 'string' ? value : '';
+}
+
+type UserDisplayNameFields = {
+  fullName?: unknown;
+  name?: unknown;
+};
+
+function getUserDisplayName(user: unknown, fallbackEmail: string): string {
+  if (typeof user !== 'object' || user === null) {
+    return fallbackEmail.split('@')[0];
+  }
+  const userWithFields = user as UserDisplayNameFields;
+  if (typeof userWithFields.fullName === 'string' && userWithFields.fullName.trim()) {
+    return userWithFields.fullName;
+  }
+  if (typeof userWithFields.name === 'string' && userWithFields.name.trim()) {
+    return userWithFields.name;
+  }
+  return fallbackEmail.split('@')[0];
+}
+
+const VALID_AUTH_PERMISSIONS: AuthPermission[] = [
+  'company:read',
+  'company:update',
+  'users:read',
+  'users:create',
+  'users:update',
+  'users:disable',
+  'customers:read',
+  'customers:create',
+  'sales:read',
+  'sales:create',
+  'payments:read',
+  'inventory:read',
+  'audit:read',
+  'settings:update',
+  'admin:users:view',
+  'admin:users:manage',
+  'admin:users:create',
+  'admin:users:update',
+  'admin:users:permissions:update',
+  'admin:users:password:reset',
+  'admin:audit:view'
+];
+
+function isAuthPermission(value: unknown): value is AuthPermission {
+  return typeof value === 'string' && (VALID_AUTH_PERMISSIONS as string[]).includes(value);
+}
 
 export class AuthHttpHandlers {
   constructor(private readonly uow: LocalPostgresUnitOfWork) {}
@@ -70,12 +155,12 @@ export class AuthHttpHandlers {
       AuthCookieService.setSessionCookie(req, res, result.rawSessionToken, result.session.expiresAt);
 
       const userEmail = result.user.email;
-      const response: any = {
+      const response: Record<string, unknown> = {
         ok: true,
         user: {
           id: result.user.id,
           companyId: result.user.companyId || result.membership.companyId,
-          fullName: (result.user as any).fullName || (result.user as any).name || userEmail.split('@')[0],
+          fullName: getUserDisplayName(result.user, userEmail),
           email: userEmail,
           role: result.membership.role
         },
@@ -91,22 +176,19 @@ export class AuthHttpHandlers {
       }
 
       res.status(200).json(response);
-    } catch (err: any) {
-      const errorCode = err?.code;
-
-      if (errorCode === 'AUTH_INVALID_CREDENTIALS' || err instanceof AuthInvalidCredentialsError) {
+    } catch (err) {
+      const code = getErrorCode(err);
+      if (err instanceof AuthInvalidCredentialsError || code === 'AUTH_INVALID_CREDENTIALS') {
         return AuthHttpErrors.sendInvalidCredentials(res);
       }
-
-      if (errorCode === 'AUTH_USER_LOCKED' || err instanceof AuthUserLockedError) {
-        return AuthHttpErrors.sendLocked(res, err.message);
+      if (err instanceof AuthUserLockedError || code === 'AUTH_USER_LOCKED') {
+        const msg = getErrorMessage(err);
+        return AuthHttpErrors.sendLocked(res, msg || 'Usuário bloqueado.');
       }
-
-      if (errorCode === 'AUTH_VALIDATION_ERROR' || err instanceof AuthValidationError) {
-        return AuthHttpErrors.sendInvalidInput(res, err.message);
+      if (err instanceof AuthValidationError || code === 'AUTH_VALIDATION_ERROR') {
+        return AuthHttpErrors.sendInvalidInput(res, getErrorMessage(err));
       }
-
-      if (errorCode === 'AUTH_MEMBERSHIP_NOT_FOUND' || err instanceof AuthMembershipNotFoundError) {
+      if (err instanceof AuthMembershipNotFoundError || code === 'AUTH_MEMBERSHIP_NOT_FOUND') {
         return AuthHttpErrors.sendUnauthorized(res, 'Associação de usuário não encontrada ou inativa.');
       }
 
@@ -260,13 +342,17 @@ export class AuthHttpHandlers {
 
         const requirePermissionUseCase = new RequirePermissionUseCase(auditRepository);
         try {
+          if (!isAuthPermission(permission)) {
+            return false;
+          }
           await requirePermissionUseCase.execute({
             session: sessionOutput.session,
-            permission: permission as any
+            permission
           });
           return true;
         } catch (err) {
-          if (err instanceof AuthPermissionDeniedError) {
+          const code = getErrorCode(err);
+          if (err instanceof AuthPermissionDeniedError || code === 'AUTH_PERMISSION_DENIED') {
             return false;
           }
           throw err;
@@ -372,25 +458,25 @@ export class AuthHttpHandlers {
           expiresAt: expiresAt.toISOString()
         }
       });
-    } catch (err: any) {
-      const errorCode = err?.code;
-      const errorMessage = String(err?.message || '');
+    } catch (err) {
+      const code = getErrorCode(err);
+      const msg = getErrorMessage(err);
 
-      if (errorCode === 'AUTH_VALIDATION_ERROR' || err instanceof AuthValidationError) {
-        return AuthHttpErrors.sendInvalidInput(res, err.message);
+      if (err instanceof AuthValidationError || code === 'AUTH_VALIDATION_ERROR') {
+        return AuthHttpErrors.sendInvalidInput(res, msg);
       }
 
-      if (errorMessage.startsWith('Password policy violated')) {
-        return AuthHttpErrors.sendInvalidInput(res, 'Senha não atende à política de segurança.');
-      }
-
-      if (err.code === '23505') {
-        const errorDetail = (err.detail || err.message || '').toLowerCase();
+      if (code === '23505') {
+        const errorDetail = (getErrorDetail(err) || msg).toLowerCase();
         if (errorDetail.includes('companies') || errorDetail.includes('cnpj') || errorDetail.includes('document')) {
           return AuthHttpErrors.sendCompanyAlreadyExists(res);
         } else {
           return AuthHttpErrors.sendUserAlreadyExists(res);
         }
+      }
+
+      if (msg && msg.startsWith('Password policy violated')) {
+        return AuthHttpErrors.sendInvalidInput(res, 'Senha não atende à política de segurança.');
       }
 
       console.error('Company registration handler error:', err);

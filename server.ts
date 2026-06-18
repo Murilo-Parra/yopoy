@@ -20,6 +20,9 @@ import { LocalPostgresUnitOfWork } from "./src/infrastructure/postgres/unit-of-w
 import { createAdminUsersOperations } from "./src/backend/auth/createAdminUsersOperations";
 import { AdminUsersHttpHandlers } from "./src/backend/auth/AdminUsersHttpHandlers";
 import { registerAdminUsersRoutes } from "./src/backend/auth/registerAdminUsersRoutes";
+import { canRunFactoryReset } from "./src/backend/security/DangerousDevToolsGuard";
+import type { DangerousDevToolRequest } from "./src/backend/security/DangerousDevToolsGuard";
+
 // import { fiscalRoutes, FiscalShadowRouter, FiscalShadowOperation } from "./modules/fiscal";
 import { 
   saveSyncKey, 
@@ -105,6 +108,22 @@ const PORT = 3000;
 
 app.post('/api/system/factory-reset', async (req, res) => {
   try {
+    const guardRequest: DangerousDevToolRequest = {
+      nodeEnv: process.env.NODE_ENV,
+      enabledFlag: process.env.YOPOY_ENABLE_FACTORY_RESET,
+      expectedToken: process.env.YOPOY_FACTORY_RESET_TOKEN,
+      providedToken: typeof req.headers['x-yopoy-dev-reset-token'] === 'string' ? req.headers['x-yopoy-dev-reset-token'] : undefined
+    };
+
+    if (!canRunFactoryReset(guardRequest)) {
+      return res.status(403).json({ success: false, error: 'FACTORY_RESET_FORBIDDEN' });
+    }
+
+    const adminHash = process.env.YOPOY_FACTORY_RESET_ADMIN_PASSWORD_HASH;
+    if (!adminHash) {
+      return res.status(403).json({ success: false, error: 'FACTORY_RESET_MISSING_ADMIN_HASH' });
+    }
+
     let tablesCleaned = 0;
     let recordsRemoved = 0;
     if (isPostgresActive && pgPool) {
@@ -126,7 +145,9 @@ app.post('/api/system/factory-reset', async (req, res) => {
             recordsRemoved += count;
             await client.query(`TRUNCATE TABLE ${table} CASCADE`);
             tablesCleaned++;
-          } catch (e) {}
+          } catch {
+            // ignore table-specific cleanup failure
+          }
         }
 
         // Insert master admin
@@ -136,8 +157,8 @@ app.post('/api/system/factory-reset', async (req, res) => {
         `);
         await client.query(`
           INSERT INTO users (id, company_id, name, login, password_hash, is_admin, role, active, created_at)
-          VALUES ('usr_master_admin', 'comp_admin_master', 'Master Administrator', 'admin@elparrar.com', 'NO_HASH_REQUIRED_HARDCODED_CHEAT', true, 'Proprietário', true, NOW())
-        `);
+          VALUES ('usr_master_admin', 'comp_admin_master', 'Master Administrator', 'admin@elparrar.com', $1, true, 'Proprietário', true, NOW())
+        `, [adminHash]);
         await client.query('COMMIT');
       } catch (err) {
         await client.query('ROLLBACK');
@@ -161,7 +182,7 @@ app.post('/api/system/factory-reset', async (req, res) => {
       }
     }
 
-    res.json({
+    return res.json({
       success: true,
       report: {
         tablesCleaned,
@@ -171,8 +192,12 @@ app.post('/api/system/factory-reset', async (req, res) => {
       }
     });
 
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
+  } catch (err) {
+    console.error("Factory reset failed:", err);
+    return res.status(500).json({
+      success: false,
+      error: "FACTORY_RESET_FAILED"
+    });
   }
 });
 

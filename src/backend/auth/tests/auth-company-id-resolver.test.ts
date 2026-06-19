@@ -1,7 +1,11 @@
-import { describe, it, expect } from 'vitest';
-import { resolveAuthCompanyId, type AuthCompanyIdRequest } from '../AuthCompanyIdResolver';
+import { describe, expect, it } from 'vitest';
+import {
+  resolveAuthCompanyId,
+  resolveAuthHeaderString,
+  type AuthCompanyIdRequest,
+} from '../AuthCompanyIdResolver';
 
-describe('AuthCompanyIdResolver', () => {
+describe('AuthCompanyIdResolver.resolveAuthCompanyId', () => {
   it('deve retornar undefined se nenhum companyId for fornecido', () => {
     const req: AuthCompanyIdRequest = { body: {}, headers: {} };
 
@@ -65,5 +69,23 @@ describe('AuthCompanyIdResolver', () => {
     };
 
     expect(resolveAuthCompanyId(req)).toBeUndefined();
+  });
+});
+
+describe('AuthCompanyIdResolver.resolveAuthHeaderString', () => {
+  it('header ausente retorna undefined', () => {
+    expect(resolveAuthHeaderString({}, 'x-yopoy-company-id')).toBeUndefined();
+  });
+
+  it('header array retorna undefined', () => {
+    expect(resolveAuthHeaderString({ 'x-yopoy-company-id': ['a', 'b'] }, 'x-yopoy-company-id')).toBeUndefined();
+  });
+
+  it('header em branco retorna undefined', () => {
+    expect(resolveAuthHeaderString({ 'x-yopoy-company-id': '   ' }, 'x-yopoy-company-id')).toBeUndefined();
+  });
+
+  it('header string valida retorna valor com trim()', () => {
+    expect(resolveAuthHeaderString({ 'x-yopoy-company-id': '  valid-id  ' }, 'x-yopoy-company-id')).toBe('valid-id');
   });
 });

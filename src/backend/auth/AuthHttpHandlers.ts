@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { resolveAuthCompanyId } from './AuthCompanyIdResolver';
+import { resolveAuthCompanyId, resolveAuthHeaderString } from './AuthCompanyIdResolver';
 import { randomUUID } from 'crypto';
 import type { AuthPermission } from '../../application/auth/types';
 import { LocalPostgresUnitOfWork } from '../../infrastructure/postgres/unit-of-work/LocalPostgresUnitOfWork';
@@ -203,7 +203,7 @@ export class AuthHttpHandlers {
    */
   public handleSession = async (req: Request, res: Response): Promise<void> => {
     try {
-      const companyId = req.headers['x-yopoy-company-id'] as string;
+      const companyId = resolveAuthHeaderString(req.headers, 'x-yopoy-company-id');
       if (!companyId || !AuthRequestValidators.isValidUuid(companyId)) {
         res.status(200).json({ authenticated: false });
         return;

@@ -10,9 +10,11 @@ describe('Auth regression guard', () => {
   it('protege invariantes estáticas do AuthHttpHandlers', () => {
     const content = readProjectFile('src/backend/auth/AuthHttpHandlers.ts');
 
-    expect(content).toContain("import { resolveAuthCompanyId } from './AuthCompanyIdResolver';");
+    expect(content).toContain("import { resolveAuthCompanyId, resolveAuthHeaderString } from './AuthCompanyIdResolver';");
     expect(content).toContain("import type { AuthPermission } from '../../application/auth/types';");
     expect(content).toContain('const companyId = resolveAuthCompanyId(req);');
+    expect(content).toContain("resolveAuthHeaderString(req.headers, 'x-yopoy-company-id')");
+    expect(content).not.toContain("req.headers['x-yopoy-company-id'] as string");
     const passwordPolicyBranchStart = content.indexOf("if (msg && msg.startsWith('Password policy violated'))");
     const passwordPolicyBranchEnd = content.indexOf("console.error('Company registration handler error:', err);");
 
@@ -38,10 +40,14 @@ describe('Auth regression guard', () => {
     const content = readProjectFile('src/backend/auth/AuthCompanyIdResolver.ts');
 
     expect(content).toContain('export interface AuthCompanyIdRequest');
+    expect(content).toContain('export function resolveAuthHeaderString(');
     expect(content).toContain('export function resolveAuthCompanyId(req: AuthCompanyIdRequest): string | undefined');
+    expect(content).toContain('return value.trim();');
     expect(content).toContain('return companyIdBodyValue.trim();');
-    expect(content).toContain('return yopoyCompanyHeader.trim();');
-    expect(content).toContain('return legacyCompanyHeader.trim();');
+    expect(content).toContain("const yopoyCompanyHeader = resolveAuthHeaderString(req.headers, 'x-yopoy-company-id');");
+    expect(content).toContain("const legacyCompanyHeader = resolveAuthHeaderString(req.headers, 'x-company-id');");
+    expect(content).toContain('return yopoyCompanyHeader;');
+    expect(content).toContain('return legacyCompanyHeader;');
 
     expect(content).not.toContain("from 'express'");
     expect(content).not.toContain('from "express"');

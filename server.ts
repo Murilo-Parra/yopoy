@@ -26,6 +26,7 @@ import { registerFiscalValidationRoutes } from "./src/backend/fiscal/registerFis
 import { registerFiscalDocumentQueryRoutes } from "./src/backend/fiscal/registerFiscalDocumentQueryRoutes";
 import { registerSignedFiscalDocumentQueryRoutes } from "./src/backend/fiscal/registerSignedFiscalDocumentQueryRoutes";
 import { registerSefazQueryRoutes } from "./src/backend/fiscal/registerSefazQueryRoutes";
+import { registerNfeQueryRoutes } from "./src/backend/fiscal/registerNfeQueryRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
@@ -675,55 +676,11 @@ const isUserAuthorizedForNfeWrite = (session: LegacyActiveSession): boolean => {
   return allowedRoles.some(r => r.toLowerCase() === userRole.toLowerCase());
 };
 
-// 1. LISTAR TODAS AS NF-E COM FILTROS E PAGINAÇÃO
-app.get("/api/nfe", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      res.status(401).json({ error: "Sessão expirada para ler notas." });
-      return;
-    }
-    const invoice_number = req.query.invoice_number ? parseInt(req.query.invoice_number as string, 10) : undefined;
-    const series = req.query.series ? parseInt(req.query.series as string, 10) : undefined;
-    const customer_id = req.query.customer_id ? String(req.query.customer_id) : undefined;
-    const status = req.query.status ? String(req.query.status) : undefined;
-
-    const docs = await getNfeDocuments(session.company_id, { invoice_number, series, customer_id, status });
-    
-    // Log audit consulta
-    const ip = req.ip || (req.headers["x-forwarded-for"] as string) || "127.0.0.1";
-    await logAudit(session.company_id, session.user_id, "CONSULTA_NFE_LISTA", `Consultou lista de NF-e executada com filtros: ${JSON.stringify(req.query)}`, ip);
-
-    res.json({ success: true, documents: docs });
-  } catch (err: any) {
-    console.error("Erro ao ler nfe_documents:", err);
-    res.status(500).json({ error: `Falha ao obter lista de NF-e: ${err?.message || err}` });
-  }
-});
-
-// 2. OBTER DETALHES DE UMA NF-E ESPECÍFICA (MULTI-TENANT SAFE)
-app.get("/api/nfe/:id", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      res.status(401).json({ error: "Sessão expirada." });
-      return;
-    }
-    const doc = await getNfeDocumentById(session.company_id, req.params.id);
-    if (!doc) {
-      res.status(404).json({ error: "Documento fiscal NF-e não encontrado de forma multi-tenant segura." });
-      return;
-    }
-    
-    // Log audit consulta individual
-    const ip = req.ip || (req.headers["x-forwarded-for"] as string) || "127.0.0.1";
-    await logAudit(session.company_id, session.user_id, "CONSULTA_NFE_INDIVIDUAL", `Consultou detalhes da NF-e Nº ${doc.invoice_number} Série ${doc.series}.`, ip);
-
-    res.json({ success: true, document: doc });
-  } catch (err: any) {
-    console.error("Erro ao obter documento NF-e:", err);
-    res.status(500).json({ error: `Erro técnico ao ler documento: ${err?.message || err}` });
-  }
+registerNfeQueryRoutes(app, {
+  getSessionFromRequest,
+  getNfeDocuments,
+  getNfeDocumentById,
+  logAudit
 });
 
 // 3. PERSISTIR/CADASTRAR RASCUNHO OU VERSÕES DE NF-E (RBAC SECURE)

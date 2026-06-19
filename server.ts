@@ -29,6 +29,7 @@ import { registerSefazQueryRoutes } from "./src/backend/fiscal/registerSefazQuer
 import { registerNfeQueryRoutes } from "./src/backend/fiscal/registerNfeQueryRoutes";
 import { registerNfeDownloadRoutes } from "./src/backend/fiscal/registerNfeDownloadRoutes";
 import { registerNfseQueryRoutes } from "./src/backend/nfse/registerNfseQueryRoutes";
+import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registerAdminSystemMonitoringRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
@@ -2441,25 +2442,9 @@ app.get("/api/admin/audit-logs", requireMasterAdmin, async (req: express.Request
 });
 
 // 14. Monitoramento tecnológico
-app.get("/api/admin/system", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const memory = process.memoryUsage();
-    res.json({
-      postgresActive: isPostgresActive,
-      supabaseConfigured: !!(process.env.DATABASE_URL || "").includes("supabase"),
-      uptime: process.uptime(),
-      memoryUsedMB: Math.round(memory.heapUsed / 1024 / 1024),
-      memoryTotalMB: Math.round(memory.heapTotal / 1024 / 1024),
-      responseTimeEstMs: Math.floor(Math.random() * 8) + 2,
-      scheduledTasks: [
-        { name: "Verificação de faturas e assinaturas", schedule: "Diário, 00:00", next_run: "Próxima 00:00", status: "Agendado" },
-        { name: "Limpeza automática de sessões expiradas", schedule: "A cada 2 horas", next_run: "Em 1 hora", status: "Agendado" },
-        { name: "Backup e Sincronia de Seguranca", schedule: "Cada 30 minutos", next_run: "Em 15 minutos", status: "Sucesso" }
-      ]
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Erro no monitoramento do sistema" });
-  }
+registerAdminSystemMonitoringRoutes(app, {
+  requireMasterAdmin,
+  getIsPostgresActive: () => isPostgresActive
 });
 // --------------------------------------------------------------------
 

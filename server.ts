@@ -3,7 +3,6 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
-import fs from "fs";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import forge from "node-forge";
@@ -22,6 +21,7 @@ import { registerAdminUsersRoutes } from "./src/backend/auth/registerAdminUsersR
 import { registerFactoryResetRoutes } from "./src/backend/devtools/registerFactoryResetRoutes";
 import { registerGeminiRoutes } from "./src/backend/ai/registerGeminiRoutes";
 import { registerCompanyAuditLogRoutes } from "./src/backend/audit/registerCompanyAuditLogRoutes";
+import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
 // import { fiscalRoutes, FiscalShadowRouter, FiscalShadowOperation } from "./modules/fiscal";
@@ -2858,40 +2858,7 @@ app.post("/api/admin/custom-providers/:id/templates", requireMasterAdmin, async 
 // import { SefazEventQueue } from './src/utils/sefaz_events/SefazEventQueue';
 // import { SefazEventAuditService } from './src/utils/sefaz_events/SefazEventAuditService';
 
-// Rota pública para acessar/baixar o Manual Operacional (PDF)
-app.get("/manual.pdf", (req: express.Request, res: express.Response) => {
-  const manualPath = path.join(process.cwd(), "MANUAL_OPERACIONAL.pdf");
-  if (fs.existsSync(manualPath)) {
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="MANUAL_OPERACIONAL.pdf"');
-    res.sendFile(manualPath);
-  } else {
-    res.status(404).send("Manual em PDF não encontrado no servidor.");
-  }
-});
-
-
-app.get("/relatorio-nfse.pdf", (req: express.Request, res: express.Response) => {
-  const manualPath = path.join(process.cwd(), "RELATORIO_NFSE_INTEGRACAO.pdf");
-  if (fs.existsSync(manualPath)) {
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="RELATORIO_NFSE_INTEGRACAO.pdf"');
-    res.sendFile(manualPath);
-  } else {
-    res.status(404).send("Relatório PDF não encontrado no servidor.");
-  }
-});
-
-app.get("/relatorio-eventos.pdf", (req: express.Request, res: express.Response) => {
-  const manualPath = path.join(process.cwd(), "RELATORIO_EVENTOS_SEFAZ.pdf");
-  if (fs.existsSync(manualPath)) {
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", 'attachment; filename="RELATORIO_EVENTOS_SEFAZ.pdf"');
-    res.sendFile(manualPath);
-  } else {
-    res.status(404).send("Relatório PDF não encontrado no servidor.");
-  }
-});
+registerStaticPdfRoutes(app);
 
 // Inicialização das rotas do Vite para Desenvolvimento e Produção
 async function bootstrapServer() {

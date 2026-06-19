@@ -31,6 +31,7 @@ import { registerNfeQueryRoutes } from "./src/backend/fiscal/registerNfeQueryRou
 import { registerNfeDownloadRoutes } from "./src/backend/fiscal/registerNfeDownloadRoutes";
 import { registerNfceQueryRoutes } from "./src/backend/fiscal/registerNfceQueryRoutes";
 import { registerNfseQueryRoutes } from "./src/backend/nfse/registerNfseQueryRoutes";
+import { registerAdminAffiliateQueryRoutes } from "./src/backend/admin/registerAdminAffiliateQueryRoutes";
 import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registerAdminSystemMonitoringRoutes";
 import { registerSyncRoutes } from "./src/backend/sync/registerSyncRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
@@ -2016,20 +2017,11 @@ app.use("/api/admin", requireMasterAdmin, adminCompanyRoutes);
 app.use("/api/admin", requireMasterAdmin, adminUserRoutes);
 
 // 7. Listar Afiliados da Plataforma
-app.get("/api/admin/affiliates", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    let result: any[] = [];
-    if (isPostgresActive && pgPool) {
-      const affs = await pgPool.query("SELECT * FROM affiliates ORDER BY created_at DESC");
-      result = affs.rows;
-    } else {
-      result = JSON.parse(dbInMemoryLocal.global['affiliates'] || '[]');
-    }
-    res.json(result);
-  } catch (err) {
-    console.error("Erro ao listar afiliados:", err);
-    res.status(500).json({ error: "Erro ao listar afiliados." });
-  }
+registerAdminAffiliateQueryRoutes(app, {
+  requireMasterAdmin,
+  getIsPostgresActive: () => isPostgresActive,
+  getPgPool: () => pgPool,
+  dbInMemoryLocal
 });
 
 // 8. Cadastrar novo Afiliado

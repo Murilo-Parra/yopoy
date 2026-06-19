@@ -30,6 +30,7 @@ import { registerNfeQueryRoutes } from "./src/backend/fiscal/registerNfeQueryRou
 import { registerNfeDownloadRoutes } from "./src/backend/fiscal/registerNfeDownloadRoutes";
 import { registerNfseQueryRoutes } from "./src/backend/nfse/registerNfseQueryRoutes";
 import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registerAdminSystemMonitoringRoutes";
+import { registerSyncRoutes } from "./src/backend/sync/registerSyncRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
@@ -2082,40 +2083,10 @@ app.get("/api/sefaz/download/:docId", async (req: express.Request, res: express.
 });
 
 // --- BANCO DE DADOS POSTGRESQL & ATOMIC MULTI-TENANT SYNC SECURED ---
-// Rota de sincronização: Salvar chave de localStorage no PostgreSQL / Fallback local com isolamento absoluto
-app.post("/api/sync/save", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const { key, value } = req.body;
-    if (!key) {
-      res.status(400).json({ error: "Chave inválida." });
-      return;
-    }
-
-    // Se houver sessão ativa, sobrepomos o identificador com o company_id correto. Caso contrário, restrito a 'guest'!
-    const session = await getSessionFromRequest(req);
-    const identifier = session ? session.company_id : "guest";
-
-    await saveSyncKey(identifier, key, value);
-    res.json({ success: true });
-  } catch (err: any) {
-    console.error("Erro ao salvar sincronia de dados:", err);
-    res.status(500).json({ error: err.message || "Erro interno de sincronia" });
-  }
-});
-
-// Rota de sincronização: Carregar chaves do PostgreSQL com isolamento absoluto
-app.get("/api/sync/load", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    // Se houver sessão ativa, sobrepomos o identificador com o company_id correto. Caso contrário, restrito a 'guest'!
-    const session = await getSessionFromRequest(req);
-    const identifier = session ? session.company_id : "guest";
-
-    const data = await loadSyncData(identifier);
-    res.json(data);
-  } catch (err: any) {
-    console.error("Erro ao carregar sincronia de dados:", err);
-    res.status(500).json({ error: err.message || "Erro interno de sincronia" });
-  }
+registerSyncRoutes(app, {
+  getSessionFromRequest,
+  saveSyncKey,
+  loadSyncData
 });
 
 app.post("/api/audit/log", async (req: express.Request, res: express.Response): Promise<void> => {

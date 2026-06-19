@@ -259,7 +259,20 @@ export class AuthHttpHandlers {
    */
   public handleLogout = async (req: Request, res: Response): Promise<void> => {
     try {
-      const companyId = req.headers['x-yopoy-company-id'] as string;
+      const { companyId: companyIdBodyValue } = req.body as { companyId?: unknown };
+      const companyIdFromBody =
+        typeof companyIdBodyValue === 'string' ? companyIdBodyValue.trim() : '';
+
+      const yopoyCompanyHeader = req.headers['x-yopoy-company-id'];
+      const companyIdFromYopoyHeader =
+        typeof yopoyCompanyHeader === 'string' ? yopoyCompanyHeader.trim() : '';
+
+      const legacyCompanyHeader = req.headers['x-company-id'];
+      const companyIdFromLegacyHeader =
+        typeof legacyCompanyHeader === 'string' ? legacyCompanyHeader.trim() : '';
+
+      const companyId = companyIdFromBody || companyIdFromYopoyHeader || companyIdFromLegacyHeader;
+
       if (!companyId || !AuthRequestValidators.isValidUuid(companyId)) {
         AuthCookieService.clearSessionCookie(req, res);
         res.status(400).json({ ok: false, error: { code: 'INVALID_INPUT', message: 'companyId é obrigatório' } });

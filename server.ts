@@ -1017,7 +1017,7 @@ app.post("/api/fiscal/documents/:id/sign", async (req: express.Request, res: exp
 // MÓDULO EXCLUSIVO DE EMISSÃO NF-E COMPLETAS (nfe_documents)
 // ==========================================
 
-const isUserAuthorizedForNfeWrite = (session: any): boolean => {
+const isUserAuthorizedForNfeWrite = (session: LegacyActiveSession): boolean => {
   const allowedRoles = ["Proprietário", "Administrador", "Fiscal"];
   const userRole = session.role || (session.is_admin ? "Proprietário" : "Operador");
   return allowedRoles.some(r => r.toLowerCase() === userRole.toLowerCase());
@@ -1191,7 +1191,7 @@ app.get("/api/nfe/:id/download", async (req: express.Request, res: express.Respo
 // MÓDULO EXCLUSIVO DE NFC-e (Nota Fiscal de Consumidor Eletrônica - Model 65)
 // ==========================================
 
-const isUserAuthorizedForNfceWrite = (session: any): boolean => {
+const isUserAuthorizedForNfceWrite = (session: LegacyActiveSession): boolean => {
   const allowedRoles = ["Proprietário", "Administrador", "Fiscal", "Caixa", "Operador", "Operador PDV"];
   const userRole = session.role || (session.is_admin ? "Proprietário" : "Operador");
   return allowedRoles.some(r => r.toLowerCase() === userRole.toLowerCase());
@@ -1636,7 +1636,7 @@ app.post("/api/nfce/sync", async (req: express.Request, res: express.Response): 
 // MÓDULO EXCLUSIVO DE DANFE COMPLETO (danfe_documents)
 // ==========================================
 
-const isUserAuthorizedForDanfe = (session: any): boolean => {
+const isUserAuthorizedForDanfe = (session: LegacyActiveSession): boolean => {
   const allowedRoles = ["Proprietário", "Administrador", "Fiscal", "Financeiro"];
   const userRole = session.role || (session.is_admin ? "Proprietário" : "Operador");
   return allowedRoles.some(r => r.toLowerCase() === userRole.toLowerCase());
@@ -2299,7 +2299,7 @@ app.post("/api/sefaz/cce", async (req: express.Request, res: express.Response): 
 });
 
 // 5.2 CONSULTA DE SITUAÇÃO DO DOCUMENTO OU EVENTO FISCAL (RBAC EXTENSIVE TO FINANCEIRO + QUERY DIRECT SEFAZ)
-const isUserAuthorizedForQuery = (session: any): boolean => {
+const isUserAuthorizedForQuery = (session: LegacyActiveSession): boolean => {
   const allowedRoles = ["Proprietário", "Administrador", "Fiscal", "Financeiro"];
   const userRole = session.role || (session.is_admin ? "Proprietário" : "Operador");
   return allowedRoles.some(r => r.toLowerCase() === userRole.toLowerCase());

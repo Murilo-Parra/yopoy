@@ -1,18 +1,23 @@
-import type { Request } from 'express';
+export interface AuthCompanyIdRequest {
+  body?: unknown;
+  headers: Record<string, string | string[] | undefined>;
+}
 
-export function resolveAuthCompanyId(req: Request): string | undefined {
+export function resolveAuthCompanyId(req: AuthCompanyIdRequest): string | undefined {
   const { companyId: companyIdBodyValue } = (req.body || {}) as { companyId?: unknown };
-  
+
   if (typeof companyIdBodyValue === 'string' && companyIdBodyValue.trim() !== '') {
     return companyIdBodyValue.trim();
   }
-  
-  if (typeof req.headers['x-yopoy-company-id'] === 'string' && req.headers['x-yopoy-company-id'].trim() !== '') {
-    return req.headers['x-yopoy-company-id'].trim();
+
+  const yopoyCompanyHeader = req.headers['x-yopoy-company-id'];
+  if (typeof yopoyCompanyHeader === 'string' && yopoyCompanyHeader.trim() !== '') {
+    return yopoyCompanyHeader.trim();
   }
-  
-  if (typeof req.headers['x-company-id'] === 'string' && req.headers['x-company-id'].trim() !== '') {
-    return req.headers['x-company-id'].trim();
+
+  const legacyCompanyHeader = req.headers['x-company-id'];
+  if (typeof legacyCompanyHeader === 'string' && legacyCompanyHeader.trim() !== '') {
+    return legacyCompanyHeader.trim();
   }
 
   return undefined;

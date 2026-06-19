@@ -24,6 +24,7 @@ import { registerCompanyAuditLogRoutes } from "./src/backend/audit/registerCompa
 import { registerFiscalDiscoveryRoutes } from "./src/backend/fiscal/registerFiscalDiscoveryRoutes";
 import { registerFiscalValidationRoutes } from "./src/backend/fiscal/registerFiscalValidationRoutes";
 import { registerFiscalDocumentQueryRoutes } from "./src/backend/fiscal/registerFiscalDocumentQueryRoutes";
+import { registerSignedFiscalDocumentQueryRoutes } from "./src/backend/fiscal/registerSignedFiscalDocumentQueryRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
@@ -479,45 +480,9 @@ app.get("/api/fiscal/certificates", companyController.listCertificates);
 app.post("/api/fiscal/certificates", companyController.uploadCertificate);
 app.delete("/api/fiscal/certificates/:id", companyController.deleteCertificate);
 
-// 4. Listar todas as assinaturas geradas (xmls assinados)
-app.get("/api/fiscal/documents/signed", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      res.status(401).json({ error: "Sessão expirada." });
-      return;
-    }
-
-    const signedDocs = await getSignedDocuments(session.company_id);
-    res.json({ success: true, signedDocuments: signedDocs });
-  } catch (err) {
-    console.error("Erro ao obter assinaturas digitais:", err);
-    res.status(500).json({ error: "Erro interno ao carregar documentos fiscais assinados." });
-  }
-});
-
-// 5. Obter XML assinado específico por ID
-app.get("/api/fiscal/documents/signed/:id", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      res.status(401).json({ error: "Sessão inválida." });
-      return;
-    }
-
-    const signedDocs = await getSignedDocuments(session.company_id);
-    const target = signedDocs.find(d => d.id === req.params.id || d.document_id === req.params.id);
-
-    if (!target) {
-      res.status(404).json({ error: "O documento assinado correspondente a esta busca não foi localizado." });
-      return;
-    }
-
-    res.json({ success: true, signedDocument: target });
-  } catch (err) {
-    console.error("Erro ao carregar xml assinado:", err);
-    res.status(500).json({ error: "Falha ao carregar metadados e arquivos assinados." });
-  }
+registerSignedFiscalDocumentQueryRoutes(app, {
+  getSessionFromRequest,
+  getSignedDocuments
 });
 
 // 6. ASSINAR DIGITALMENTE UM DOCUMENTO FISCAL EXISTENTE

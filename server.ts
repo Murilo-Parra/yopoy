@@ -27,6 +27,7 @@ import { registerFiscalDocumentQueryRoutes } from "./src/backend/fiscal/register
 import { registerSignedFiscalDocumentQueryRoutes } from "./src/backend/fiscal/registerSignedFiscalDocumentQueryRoutes";
 import { registerSefazQueryRoutes } from "./src/backend/fiscal/registerSefazQueryRoutes";
 import { registerNfeQueryRoutes } from "./src/backend/fiscal/registerNfeQueryRoutes";
+import { registerNfeDownloadRoutes } from "./src/backend/fiscal/registerNfeDownloadRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
@@ -764,36 +765,10 @@ app.post("/api/nfe/:id/status", async (req: express.Request, res: express.Respon
 });
 
 // 5. EFETUAR DOWNLOAD DE XML OFICIAL (ORIGINAL, SIGNED, OU AUTHORIZED)
-app.get("/api/nfe/:id/download", async (req: express.Request, res: express.Response): Promise<void> => {
-  const ip = req.ip || (req.headers["x-forwarded-for"] as string) || "127.0.0.1";
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      res.status(401).json({ error: "Sessão expirada." });
-      return;
-    }
-
-    const doc = await getNfeDocumentById(session.company_id, req.params.id);
-    if (!doc) {
-      res.status(404).json({ error: "Documento fiscal não localizado ou acesso negado à sua companhia." });
-      return;
-    }
-
-    const xmlContent = doc.xml_authorized || doc.xml_signed || doc.xml_original;
-    if (!xmlContent) {
-      res.status(404).json({ error: "O XML correspondente a este documento faturado está vazio ou ausente." });
-      return;
-    }
-
-    await logAudit(session.company_id, session.user_id, "DOWNLOAD_XML_NFE", `Efetuou download de arquivo XML da NF-e N ${doc.invoice_number} Série ${doc.series}. [Ambiente: Sefaz Ativo]`, ip);
-
-    res.set("Content-Type", "application/xml");
-    res.set("Content-Disposition", `attachment; filename=NFe_${doc.invoice_number}_Serie_${doc.series}_${doc.status}.xml`);
-    res.send(xmlContent);
-  } catch (err: any) {
-    console.error("Erro ao baixar faturamento XML:", err);
-    res.status(500).json({ error: `Erro na extração do faturamento: ${err?.message || err}` });
-  }
+registerNfeDownloadRoutes(app, {
+  getSessionFromRequest,
+  getNfeDocumentById,
+  logAudit
 });
 
 // ==========================================

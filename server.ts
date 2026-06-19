@@ -23,6 +23,7 @@ import { registerGeminiRoutes } from "./src/backend/ai/registerGeminiRoutes";
 import { registerCompanyAuditLogRoutes } from "./src/backend/audit/registerCompanyAuditLogRoutes";
 import { registerFiscalDiscoveryRoutes } from "./src/backend/fiscal/registerFiscalDiscoveryRoutes";
 import { registerFiscalValidationRoutes } from "./src/backend/fiscal/registerFiscalValidationRoutes";
+import { registerFiscalDocumentQueryRoutes } from "./src/backend/fiscal/registerFiscalDocumentQueryRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
@@ -226,44 +227,13 @@ registerCompanyAuditLogRoutes(app, {
   getSessionFromRequest
 });
 
+registerFiscalDocumentQueryRoutes(app, {
+  getSessionFromRequest,
+  getFiscalDocuments,
+  getFiscalDocumentById
+});
+
 // 7d. Rotas do Módulo de Geração, Validação e Gerenciamento de XMLs Fiscais
-app.get("/api/fiscal/documents", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      res.status(401).json({ error: "Sessão expirada ou Token inválido." });
-      return;
-    }
-    const limit = parseInt(req.query.limit as string, 10) || 10;
-    const offset = parseInt(req.query.offset as string, 10) || 0;
-
-    const { documents, total } = await getFiscalDocuments(session.company_id, limit, offset);
-    res.json({ success: true, documents, total });
-  } catch (err) {
-    console.error("Erro ao obter documentos fiscais:", err);
-    res.status(500).json({ error: "Erro interno ao obter lista de documentos fiscais" });
-  }
-});
-
-app.get("/api/fiscal/documents/:id", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      res.status(401).json({ error: "Sessão expirada." });
-      return;
-    }
-    const doc = await getFiscalDocumentById(session.company_id, req.params.id);
-    if (!doc) {
-      res.status(404).json({ error: "Documento fiscal não encontrado ou acesso não autorizado." });
-      return;
-    }
-    res.json({ success: true, document: doc });
-  } catch (err) {
-    console.error("Erro ao carregar documento fiscal:", err);
-    res.status(500).json({ error: "Erro interno ao carregar documento" });
-  }
-});
-
 app.post("/api/fiscal/documents", async (req: express.Request, res: express.Response): Promise<void> => {
   try {
     const session = await getSessionFromRequest(req);

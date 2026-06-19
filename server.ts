@@ -208,6 +208,21 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ limit: "15mb", extended: true }));
 
 // Centralized SaaS Multi-tenant AsyncLocalStorage request/thread context middleware
+type LegacyValidatedSession = Awaited<ReturnType<typeof validateSession>>;
+type LegacyActiveSession = NonNullable<LegacyValidatedSession>;
+
+type RequestWithLegacySession = express.Request & {
+  session?: LegacyActiveSession;
+};
+
+function attachLegacySessionToRequest(
+  req: express.Request,
+  session: LegacyActiveSession
+): void {
+  const requestWithSession = req as RequestWithLegacySession;
+  requestWithSession.session = session;
+}
+
 app.use((req, res, next) => {
   const authHeader = req.headers.authorization;
   const legacyBearerAllowed = canUseLegacyBearerAuth({
@@ -219,7 +234,7 @@ app.use((req, res, next) => {
     const token = authHeader.substring(7);
     validateSession(token).then((session) => {
       if (session) {
-        (req as any).session = session;
+        attachLegacySessionToRequest(req, session);
         tenantContext.run({ companyId: session.company_id, userId: session.user_id }, () => {
           next();
         });
@@ -392,7 +407,7 @@ app.post("/api/gemini/chat-assistant", async (req: express.Request, res: express
 // --- ROTAS DO SISTEMA DE AUTENTICAÇÃO E CADASTRO SEGURO (MULTI-TENANT) ---
 
 // Helper para validar sessão via Token Bearer do Header de Autorização
-async function getSessionFromRequest(req: express.Request): Promise<any | null> {
+async function getSessionFromRequest(req: express.Request): Promise<LegacyActiveSession | null> {
   const authHeader = req.headers.authorization;
   const legacyBearerAllowed = canUseLegacyBearerAuth({
     nodeEnv: process.env.NODE_ENV,

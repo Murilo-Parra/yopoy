@@ -21,6 +21,7 @@ import { AdminUsersHttpHandlers } from "./src/backend/auth/AdminUsersHttpHandler
 import { registerAdminUsersRoutes } from "./src/backend/auth/registerAdminUsersRoutes";
 import { registerFactoryResetRoutes } from "./src/backend/devtools/registerFactoryResetRoutes";
 import { registerGeminiRoutes } from "./src/backend/ai/registerGeminiRoutes";
+import { registerCompanyAuditLogRoutes } from "./src/backend/audit/registerCompanyAuditLogRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
 // import { fiscalRoutes, FiscalShadowRouter, FiscalShadowOperation } from "./modules/fiscal";
@@ -223,43 +224,15 @@ app.post("/api/fiscal/discover", (req: express.Request, res: express.Response): 
   }
 });
 
-// 7c. Obter Histórico de Auditoria do Tenant Logado (Cadastro Fiscal e Outros)
-app.get("/api/auth/company-audit-logs", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      res.status(401).json({ error: "Sessão expirada ou Token inválido." });
-      return;
-    }
-
-    if (isPostgresActive && pgPool) {
-      const q = `
-        SELECT a.*, COALESCE(u.name, 'Ação do Sistema') as user_name 
-        FROM audit_logs a
-        LEFT JOIN users u ON a.user_id = u.id
-        WHERE a.company_id = $1 
-        ORDER BY a.created_at DESC 
-        LIMIT 50
-      `;
-      const result = await pgPool.query(q, [session.company_id]);
-      res.json({ success: true, logs: result.rows });
-    } else {
-      const logsRaw = dbInMemoryLocal.global['audit_logs'] || '[]';
-      try {
-        const logs = JSON.parse(logsRaw);
-        const filtered = logs
-          .filter((l: any) => l.company_id === session.company_id)
-          .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, 50);
-        res.json({ success: true, logs: filtered });
-      } catch (e) {
-        res.json({ success: true, logs: [] });
-      }
-    }
-  } catch (err: any) {
-    console.error("Erro ao carregar auditoria da empresa:", err);
-    res.status(500).json({ error: "Falha ao obter logs de auditoria." });
-  }
+registerCompanyAuditLogRoutes(app, {
+  get isPostgresActive() {
+    return isPostgresActive;
+  },
+  get pgPool() {
+    return pgPool;
+  },
+  dbInMemoryLocal,
+  getSessionFromRequest
 });
 
 // 7d. Rotas do Módulo de Geração, Validação e Gerenciamento de XMLs Fiscais

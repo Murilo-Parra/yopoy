@@ -32,6 +32,7 @@ import { registerNfeDownloadRoutes } from "./src/backend/fiscal/registerNfeDownl
 import { registerNfceQueryRoutes } from "./src/backend/fiscal/registerNfceQueryRoutes";
 import { registerNfseQueryRoutes } from "./src/backend/nfse/registerNfseQueryRoutes";
 import { registerAdminAffiliateQueryRoutes } from "./src/backend/admin/registerAdminAffiliateQueryRoutes";
+import { registerAdminSupportQueryRoutes } from "./src/backend/admin/registerAdminSupportQueryRoutes";
 import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registerAdminSystemMonitoringRoutes";
 import { registerSyncRoutes } from "./src/backend/sync/registerSyncRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
@@ -2145,35 +2146,11 @@ app.post("/api/admin/commissions/:id/pay", requireMasterAdmin, async (req: expre
 });
 
 // 11. Tickets de Suporte
-app.get("/api/admin/support", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    let result: any[] = [];
-    if (isPostgresActive && pgPool) {
-      const tickets = await pgPool.query(`
-        SELECT st.*, c.corporate_name as company_name 
-        FROM support_tickets st
-        LEFT JOIN companies c ON st.company_id = c.id
-        ORDER BY 
-          CASE WHEN st.status = 'Aberto' THEN 1 WHEN st.status = 'Em Atendimento' THEN 2 ELSE 3 END, 
-          st.created_at DESC
-      `);
-      result = tickets.rows;
-    } else {
-      const tickets = JSON.parse(dbInMemoryLocal.global['support_tickets'] || '[]');
-      const companies = JSON.parse(dbInMemoryLocal.global['companies'] || '[]');
-      result = tickets.map((st: any) => {
-        const comp = companies.find((c: any) => c.id === st.company_id);
-        return {
-          ...st,
-          company_name: comp ? comp.corporate_name : "Não Autenticado"
-        };
-      });
-    }
-    res.json(result);
-  } catch (err) {
-    console.error("Erro de suporte Super Admin:", err);
-    res.status(500).json({ error: "Erro ao listar chamados de suporte." });
-  }
+registerAdminSupportQueryRoutes(app, {
+  requireMasterAdmin,
+  getIsPostgresActive: () => isPostgresActive,
+  getPgPool: () => pgPool,
+  dbInMemoryLocal
 });
 
 // 12. Responder e atualizar status do Ticket

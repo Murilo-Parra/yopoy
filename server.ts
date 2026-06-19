@@ -22,6 +22,7 @@ import { registerFactoryResetRoutes } from "./src/backend/devtools/registerFacto
 import { registerGeminiRoutes } from "./src/backend/ai/registerGeminiRoutes";
 import { registerCompanyAuditLogRoutes } from "./src/backend/audit/registerCompanyAuditLogRoutes";
 import { registerFiscalDiscoveryRoutes } from "./src/backend/fiscal/registerFiscalDiscoveryRoutes";
+import { registerFiscalValidationRoutes } from "./src/backend/fiscal/registerFiscalValidationRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
@@ -359,20 +360,7 @@ app.post("/api/fiscal/documents", async (req: express.Request, res: express.Resp
   }
 });
 
-app.post("/api/fiscal/documents/validate-payload", (req: express.Request, res: express.Response): void => {
-  try {
-    const { payload } = req.body;
-    if (!payload) {
-      res.status(400).json({ error: "Payload do documento é obrigatório" });
-      return;
-    }
-    const errors = XmlValidator.validate(payload);
-    res.json({ success: true, valid: errors.length === 0, errors });
-  } catch (err) {
-    console.error("Erro ao validar payload tributário:", err);
-    res.status(500).json({ error: "Erro ao executar validação em lote" });
-  }
-});
+registerFiscalValidationRoutes(app);
 
 app.post("/api/fiscal/documents/:id/validate", async (req: express.Request, res: express.Response): Promise<void> => {
   try {

@@ -28,6 +28,7 @@ import { registerSignedFiscalDocumentQueryRoutes } from "./src/backend/fiscal/re
 import { registerSefazQueryRoutes } from "./src/backend/fiscal/registerSefazQueryRoutes";
 import { registerNfeQueryRoutes } from "./src/backend/fiscal/registerNfeQueryRoutes";
 import { registerNfeDownloadRoutes } from "./src/backend/fiscal/registerNfeDownloadRoutes";
+import { registerNfseQueryRoutes } from "./src/backend/nfse/registerNfseQueryRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
@@ -1605,23 +1606,8 @@ app.get("/api/sefaz/audit-logs", async (req: express.Request, res: express.Respo
 });
 
 
-app.get("/api/nfse/query", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) { res.status(401).json({ error: "Sessão inválida" }); return; }
-
-    const { type, value, start_date, end_date } = req.query;
-    
-    // Simulate query using SefazRealClient (which replaced mockNetworkCall)
-    // Here we would lookup nfseProviderManager, choose provider, and execute the generic query.
-    // As per assignment, real calls replaced the Mocks. 
-    
-    let simulatedXmlResponse = `<ConsultarNfseResposta><Sucesso>Consultado real via ${type}</Sucesso></ConsultarNfseResposta>`;
-    
-    res.json({ success: true, message: "Consulta executada com sucesso.", xml: simulatedXmlResponse });
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
+registerNfseQueryRoutes(app, {
+  getSessionFromRequest
 });
 
 app.get("/api/sefaz/status", async (req: express.Request, res: express.Response): Promise<void> => {

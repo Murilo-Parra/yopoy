@@ -25,6 +25,7 @@ import { registerFiscalDiscoveryRoutes } from "./src/backend/fiscal/registerFisc
 import { registerFiscalValidationRoutes } from "./src/backend/fiscal/registerFiscalValidationRoutes";
 import { registerFiscalDocumentQueryRoutes } from "./src/backend/fiscal/registerFiscalDocumentQueryRoutes";
 import { registerSignedFiscalDocumentQueryRoutes } from "./src/backend/fiscal/registerSignedFiscalDocumentQueryRoutes";
+import { registerSefazQueryRoutes } from "./src/backend/fiscal/registerSefazQueryRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
@@ -1776,20 +1777,10 @@ app.post("/api/sefaz/transmit", async (req: express.Request, res: express.Respon
 });
 
 // 3. RECUPERAR HISTÓRICO DE PROTOCOLOS EMITIDOS (SEFAZ_PROTOCOLS)
-app.get("/api/sefaz/protocols", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      res.status(401).json({ error: "Sessão inválida." });
-      return;
-    }
-
-    const protocols = await getSefazProtocols(session.company_id);
-    res.json({ success: true, protocols });
-  } catch (err: any) {
-    console.error("Erro ao carregar protocolos SEFAZ:", err);
-    res.status(500).json({ error: `Falha ao ler histórico de faturas autorizadas: ${err?.message || err}` });
-  }
+registerSefazQueryRoutes(app, {
+  getSessionFromRequest,
+  getSefazProtocols,
+  getFiscalEvents
 });
 
 // 4. CANCELAR NOTA AUTORIZADA PERANTE A SEFAZ (RBAC + REGISTRO EVENTO)
@@ -1999,38 +1990,6 @@ app.post("/api/sefaz/query", async (req: express.Request, res: express.Response)
   } catch (err: any) {
     console.error("Erro na consulta de situação fiscal:", err);
     res.status(500).json({ error: `Erro no Webservice de Consulta de Situação da SEFAZ: ${err?.message || err}` });
-  }
-});
-
-// 5.3 HISTÓRICO COMPLETO GLOBAL OU POR DOCUMENTO DE EVENTOS FISCAIS (MULTI-TENANT ISOLADO)
-app.get("/api/sefaz/events", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      res.status(401).json({ error: "Sessão expirada." });
-      return;
-    }
-    const events = await getFiscalEvents(session.company_id);
-    res.json({ success: true, events });
-  } catch (err: any) {
-    console.error("Erro ao consultar histórico global de eventos:", err);
-    res.status(500).json({ error: `Erro ao carregar histórico fiscal: ${err?.message || err}` });
-  }
-});
-
-app.get("/api/sefaz/events/:docId", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) {
-      res.status(401).json({ error: "Sessão expirada." });
-      return;
-    }
-    const docId = req.params.docId;
-    const events = await getFiscalEvents(session.company_id, docId);
-    res.json({ success: true, events });
-  } catch (err: any) {
-    console.error("Erro ao listar eventos do documento:", err);
-    res.status(500).json({ error: `Erro ao recuperar eventos fiscais listados: ${err?.message || err}` });
   }
 });
 

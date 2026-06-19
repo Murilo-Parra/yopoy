@@ -21,6 +21,7 @@ import { registerAdminUsersRoutes } from "./src/backend/auth/registerAdminUsersR
 import { registerFactoryResetRoutes } from "./src/backend/devtools/registerFactoryResetRoutes";
 import { registerGeminiRoutes } from "./src/backend/ai/registerGeminiRoutes";
 import { registerCompanyAuditLogRoutes } from "./src/backend/audit/registerCompanyAuditLogRoutes";
+import { registerFiscalDiscoveryRoutes } from "./src/backend/fiscal/registerFiscalDiscoveryRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
 
@@ -69,7 +70,6 @@ import {
   getNfceDocumentById,
   updateNfceDocumentStatus
 } from "./db";
-import { FiscalProviderResolver } from "./src/utils/locationResolver";
 import { XmlGenerator, XmlValidator } from "./src/utils/xmlGenerator";
 // import { CertificateManager, XmlSignatureService, EncryptionUtils } from "./xmlSignatureService";
 // import { SefazConnector, SefazErrorHandler } from "./sefazConnector";
@@ -212,17 +212,7 @@ app.use("/api/admin", adminUsersRouter);
 // Rotas fiscais modulares de leitura em modo paralelo. Não substituem rotas fiscais legadas nesta Sprint.
 app.use("/api/fiscal-v2", fiscalRoutes);
 
-// Endpoint para consulta em tempo real e simulação de descoberta sem salvar
-app.post("/api/fiscal/discover", (req: express.Request, res: express.Response): void => {
-  try {
-    const { city, state_uf, ibge_code } = req.body;
-    const resolved = FiscalProviderResolver(state_uf, city, ibge_code);
-    res.json({ success: true, resolved });
-  } catch (err) {
-    console.error("Erro na rota de descoberta:", err);
-    res.status(500).json({ error: "Erro interno no servidor ao descobrir provedor fiscal" });
-  }
-});
+registerFiscalDiscoveryRoutes(app);
 
 registerCompanyAuditLogRoutes(app, {
   get isPostgresActive() {

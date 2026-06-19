@@ -11,10 +11,16 @@ describe('Auth regression guard', () => {
     const content = readProjectFile('src/backend/auth/AuthHttpHandlers.ts');
 
     expect(content).toContain("import { resolveAuthCompanyId, resolveAuthHeaderString } from './AuthCompanyIdResolver';");
+    expect(content).toContain("import { resolveAuthRequirePermissionPayload } from './AuthRequirePermissionPayloadResolver';");
     expect(content).toContain("import type { AuthPermission } from '../../application/auth/types';");
+
     expect(content).toContain('const companyId = resolveAuthCompanyId(req);');
     expect(content).toContain("resolveAuthHeaderString(req.headers, 'x-yopoy-company-id')");
+    expect(content).toContain('resolveAuthRequirePermissionPayload(req.body)');
+
     expect(content).not.toContain("req.headers['x-yopoy-company-id'] as string");
+    expect(content).not.toContain('const { companyId, permission } = req.body;');
+
     const passwordPolicyBranchStart = content.indexOf("if (msg && msg.startsWith('Password policy violated'))");
     const passwordPolicyBranchEnd = content.indexOf("console.error('Company registration handler error:', err);");
 
@@ -34,6 +40,30 @@ describe('Auth regression guard', () => {
     expect(content).not.toContain('const companyIdFromYopoyHeader');
     expect(content).not.toContain('const companyIdFromLegacyHeader');
     expect(content).not.toContain('req.body.companyId');
+  });
+
+  it('protege invariantes estáticas do AuthRequirePermissionPayloadResolver', () => {
+    const content = readProjectFile('src/backend/auth/AuthRequirePermissionPayloadResolver.ts');
+
+    expect(content).toContain("import type { AuthPermission } from '../../application/auth/types';");
+    expect(content).toContain('export interface AuthRequirePermissionPayload');
+    expect(content).toContain('export function resolveAuthRequirePermissionPayload(');
+    expect(content).toContain('body: unknown');
+    expect(content).toContain('companyId: companyId.trim()');
+
+    expect(content).not.toContain("from 'express'");
+    expect(content).not.toContain('from "express"');
+    expect(content).not.toContain('import type { Request }');
+    expect(content).not.toContain('import { Request }');
+    expect(content).not.toContain('as unknown as Request');
+
+    const asAnyPattern = ['as', 'any'].join(' ');
+    const colonAnyPattern = [':', 'any'].join(' ');
+    const promiseAnyPattern = ['Promise', '<', 'an', 'y>'].join('');
+
+    expect(content).not.toContain(asAnyPattern);
+    expect(content).not.toContain(colonAnyPattern);
+    expect(content).not.toContain(promiseAnyPattern);
   });
 
   it('protege invariantes estáticas do AuthCompanyIdResolver', () => {
@@ -73,6 +103,20 @@ describe('Auth regression guard', () => {
 
     expect(content).toContain('type AuthCompanyIdRequest');
     expect(content).toContain('headers não-string');
+
+    expect(content).not.toContain(asUnknownAsRequestPattern);
+    expect(content).not.toContain(asAnyPattern);
+    expect(content).not.toContain(colonAnyPattern);
+    expect(content).not.toContain(promiseAnyPattern);
+  });
+
+  it('protege invariantes estáticas do teste AuthRequirePermissionPayloadResolver', () => {
+    const content = readProjectFile('src/backend/auth/tests/auth-require-permission-payload-resolver.test.ts');
+
+    const asUnknownAsRequestPattern = ['as', 'unknown', 'as', 'Request'].join(' ');
+    const asAnyPattern = ['as', 'any'].join(' ');
+    const colonAnyPattern = [':', 'any'].join(' ');
+    const promiseAnyPattern = ['Promise', '<', 'an', 'y>'].join('');
 
     expect(content).not.toContain(asUnknownAsRequestPattern);
     expect(content).not.toContain(asAnyPattern);

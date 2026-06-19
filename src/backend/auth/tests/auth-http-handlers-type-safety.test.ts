@@ -66,4 +66,19 @@ describe('AuthHttpHandlers Static Type Safety', () => {
     expect(content).not.toContain(promiseAnyPattern);
   });
 
+  it('valida estaticamente type safety no auth-require-permission-payload-resolver.test.ts', () => {
+    const filePath = path.resolve(process.cwd(), 'src/backend/auth/tests/auth-require-permission-payload-resolver.test.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    const asAnyPattern = ['as', 'any'].join(' ');
+    const asUnknownAsRequest = ['as', 'unknown', 'as', 'Request'].join(' ');
+    const colonAnyPattern = [':', 'any'].join('');
+    const promiseAnyPattern = ['Promise', '<', 'an', 'y>'].join('');
+
+    expect(content).not.toContain(asAnyPattern);
+    expect(content).not.toContain(colonAnyPattern);
+    expect(content).not.toContain(asUnknownAsRequest);
+    expect(content).not.toContain(promiseAnyPattern);
+  });
+
 });

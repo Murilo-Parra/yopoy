@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { resolveAuthCompanyId, resolveAuthHeaderString } from './AuthCompanyIdResolver';
+import { resolveAuthRequirePermissionPayload } from './AuthRequirePermissionPayloadResolver';
 import { randomUUID } from 'crypto';
 import type { AuthPermission } from '../../application/auth/types';
 import { LocalPostgresUnitOfWork } from '../../infrastructure/postgres/unit-of-work/LocalPostgresUnitOfWork';
@@ -314,7 +315,12 @@ export class AuthHttpHandlers {
         return AuthHttpErrors.sendInvalidInput(res, validation.message);
       }
 
-      const { companyId, permission } = req.body;
+      const payload = resolveAuthRequirePermissionPayload(req.body);
+      if (!payload) {
+        return AuthHttpErrors.sendInvalidInput(res, validation.message);
+      }
+
+      const { companyId, permission } = payload;
 
       const rawSessionToken = AuthCookieService.getSessionToken(req);
       if (!rawSessionToken) {

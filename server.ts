@@ -26,6 +26,7 @@ import { registerFiscalValidationRoutes } from "./src/backend/fiscal/registerFis
 import { registerFiscalDocumentQueryRoutes } from "./src/backend/fiscal/registerFiscalDocumentQueryRoutes";
 import { registerSignedFiscalDocumentQueryRoutes } from "./src/backend/fiscal/registerSignedFiscalDocumentQueryRoutes";
 import { registerSefazQueryRoutes } from "./src/backend/fiscal/registerSefazQueryRoutes";
+import { registerSefazEventObservationRoutes } from "./src/backend/fiscal/registerSefazEventObservationRoutes";
 import { registerNfeQueryRoutes } from "./src/backend/fiscal/registerNfeQueryRoutes";
 import { registerNfeDownloadRoutes } from "./src/backend/fiscal/registerNfeDownloadRoutes";
 import { registerNfceQueryRoutes } from "./src/backend/fiscal/registerNfceQueryRoutes";
@@ -1456,49 +1457,10 @@ app.post("/api/sefaz/distribuicao", async (req: express.Request, res: express.Re
   }
 });
 
-app.get("/api/sefaz/distribuicao", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) { res.status(401).json({ error: "Sessão inválida" }); return; }
-    
-    const limit = parseInt(req.query.limit as string) || 100;
-
-    const result = pgPool ? await pgPool.query(
-      'SELECT * FROM sefaz_distribution_documents WHERE company_id = $1 ORDER BY created_at DESC LIMIT $2', 
-      [session.company_id, limit]
-    ) : {rows:[]};
-
-    res.json(result.rows || []);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/sefaz/event-queue", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) { res.status(401).json({ error: "Sessão inválida" }); return; }
-
-    const result = pgPool ? await pgPool.query(
-      'SELECT * FROM sefaz_event_queue WHERE company_id = $1 ORDER BY created_at DESC LIMIT 50', 
-      [session.company_id]
-    ) : {rows: []};
-    res.json(result.rows || []);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get("/api/sefaz/audit-logs", async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const session = await getSessionFromRequest(req);
-    if (!session) { res.status(401).json({ error: "Sessão inválida" }); return; }
-
-    const logs = await SefazEventAuditService.getLogs(session.company_id, 100);
-    res.json(logs);
-  } catch (err: any) {
-    res.status(500).json({ error: err.message });
-  }
+registerSefazEventObservationRoutes(app, {
+  getSessionFromRequest,
+  getPgPool: () => pgPool,
+  sefazEventAuditService: SefazEventAuditService
 });
 
 

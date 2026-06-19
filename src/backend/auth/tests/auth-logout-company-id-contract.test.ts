@@ -14,8 +14,8 @@ describe('handleLogout Contract', () => {
   let handlers: AuthHttpHandlers;
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response>;
-  let mockStatus: any;
-  let mockJson: any;
+  let mockStatus: ReturnType<typeof vi.fn>;
+  let mockJson: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     // Create a dummy UOW mock
@@ -25,7 +25,7 @@ describe('handleLogout Contract', () => {
         return callback({});
       })
     };
-    handlers = new AuthHttpHandlers(mockUow as any);
+    handlers = new AuthHttpHandlers(mockUow as unknown as ConstructorParameters<typeof AuthHttpHandlers>[0]);
 
     mockJson = vi.fn();
     mockStatus = vi.fn().mockReturnValue({ json: mockJson });
@@ -36,8 +36,8 @@ describe('handleLogout Contract', () => {
     };
 
     mockRes = {
-      status: mockStatus,
-      setHeader: vi.fn(),
+      status: mockStatus as unknown as (code: number) => Response,
+      setHeader: vi.fn() as unknown as (name: string, value: string | number | readonly string[]) => Response,
     };
 
     vi.clearAllMocks();

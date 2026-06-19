@@ -15,6 +15,7 @@ describe('AuthHttpHandlers Static Type Safety', () => {
     const equalsAny = ['=', 'an', 'y'].join(' ');
     const queryCompanyIdPattern = ['req', 'query', 'companyI' + 'd'].join('.');
     const bodyCompanyIdPattern = ['req', 'body', 'companyI' + 'd'].join('.');
+    const colonAnyPattern = [':', 'any'].join(' ');
 
     expect(content).not.toContain(asAnyPattern);
     expect(content).not.toContain(catchErrAny);
@@ -24,6 +25,7 @@ describe('AuthHttpHandlers Static Type Safety', () => {
     // expect(content).not.toContain(equalsAny); // can be risky due to formatting, skipping
     expect(content).not.toContain(queryCompanyIdPattern);
     expect(content).not.toContain(bodyCompanyIdPattern);
+    expect(content).not.toContain(colonAnyPattern);
 
     expect(content).toContain('x-yopoy-company-id');
   });
@@ -34,4 +36,19 @@ describe('AuthHttpHandlers Static Type Safety', () => {
     const promiseAny = ['Promise', '<', 'an', 'y>'].join('');
     expect(content).not.toContain(promiseAny);
   });
+  it('valida estaticamente remocao de any no teste de contrato de logout', () => {
+    const filePath = path.resolve(process.cwd(), 'src/backend/auth/tests/auth-logout-company-id-contract.test.ts');
+    const content = fs.readFileSync(filePath, 'utf8');
+
+    const asAnyPattern = ['as', 'any'].join(' ');
+    const colonAnyPattern = [':', 'any'].join(' ');
+    const promiseAnyPattern = ['Promise', '<', 'an', 'y>'].join('');
+    const reqBodyCompanyIdPattern = ['req', 'body', 'companyI' + 'd'].join('.');
+
+    expect(content).not.toContain(asAnyPattern);
+    expect(content).not.toContain(colonAnyPattern);
+    expect(content).not.toContain(promiseAnyPattern);
+    expect(content).not.toContain(reqBodyCompanyIdPattern);
+  });
+
 });

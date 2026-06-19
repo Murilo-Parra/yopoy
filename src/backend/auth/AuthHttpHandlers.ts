@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { resolveAuthCompanyId } from './AuthCompanyIdResolver';
 import { randomUUID } from 'crypto';
 import type { AuthPermission } from '../../application/auth/types';
 import { LocalPostgresUnitOfWork } from '../../infrastructure/postgres/unit-of-work/LocalPostgresUnitOfWork';
@@ -259,19 +260,7 @@ export class AuthHttpHandlers {
    */
   public handleLogout = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { companyId: companyIdBodyValue } = req.body as { companyId?: unknown };
-      const companyIdFromBody =
-        typeof companyIdBodyValue === 'string' ? companyIdBodyValue.trim() : '';
-
-      const yopoyCompanyHeader = req.headers['x-yopoy-company-id'];
-      const companyIdFromYopoyHeader =
-        typeof yopoyCompanyHeader === 'string' ? yopoyCompanyHeader.trim() : '';
-
-      const legacyCompanyHeader = req.headers['x-company-id'];
-      const companyIdFromLegacyHeader =
-        typeof legacyCompanyHeader === 'string' ? legacyCompanyHeader.trim() : '';
-
-      const companyId = companyIdFromBody || companyIdFromYopoyHeader || companyIdFromLegacyHeader;
+      const companyId = resolveAuthCompanyId(req);
 
       if (!companyId || !AuthRequestValidators.isValidUuid(companyId)) {
         AuthCookieService.clearSessionCookie(req, res);

@@ -34,6 +34,7 @@ import { registerNfseQueryRoutes } from "./src/backend/nfse/registerNfseQueryRou
 import { registerAdminAffiliateQueryRoutes } from "./src/backend/admin/registerAdminAffiliateQueryRoutes";
 import { registerAdminCommissionQueryRoutes } from "./src/backend/admin/registerAdminCommissionQueryRoutes";
 import { registerAdminSupportQueryRoutes } from "./src/backend/admin/registerAdminSupportQueryRoutes";
+import { registerAdminAuditLogQueryRoutes } from "./src/backend/admin/registerAdminAuditLogQueryRoutes";
 import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registerAdminSystemMonitoringRoutes";
 import { registerSyncRoutes } from "./src/backend/sync/registerSyncRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
@@ -2182,32 +2183,11 @@ app.post("/api/admin/support/:id/reply", requireMasterAdmin, async (req: express
 });
 
 // 13. Auditoria consolidada & Logs de sistema
-app.get("/api/admin/audit-logs", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    let audit_logs: any[] = [];
-    let system_logs: any[] = [];
-
-    if (isPostgresActive && pgPool) {
-      const auds = await pgPool.query("SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT 200");
-      audit_logs = auds.rows;
-
-      const sys = await pgPool.query("SELECT * FROM system_logs ORDER BY created_at DESC LIMIT 200");
-      system_logs = sys.rows;
-    } else {
-      const rawAud = dbInMemoryLocal.global['audit_logs'] || '[]';
-      try { audit_logs = JSON.parse(rawAud); } catch(e){}
-      audit_logs = audit_logs.reverse().slice(0, 200);
-
-      const rawSys = dbInMemoryLocal.global['system_logs'] || '[]';
-      try { system_logs = JSON.parse(rawSys); } catch(e){}
-      system_logs = system_logs.reverse().slice(0, 200);
-    }
-
-    res.json({ audit_logs, system_logs });
-  } catch (err) {
-    console.error("Erro ao puxar logs de auditoria:", err);
-    res.status(500).json({ error: "Erro interno ao obter logs." });
-  }
+registerAdminAuditLogQueryRoutes(app, {
+  requireMasterAdmin,
+  getIsPostgresActive: () => isPostgresActive,
+  getPgPool: () => pgPool,
+  dbInMemoryLocal
 });
 
 // 14. Monitoramento tecnológico

@@ -77,6 +77,8 @@ A numeração abaixo representa a sequência de produto a partir deste marco. El
 - **50.0-B — diagnóstico do cadastro atual:** mapear o wizard, campos, validações, dependências de autenticação/backend e estado local antes da implementação mínima.
 - **50.0-C — decisão de tenant para cadastro mínimo:** adotar conta pessoal mínima com tenant provisório interno não fiscal, preservando sessão, isolamento e RLS sem dados empresariais fictícios.
 - **50.0-D — diagnóstico de persistência do tenant provisório:** concluir que o estado provisório exige evolução mínima de schema e planejar a 50.0-E sem implementar cadastro ou dados fiscais fictícios.
+- **50.0-E — limite anti-refatoração de cadastro e tenant:** frear implementação estrutural e adiar migration até a consolidação documental da fonte canônica de auth/persistência, preservando o foco na Central Visual.
+- **50.0-F — consolidação pós-trava:** congelar cadastro/tenant e redirecionar o próximo avanço para QA visual e validação comercial da Central Visual.
 - **Objetivo:** refletir a operação diária em caixa e quantidade simples de produtos.
 - **Entregáveis:** abertura/fechamento de caixa, resumo do dia, cadastro de produtos e movimentação básica de estoque auditável.
 - **Critério de conclusão:** a empresa fecha o dia e identifica efeitos das vendas no estoque, com divergências visíveis.

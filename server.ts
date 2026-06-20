@@ -42,6 +42,7 @@ import { registerAdminCustomProviderMutationRoutes } from "./src/backend/admin/r
 import { registerAdminCustomProviderMappingQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderMappingQueryRoutes";
 import { registerAdminCustomProviderMappingMutationRoutes } from "./src/backend/admin/registerAdminCustomProviderMappingMutationRoutes";
 import { registerAdminCustomProviderTemplateQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderTemplateQueryRoutes";
+import { registerAdminCustomProviderTemplateMutationRoutes } from "./src/backend/admin/registerAdminCustomProviderTemplateMutationRoutes";
 import { registerSyncRoutes } from "./src/backend/sync/registerSyncRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
@@ -2246,27 +2247,10 @@ registerAdminCustomProviderTemplateQueryRoutes(app, {
   getPgPool: () => pgPool
 });
 
-app.post("/api/admin/custom-providers/:id/templates", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    if (!pgPool) {
-      res.status(500).json({ error: "Banco de dados não conectado." });
-      return;
-    }
-    const { id } = req.params;
-    const { template_name, template_xml, version } = req.body;
-    
-    const templateId = crypto.randomUUID();
-    await pgPool.query(`
-      INSERT INTO custom_provider_templates (
-        id, provider_id, template_name, template_xml, version
-      ) VALUES ($1, $2, $3, $4, $5)
-    `, [templateId, id, template_name, template_xml, version || '1.0']);
-    
-    res.status(201).json({ id: templateId, message: "Template criado com sucesso" });
-  } catch (err: any) {
-    console.error("Erro ao criar template:", err);
-    res.status(500).json({ error: "Falha ao criar template", details: err.message });
-  }
+registerAdminCustomProviderTemplateMutationRoutes(app, {
+  requireMasterAdmin,
+  getPgPool: () => pgPool,
+  generateUuid: () => crypto.randomUUID()
 });
 
 

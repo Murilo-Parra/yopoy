@@ -107,8 +107,12 @@ describe("admin remaining mutation routes safety 49.1-AN", () => {
       "registerAdminSupportQueryRoutes(app, {"
     );
 
-    expect(block).toContain('pgPool.query("BEGIN")');
-    expect(block).toContain('pgPool.query("COMMIT")');
+    expect(block).toContain("pgPool.connect()");
+    expect(block).toContain('client.query("BEGIN")');
+    expect(block).toContain('client.query("COMMIT")');
+    expect(block).toContain('client.query("ROLLBACK")');
+    expect(block).toContain("client.release()");
+    expect(block).not.toMatch(/pgPool\.query\s*\(/);
     expect(block).toContain("affiliate_commissions");
     expect(block).toContain("affiliates");
     expect(block).toContain("scheduleSaveLocalFallback");

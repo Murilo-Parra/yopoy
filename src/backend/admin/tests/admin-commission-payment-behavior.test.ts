@@ -30,9 +30,7 @@ type QueryResult = {
   rowCount?: number;
 };
 
-type RouteRequest = {
-  params: { id: string };
-};
+type RouteRequest = { params: { id: string } };
 
 class ControlledResponse {
   statusCode = 200;
@@ -54,14 +52,18 @@ type RouteHandler = (
   response: ControlledResponse
 ) => Promise<void>;
 
-type Query = (
-  sql: string,
-  params?: readonly unknown[]
-) => Promise<QueryResult>;
+type Query = (sql: string, params?: readonly unknown[]) => Promise<QueryResult>;
+type Connect = () => Promise<{
+  query: ReturnType<typeof vi.fn<Query>>;
+  release: ReturnType<typeof vi.fn<() => void>>;
+}>;
 
 type RouteEnvironment = {
   handler: RouteHandler;
-  query: ReturnType<typeof vi.fn<Query>>;
+  clientQuery: ReturnType<typeof vi.fn<Query>>;
+  poolQuery: ReturnType<typeof vi.fn<Query>>;
+  connect: ReturnType<typeof vi.fn<Connect>>;
+  release: ReturnType<typeof vi.fn<() => void>>;
   local: { global: Record<string, string> };
   scheduleSaveLocalFallback: ReturnType<typeof vi.fn<() => void>>;
 };
@@ -100,8 +102,11 @@ function createEnvironment(options: {
   };
   const requireMasterAdmin: RouteHandler = async () => undefined;
   const defaultQuery: Query = async () => ({ rows: [] });
-  const query = vi.fn<Query>(options.queryImplementation ?? defaultQuery);
-  const pgPool = { query };
+  const clientQuery = vi.fn<Query>(options.queryImplementation ?? defaultQuery);
+  const poolQuery = vi.fn<Query>(defaultQuery);
+  const release = vi.fn<() => void>();
+  const connect = vi.fn<Connect>(async () => ({ query: clientQuery, release }));
+  const pgPool = { query: poolQuery, connect };
   const local = {
     global: {
       affiliate_commissions: JSON.stringify(options.commissions ?? []),
@@ -136,7 +141,10 @@ function createEnvironment(options: {
   expect(handlers).toHaveLength(1);
   return {
     handler: handlers[0],
-    query,
+    clientQuery,
+    poolQuery,
+    connect,
+    release,
     local,
     scheduleSaveLocalFallback
   };
@@ -152,165 +160,162 @@ function normalizedSql(query: ReturnType<typeof vi.fn<Query>>): string[] {
   return query.mock.calls.map(([sql]) => sql.replace(/\s+/g, " ").trim());
 }
 
-describe("admin commission payment current behavior 49.1-AR", () => {
+function pendingCommission(overrides: Partial<Commission> = {}): Commission {
+  return {
+    id: "commission-1",
+    affiliate_id: "affiliate-1",
+    commission_amount: 125.5,
+    status: "Pendente",
+    ...overrides
+  };
+}
+
+describe("admin commission payment behavior 49.1-AS", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("congela o caminho PostgreSQL feliz e sua ordem financeira atual", async () => {
-    const commission: Commission = {
-      id: "commission-1",
-      affiliate_id: "affiliate-1",
-      commission_amount: 125.5,
-      status: "Pendente"
-    };
+  it("faz o caminho feliz no client dedicado, COMMIT e release", async () => {
     let call = 0;
     const environment = createEnvironment({
       postgresActive: true,
       queryImplementation: async () => {
         call += 1;
-        return call === 2 ? { rows: [commission] } : { rows: [] };
-      }
-    });
-
-    const response = await invoke(environment.handler);
-
-    expect(normalizedSql(environment.query)).toEqual([
-      "BEGIN",
-      "SELECT * FROM affiliate_commissions WHERE id = $1",
-      "UPDATE affiliate_commissions SET status = 'Pago' WHERE id = $1",
-      "UPDATE affiliates SET commission_paid = commission_paid + $1, commission_pending = commission_pending - $1 WHERE id = $2",
-      "COMMIT"
-    ]);
-    expect(environment.query.mock.calls.map(([, params]) => params)).toEqual([
-      undefined,
-      ["commission-1"],
-      ["commission-1"],
-      [125.5, "affiliate-1"],
-      undefined
-    ]);
-    expect(response.statusCode).toBe(200);
-    expect(response.payload).toEqual(SUCCESS_PAYLOAD);
-  });
-
-  it("congela sucesso silencioso PostgreSQL para comissão inexistente", async () => {
-    const environment = createEnvironment({ postgresActive: true });
-
-    const response = await invoke(environment.handler, "missing");
-
-    expect(normalizedSql(environment.query)).toEqual([
-      "BEGIN",
-      "SELECT * FROM affiliate_commissions WHERE id = $1",
-      "COMMIT"
-    ]);
-    expect(environment.query.mock.calls[1][1]).toEqual(["missing"]);
-    expect(response.payload).toEqual(SUCCESS_PAYLOAD);
-  });
-
-  it("congela sucesso silencioso PostgreSQL para comissão já paga", async () => {
-    let call = 0;
-    const environment = createEnvironment({
-      postgresActive: true,
-      queryImplementation: async () => {
-        call += 1;
-        return call === 2
-          ? {
-              rows: [{
-                id: "commission-1",
-                affiliate_id: "affiliate-1",
-                commission_amount: 50,
-                status: "Pago"
-              }]
-            }
-          : { rows: [] };
-      }
-    });
-
-    const response = await invoke(environment.handler);
-
-    expect(normalizedSql(environment.query)).toEqual([
-      "BEGIN",
-      "SELECT * FROM affiliate_commissions WHERE id = $1",
-      "COMMIT"
-    ]);
-    expect(response.payload).toEqual(SUCCESS_PAYLOAD);
-  });
-
-  it("congela erro 500 sem ROLLBACK após falha no meio da suposta transação", async () => {
-    const expectedError = new Error("affiliate update failed");
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    let call = 0;
-    const environment = createEnvironment({
-      postgresActive: true,
-      queryImplementation: async () => {
-        call += 1;
-        if (call === 2) {
-          return {
-            rows: [{
-              id: "commission-1",
-              affiliate_id: "affiliate-1",
-              commission_amount: 80,
-              status: "Pendente"
-            }]
-          };
-        }
-        if (call === 4) {
-          throw expectedError;
-        }
+        if (call === 2) return { rows: [pendingCommission()] };
+        if (call === 4) return { rows: [], rowCount: 1 };
         return { rows: [] };
       }
     });
 
     const response = await invoke(environment.handler);
 
-    expect(normalizedSql(environment.query)).toEqual([
+    expect(normalizedSql(environment.clientQuery)).toEqual([
       "BEGIN",
       "SELECT * FROM affiliate_commissions WHERE id = $1",
       "UPDATE affiliate_commissions SET status = 'Pago' WHERE id = $1",
-      "UPDATE affiliates SET commission_paid = commission_paid + $1, commission_pending = commission_pending - $1 WHERE id = $2"
+      "UPDATE affiliates SET commission_paid = commission_paid + $1, commission_pending = commission_pending - $1 WHERE id = $2",
+      "COMMIT"
     ]);
-    expect(normalizedSql(environment.query)).not.toContain("ROLLBACK");
-    expect(response.statusCode).toBe(500);
-    expect(response.payload).toEqual(ERROR_PAYLOAD);
-    expect(consoleError).toHaveBeenCalledWith("Erro quitar comissão:", expectedError);
+    expect(environment.clientQuery.mock.calls.map(([, params]) => params)).toEqual([
+      undefined,
+      ["commission-1"],
+      ["commission-1"],
+      [125.5, "affiliate-1"],
+      undefined
+    ]);
+    expect(environment.connect).toHaveBeenCalledTimes(1);
+    expect(environment.poolQuery).not.toHaveBeenCalled();
+    expect(environment.release).toHaveBeenCalledTimes(1);
+    expect(response.statusCode).toBe(200);
+    expect(response.payload).toEqual(SUCCESS_PAYLOAD);
   });
 
-  it("congela sucesso PostgreSQL sem verificar rowCount do afiliado", async () => {
+  it("faz ROLLBACK e release para comissão inexistente", async () => {
+    const environment = createEnvironment({ postgresActive: true });
+
+    const response = await invoke(environment.handler, "missing");
+
+    expect(normalizedSql(environment.clientQuery)).toEqual([
+      "BEGIN",
+      "SELECT * FROM affiliate_commissions WHERE id = $1",
+      "ROLLBACK"
+    ]);
+    expect(environment.poolQuery).not.toHaveBeenCalled();
+    expect(environment.release).toHaveBeenCalledTimes(1);
+    expect(response.statusCode).toBe(404);
+    expect(response.payload).toEqual({ error: "Comissão não encontrada." });
+  });
+
+  it("faz ROLLBACK e release para comissão já paga", async () => {
+    let call = 0;
+    const environment = createEnvironment({
+      postgresActive: true,
+      queryImplementation: async () => {
+        call += 1;
+        return call === 2
+          ? { rows: [pendingCommission({ status: "Pago" })] }
+          : { rows: [] };
+      }
+    });
+
+    const response = await invoke(environment.handler);
+
+    expect(normalizedSql(environment.clientQuery)).toEqual([
+      "BEGIN",
+      "SELECT * FROM affiliate_commissions WHERE id = $1",
+      "ROLLBACK"
+    ]);
+    expect(environment.release).toHaveBeenCalledTimes(1);
+    expect(response.statusCode).toBe(409);
+    expect(response.payload).toEqual({ error: "Comissão já foi paga." });
+  });
+
+  it("faz ROLLBACK e release quando o afiliado não existe", async () => {
     let call = 0;
     const environment = createEnvironment({
       postgresActive: true,
       queryImplementation: async () => {
         call += 1;
         if (call === 2) {
-          return {
-            rows: [{
-              id: "commission-1",
-              affiliate_id: "missing-affiliate",
-              commission_amount: 30,
-              status: "Pendente"
-            }]
-          };
+          return { rows: [pendingCommission({ affiliate_id: "missing-affiliate" })] };
         }
-        return call === 4 ? { rows: [], rowCount: 0 } : { rows: [] };
+        if (call === 4) return { rows: [], rowCount: 0 };
+        return { rows: [] };
       }
     });
 
     const response = await invoke(environment.handler);
 
-    expect(normalizedSql(environment.query).at(-1)).toBe("COMMIT");
-    expect(environment.query.mock.calls[3][1]).toEqual([30, "missing-affiliate"]);
-    expect(response.payload).toEqual(SUCCESS_PAYLOAD);
+    expect(normalizedSql(environment.clientQuery)).toEqual([
+      "BEGIN",
+      "SELECT * FROM affiliate_commissions WHERE id = $1",
+      "UPDATE affiliate_commissions SET status = 'Pago' WHERE id = $1",
+      "UPDATE affiliates SET commission_paid = commission_paid + $1, commission_pending = commission_pending - $1 WHERE id = $2",
+      "ROLLBACK"
+    ]);
+    expect(environment.release).toHaveBeenCalledTimes(1);
+    expect(response.statusCode).toBe(404);
+    expect(response.payload).toEqual({ error: "Afiliado não encontrado." });
   });
 
-  it("congela pagamento local pendente e agenda persistência uma vez", async () => {
+  it("faz ROLLBACK e release em erro inesperado após BEGIN", async () => {
+    const expectedError = new Error("select failed");
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    let call = 0;
+    const environment = createEnvironment({
+      postgresActive: true,
+      queryImplementation: async () => {
+        call += 1;
+        if (call === 2) throw expectedError;
+        return { rows: [] };
+      }
+    });
+
+    const response = await invoke(environment.handler);
+
+    expect(normalizedSql(environment.clientQuery)).toEqual([
+      "BEGIN",
+      "SELECT * FROM affiliate_commissions WHERE id = $1",
+      "ROLLBACK"
+    ]);
+    expect(environment.poolQuery).not.toHaveBeenCalled();
+    expect(environment.release).toHaveBeenCalledTimes(1);
+    expect(response.statusCode).toBe(500);
+    expect(response.payload).toEqual(ERROR_PAYLOAD);
+    expect(response.payload).not.toHaveProperty("details");
+    expect(consoleError).toHaveBeenCalledWith("Erro quitar comissão:", expectedError);
+  });
+
+  it("não contém chamada de gateway ou API externa", () => {
+    expect(readInlineRouteSource()).not.toMatch(
+      /\b(?:Pix|boleto|cart[aã]o|Stripe|Mercado Pago|PayPal|PagSeguro|Pagar\.me|Cielo|Asaas|Iugu|OpenPix|Gerencianet|Efi|fetch|axios|http\.request|https\.request|Authorization|Bearer|apiKey|secretKey|webhook)\b/i
+    );
+  });
+
+  it("mantém a baixa local válida e agenda persistência uma vez", async () => {
     const environment = createEnvironment({
       postgresActive: false,
-      commissions: [{
-        id: "commission-1",
-        affiliate_id: "affiliate-1",
-        commission_amount: 40,
-        status: "Pendente"
-      }],
+      commissions: [pendingCommission({ commission_amount: 40 })],
       affiliates: [{
         id: "affiliate-1",
         commission_paid: 10,
@@ -320,41 +325,49 @@ describe("admin commission payment current behavior 49.1-AR", () => {
 
     const response = await invoke(environment.handler);
 
-    expect(JSON.parse(environment.local.global.affiliate_commissions)).toEqual([{
-      id: "commission-1",
-      affiliate_id: "affiliate-1",
-      commission_amount: 40,
-      status: "Pago"
-    }]);
+    expect(JSON.parse(environment.local.global.affiliate_commissions)[0].status).toBe("Pago");
     expect(JSON.parse(environment.local.global.affiliates)).toEqual([{
       id: "affiliate-1",
       commission_paid: 50,
       commission_pending: 0
     }]);
     expect(environment.scheduleSaveLocalFallback).toHaveBeenCalledTimes(1);
-    expect(environment.query).not.toHaveBeenCalled();
+    expect(environment.connect).not.toHaveBeenCalled();
     expect(response.payload).toEqual(SUCCESS_PAYLOAD);
   });
 
   it.each([
     {
-      name: "inexistente",
-      commissions: [] satisfies Commission[]
+      name: "comissão inexistente",
+      commissions: [] satisfies Commission[],
+      affiliates: [] satisfies Affiliate[],
+      status: 404,
+      payload: { error: "Comissão não encontrada." }
     },
     {
-      name: "já paga",
-      commissions: [{
-        id: "commission-1",
-        affiliate_id: "affiliate-1",
-        commission_amount: 40,
-        status: "Pago"
-      }] satisfies Commission[]
+      name: "comissão já paga",
+      commissions: [pendingCommission({ status: "Pago" })],
+      affiliates: [] satisfies Affiliate[],
+      status: 409,
+      payload: { error: "Comissão já foi paga." }
+    },
+    {
+      name: "afiliado inexistente",
+      commissions: [pendingCommission({ affiliate_id: "missing-affiliate" })],
+      affiliates: [] satisfies Affiliate[],
+      status: 404,
+      payload: { error: "Afiliado não encontrado." }
     }
-  ])("congela sucesso local para comissão $name sem agendar persistência", async ({ commissions }) => {
+  ])("não retorna sucesso silencioso local para $name", async ({
+    commissions,
+    affiliates,
+    status,
+    payload
+  }) => {
     const environment = createEnvironment({
       postgresActive: false,
       commissions,
-      affiliates: []
+      affiliates
     });
     const originalCommissions = environment.local.global.affiliate_commissions;
 
@@ -362,26 +375,7 @@ describe("admin commission payment current behavior 49.1-AR", () => {
 
     expect(environment.local.global.affiliate_commissions).toBe(originalCommissions);
     expect(environment.scheduleSaveLocalFallback).not.toHaveBeenCalled();
-    expect(response.payload).toEqual(SUCCESS_PAYLOAD);
-  });
-
-  it("congela baixa local mesmo sem afiliado e ainda agenda persistência", async () => {
-    const environment = createEnvironment({
-      postgresActive: false,
-      commissions: [{
-        id: "commission-1",
-        affiliate_id: "missing-affiliate",
-        commission_amount: 70,
-        status: "Pendente"
-      }],
-      affiliates: []
-    });
-
-    const response = await invoke(environment.handler);
-
-    expect(JSON.parse(environment.local.global.affiliate_commissions)[0].status).toBe("Pago");
-    expect(JSON.parse(environment.local.global.affiliates)).toEqual([]);
-    expect(environment.scheduleSaveLocalFallback).toHaveBeenCalledTimes(1);
-    expect(response.payload).toEqual(SUCCESS_PAYLOAD);
+    expect(response.statusCode).toBe(status);
+    expect(response.payload).toEqual(payload);
   });
 });

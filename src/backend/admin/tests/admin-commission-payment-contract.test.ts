@@ -4,7 +4,7 @@ import * as path from "path";
 
 const SERVER_PATH = "server.ts";
 const TEST_PATH = "src/backend/admin/tests/admin-commission-payment-contract.test.ts";
-const REPORT_PATH = "docs/server-refactor-49.1-AP.md";
+const REPORT_PATH = "docs/server-refactor-49.1-AS.md";
 const ROUTE_MARKER = 'app.post("/api/admin/commissions/:id/pay"';
 const PREVIOUS_MARKER = "registerAdminCommissionQueryRoutes(app, {";
 const NEXT_MARKER = "registerAdminSupportQueryRoutes(app, {";
@@ -24,7 +24,7 @@ function commissionPaymentRouteBlock(serverContent: string): string {
   return serverContent.slice(startIndex, endIndex);
 }
 
-describe("admin commission payment contract 49.1-AP", () => {
+describe("admin commission payment contract 49.1-AS", () => {
   it("mantém todos os arquivos obrigatórios da etapa", () => {
     readProjectFile(SERVER_PATH);
     readProjectFile(TEST_PATH);
@@ -38,7 +38,7 @@ describe("admin commission payment contract 49.1-AP", () => {
     const supportQueryIndex = serverContent.indexOf(NEXT_MARKER);
     const block = commissionPaymentRouteBlock(serverContent);
 
-    expect(commissionQueryIndex, `${PREVIOUS_MARKER} must exist`).toBeGreaterThan(-1);
+    expect(commissionQueryIndex).toBeGreaterThan(-1);
     expect(routeIndex).toBeGreaterThan(commissionQueryIndex);
     expect(supportQueryIndex).toBeGreaterThan(routeIndex);
     expect(block).toContain(
@@ -46,104 +46,55 @@ describe("admin commission payment contract 49.1-AP", () => {
     );
   });
 
-  it("preserva dependências e limites reais da rota", () => {
+  it("usa um client dedicado em toda a transação PostgreSQL", () => {
     const block = commissionPaymentRouteBlock(readProjectFile(SERVER_PATH));
-
-    expect(block).toContain("pgPool");
-    expect(block).toContain("isPostgresActive");
-    expect(block).toContain("dbInMemoryLocal");
-    expect(block).toContain("scheduleSaveLocalFallback");
-    expect(block).not.toMatch(/new Date|Date\.now|crypto\.randomUUID/);
-    expect(block).not.toMatch(
-      /\b(?:fetch|axios|SEFAZ|NFe|NFCe|NFSe|DANFE|CompanyController|certificado|certificate|servi[cç]o externo)\b/i
-    );
-  });
-
-  it("congela o risco transacional PostgreSQL atual", () => {
-    const block = commissionPaymentRouteBlock(readProjectFile(SERVER_PATH));
-
-    expect(block).toContain('await pgPool.query("BEGIN")');
-    expect(block).toContain('await pgPool.query("COMMIT")');
-    expect(block).not.toMatch(/\bROLLBACK\b/);
-    expect(block).not.toMatch(/pgPool\.connect|\.release\(\)/);
-    expect(block).not.toMatch(/FOR\s+UPDATE|FOR\s+SHARE|LOCK\s+TABLE|pg_advisory|updated_at|\bversion\b/i);
-  });
-
-  it("preserva o SELECT e os UPDATEs PostgreSQL literais", () => {
-    const block = commissionPaymentRouteBlock(readProjectFile(SERVER_PATH));
+    const connectIndex = block.indexOf("const client = await pgPool.connect()");
+    const beginIndex = block.indexOf('await client.query("BEGIN")');
     const selectIndex = block.indexOf(
-      'pgPool.query("SELECT * FROM affiliate_commissions WHERE id = $1", [id])'
+      'client.query("SELECT * FROM affiliate_commissions WHERE id = $1", [id])'
     );
     const commissionUpdateIndex = block.indexOf(
-      'pgPool.query("UPDATE affiliate_commissions SET status = \'Pago\' WHERE id = $1", [id])'
+      'client.query("UPDATE affiliate_commissions SET status = \'Pago\' WHERE id = $1", [id])'
     );
-    const affiliateUpdateIndex = block.indexOf("UPDATE affiliates");
-    const commitIndex = block.indexOf('pgPool.query("COMMIT")');
+    const affiliateUpdateIndex = block.indexOf("const affiliateUpdate = await client.query");
+    const commitIndex = block.indexOf('await client.query("COMMIT")');
+    const releaseIndex = block.indexOf("client.release()");
 
-    expect(selectIndex).toBeGreaterThan(-1);
-    expect(block).toContain("const comm = commRes.rows[0];");
-    expect(block).toContain("if (comm && comm.status !== 'Pago')");
+    expect(connectIndex).toBeGreaterThan(-1);
+    expect(beginIndex).toBeGreaterThan(connectIndex);
+    expect(selectIndex).toBeGreaterThan(beginIndex);
     expect(commissionUpdateIndex).toBeGreaterThan(selectIndex);
-    expect(block).toMatch(
-      /UPDATE affiliates\s+SET commission_paid = commission_paid \+ \$1, commission_pending = commission_pending - \$1\s+WHERE id = \$2/
-    );
-    expect(block).toContain("[comm.commission_amount, comm.affiliate_id]");
     expect(affiliateUpdateIndex).toBeGreaterThan(commissionUpdateIndex);
     expect(commitIndex).toBeGreaterThan(affiliateUpdateIndex);
+    expect(releaseIndex).toBeGreaterThan(commitIndex);
+    expect(block).not.toMatch(/pgPool\.query\s*\(/);
   });
 
-  it("preserva sucesso silencioso para comissão ausente ou já paga", () => {
+  it("faz ROLLBACK, release no finally e valida rowCount do afiliado", () => {
     const block = commissionPaymentRouteBlock(readProjectFile(SERVER_PATH));
 
-    expect(block).toContain("if (comm && comm.status !== 'Pago')");
-    expect(block).not.toMatch(/rowCount|res\.status\(404\)|throw new Error/);
-    expect(block.indexOf('await pgPool.query("COMMIT")')).toBeGreaterThan(
-      block.indexOf("if (comm && comm.status !== 'Pago')")
-    );
+    expect(block).toContain('await client.query("ROLLBACK")');
+    expect(block).toContain("if (affiliateUpdate.rowCount === 0)");
+    expect(block).toMatch(/finally\s*\{\s*client\.release\(\);\s*\}/);
   });
 
-  it("preserva o fallback local e seus campos financeiros reais", () => {
+  it("trata comissão inexistente, já paga e afiliado inexistente", () => {
     const block = commissionPaymentRouteBlock(readProjectFile(SERVER_PATH));
 
-    expect(block).toContain("dbInMemoryLocal.global['affiliate_commissions']");
-    expect(block).toContain("dbInMemoryLocal.global['affiliates']");
-    expect(block).toContain("commissions.findIndex");
-    expect(block).toContain("ac.id === id");
-    expect(block).toContain("if (idx !== -1 && commissions[idx].status !== 'Pago')");
-    expect(block).toContain("commissions[idx].status = 'Pago'");
-    expect(block).toContain("a.id === commissions[idx].affiliate_id");
-    expect(block).toContain("if (affIdx !== -1)");
-    expect(block).toContain("const amt = commissions[idx].commission_amount;");
-    expect(block).toContain(
-      "commission_paid = (affiliates[affIdx].commission_paid || 0.00) + amt"
-    );
-    expect(block).toContain(
-      "commission_pending = Math.max(0, (affiliates[affIdx].commission_pending || 0.00) - amt)"
-    );
-    expect(block).toContain("JSON.stringify(commissions)");
-    expect(block).toContain("JSON.stringify(affiliates)");
-    expect(block).toContain("scheduleSaveLocalFallback()");
-    expect(block).toMatch(
-      /if \(affIdx !== -1\) \{[\s\S]*?\n\s*\}\n\s*dbInMemoryLocal\.global\['affiliate_commissions'\] = JSON\.stringify\(commissions\);\n\s*dbInMemoryLocal\.global\['affiliates'\] = JSON\.stringify\(affiliates\);\n\s*scheduleSaveLocalFallback\(\);/
-    );
+    expect(block).toContain("if (!comm)");
+    expect(block).toContain("if (comm.status === 'Pago')");
+    expect(block).toContain('res.status(404).json({ error: "Comissão não encontrada." })');
+    expect(block).toContain('res.status(409).json({ error: "Comissão já foi paga." })');
+    expect(block).toContain('res.status(404).json({ error: "Afiliado não encontrado." })');
   });
 
-  it("preserva a persistência local mesmo quando o afiliado não existe", () => {
-    const block = commissionPaymentRouteBlock(readProjectFile(SERVER_PATH));
-    const affiliateGuardIndex = block.indexOf("if (affIdx !== -1)");
-    const commissionsWriteIndex = block.indexOf(
-      "dbInMemoryLocal.global['affiliate_commissions'] = JSON.stringify(commissions)"
-    );
-    const scheduleIndex = block.indexOf("scheduleSaveLocalFallback()");
-
-    expect(affiliateGuardIndex).toBeGreaterThan(-1);
-    expect(commissionsWriteIndex).toBeGreaterThan(affiliateGuardIndex);
-    expect(scheduleIndex).toBeGreaterThan(commissionsWriteIndex);
-  });
-
-  it("preserva os payloads e status HTTP reais", () => {
+  it("preserva somente a baixa interna e o payload de sucesso", () => {
     const block = commissionPaymentRouteBlock(readProjectFile(SERVER_PATH));
 
+    expect(block).toContain("affiliate_commissions");
+    expect(block).toContain("affiliates");
+    expect(block).toContain("commission_paid");
+    expect(block).toContain("commission_pending");
     expect(block).toContain(
       'res.json({ success: true, message: "Comissão quitada e registrada financeiramente com sucesso!" });'
     );
@@ -151,7 +102,14 @@ describe("admin commission payment contract 49.1-AP", () => {
       'res.status(500).json({ error: "Erro ao dar baixa em comissão." });'
     );
     expect(block).not.toContain("details:");
-    expect(block).not.toMatch(/res\.status\(2\d\d\)/);
+  });
+
+  it("não adiciona gateway, API financeira ou chamada externa", () => {
+    const block = commissionPaymentRouteBlock(readProjectFile(SERVER_PATH));
+
+    expect(block).not.toMatch(
+      /\b(?:Pix|boleto|cart[aã]o|Stripe|Mercado Pago|PayPal|PagSeguro|Pagar\.me|Cielo|Asaas|Iugu|OpenPix|Gerencianet|Efi|fetch|axios|http\.request|https\.request|Authorization|Bearer|apiKey|secretKey|webhook)\b/i
+    );
   });
 
   it("impede a extração antecipada da rota", () => {

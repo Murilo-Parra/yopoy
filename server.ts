@@ -2057,34 +2057,78 @@ app.post("/api/admin/commissions/:id/pay", requireMasterAdmin, async (req: expre
   try {
     const { id } = req.params;
     if (isPostgresActive && pgPool) {
-      await pgPool.query("BEGIN");
-      const commRes = await pgPool.query("SELECT * FROM affiliate_commissions WHERE id = $1", [id]);
-      const comm = commRes.rows[0];
-      if (comm && comm.status !== 'Pago') {
-        await pgPool.query("UPDATE affiliate_commissions SET status = 'Pago' WHERE id = $1", [id]);
-        await pgPool.query(`
-          UPDATE affiliates 
-          SET commission_paid = commission_paid + $1, commission_pending = commission_pending - $1 
+      const client = await pgPool.connect();
+      let transactionStarted = false;
+      try {
+        await client.query("BEGIN");
+        transactionStarted = true;
+
+        const commRes = await client.query("SELECT * FROM affiliate_commissions WHERE id = $1", [id]);
+        const comm = commRes.rows[0];
+        if (!comm) {
+          await client.query("ROLLBACK");
+          transactionStarted = false;
+          res.status(404).json({ error: "Comissão não encontrada." });
+          return;
+        }
+        if (comm.status === 'Pago') {
+          await client.query("ROLLBACK");
+          transactionStarted = false;
+          res.status(409).json({ error: "Comissão já foi paga." });
+          return;
+        }
+
+        await client.query("UPDATE affiliate_commissions SET status = 'Pago' WHERE id = $1", [id]);
+        const affiliateUpdate = await client.query(`
+          UPDATE affiliates
+          SET commission_paid = commission_paid + $1, commission_pending = commission_pending - $1
           WHERE id = $2
         `, [comm.commission_amount, comm.affiliate_id]);
-      }
-      await pgPool.query("COMMIT");
-    } else {
-      const commissions = JSON.parse(dbInMemoryLocal.global['affiliate_commissions'] || '[]');
-      const affiliates = JSON.parse(dbInMemoryLocal.global['affiliates'] || '[]');
-      const idx = commissions.findIndex((ac: any) => ac.id === id);
-      if (idx !== -1 && commissions[idx].status !== 'Pago') {
-        commissions[idx].status = 'Pago';
-        const affIdx = affiliates.findIndex((a: any) => a.id === commissions[idx].affiliate_id);
-        if (affIdx !== -1) {
-          const amt = commissions[idx].commission_amount;
-          affiliates[affIdx].commission_paid = (affiliates[affIdx].commission_paid || 0.00) + amt;
-          affiliates[affIdx].commission_pending = Math.max(0, (affiliates[affIdx].commission_pending || 0.00) - amt);
+        if (affiliateUpdate.rowCount === 0) {
+          await client.query("ROLLBACK");
+          transactionStarted = false;
+          res.status(404).json({ error: "Afiliado não encontrado." });
+          return;
         }
-        dbInMemoryLocal.global['affiliate_commissions'] = JSON.stringify(commissions);
-        dbInMemoryLocal.global['affiliates'] = JSON.stringify(affiliates);
-        scheduleSaveLocalFallback();
+
+        await client.query("COMMIT");
+        transactionStarted = false;
+      } catch (err) {
+        if (transactionStarted) {
+          await client.query("ROLLBACK");
+        }
+        throw err;
+      } finally {
+        client.release();
       }
+    } else {
+      const commissions: Array<{ id: string; affiliate_id: string; commission_amount: number; status: string }> =
+        JSON.parse(dbInMemoryLocal.global['affiliate_commissions'] || '[]');
+      const affiliates: Array<{ id: string; commission_paid?: number; commission_pending?: number }> =
+        JSON.parse(dbInMemoryLocal.global['affiliates'] || '[]');
+      const idx = commissions.findIndex((commission) => commission.id === id);
+      if (idx === -1) {
+        res.status(404).json({ error: "Comissão não encontrada." });
+        return;
+      }
+      if (commissions[idx].status === 'Pago') {
+        res.status(409).json({ error: "Comissão já foi paga." });
+        return;
+      }
+
+      const affIdx = affiliates.findIndex((affiliate) => affiliate.id === commissions[idx].affiliate_id);
+      if (affIdx === -1) {
+        res.status(404).json({ error: "Afiliado não encontrado." });
+        return;
+      }
+
+      commissions[idx].status = 'Pago';
+      const amt = commissions[idx].commission_amount;
+      affiliates[affIdx].commission_paid = (affiliates[affIdx].commission_paid || 0.00) + amt;
+      affiliates[affIdx].commission_pending = Math.max(0, (affiliates[affIdx].commission_pending || 0.00) - amt);
+      dbInMemoryLocal.global['affiliate_commissions'] = JSON.stringify(commissions);
+      dbInMemoryLocal.global['affiliates'] = JSON.stringify(affiliates);
+      scheduleSaveLocalFallback();
     }
     res.json({ success: true, message: "Comissão quitada e registrada financeiramente com sucesso!" });
   } catch (err) {

@@ -32,6 +32,7 @@ import { registerNfeDownloadRoutes } from "./src/backend/fiscal/registerNfeDownl
 import { registerNfceQueryRoutes } from "./src/backend/fiscal/registerNfceQueryRoutes";
 import { registerNfseQueryRoutes } from "./src/backend/nfse/registerNfseQueryRoutes";
 import { registerAdminAffiliateQueryRoutes } from "./src/backend/admin/registerAdminAffiliateQueryRoutes";
+import { registerAdminCommissionQueryRoutes } from "./src/backend/admin/registerAdminCommissionQueryRoutes";
 import { registerAdminSupportQueryRoutes } from "./src/backend/admin/registerAdminSupportQueryRoutes";
 import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registerAdminSystemMonitoringRoutes";
 import { registerSyncRoutes } from "./src/backend/sync/registerSyncRoutes";
@@ -2069,39 +2070,11 @@ app.post("/api/admin/affiliates/create", requireMasterAdmin, async (req: express
 });
 
 // 9. Comissões de Afiliados
-app.get("/api/admin/commissions", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    let result: any[] = [];
-    if (isPostgresActive && pgPool) {
-      const comms = await pgPool.query(`
-        SELECT ac.*, a.name as affiliate_name, a.code as affiliate_code, c.corporate_name as company_name
-        FROM affiliate_commissions ac
-        JOIN affiliates a ON ac.affiliate_id = a.id
-        LEFT JOIN companies c ON ac.company_id = c.id
-        ORDER BY ac.created_at DESC
-      `);
-      result = comms.rows;
-    } else {
-      const commissions = JSON.parse(dbInMemoryLocal.global['affiliate_commissions'] || '[]');
-      const affiliates = JSON.parse(dbInMemoryLocal.global['affiliates'] || '[]');
-      const companies = JSON.parse(dbInMemoryLocal.global['companies'] || '[]');
-      
-      result = commissions.map((ac: any) => {
-        const aff = affiliates.find((a: any) => a.id === ac.affiliate_id);
-        const comp = companies.find((c: any) => c.id === ac.company_id);
-        return {
-          ...ac,
-          affiliate_name: aff ? aff.name : "Parceiro Avulso",
-          affiliate_code: aff ? aff.code : "N/A",
-          company_name: comp ? comp.corporate_name : "Nova Empresa Premium"
-        };
-      });
-    }
-    res.json(result);
-  } catch (err) {
-    console.error("Erro listando comissões:", err);
-    res.status(500).json({ error: "Erro ao consultar comissões." });
-  }
+registerAdminCommissionQueryRoutes(app, {
+  requireMasterAdmin,
+  getIsPostgresActive: () => isPostgresActive,
+  getPgPool: () => pgPool,
+  dbInMemoryLocal
 });
 
 // 10. Quitar Comissão de Afiliado

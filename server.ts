@@ -32,6 +32,7 @@ import { registerNfeDownloadRoutes } from "./src/backend/fiscal/registerNfeDownl
 import { registerNfceQueryRoutes } from "./src/backend/fiscal/registerNfceQueryRoutes";
 import { registerNfseQueryRoutes } from "./src/backend/nfse/registerNfseQueryRoutes";
 import { registerAdminAffiliateQueryRoutes } from "./src/backend/admin/registerAdminAffiliateQueryRoutes";
+import { registerAdminAffiliateMutationRoutes } from "./src/backend/admin/registerAdminAffiliateMutationRoutes";
 import { registerAdminCommissionQueryRoutes } from "./src/backend/admin/registerAdminCommissionQueryRoutes";
 import { registerAdminSupportQueryRoutes } from "./src/backend/admin/registerAdminSupportQueryRoutes";
 import { registerAdminAuditLogQueryRoutes } from "./src/backend/admin/registerAdminAuditLogQueryRoutes";
@@ -2028,46 +2029,12 @@ registerAdminAffiliateQueryRoutes(app, {
 });
 
 // 8. Cadastrar novo Afiliado
-app.post("/api/admin/affiliates/create", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    const { name, email, code, commission_rate, discount_rate } = req.body;
-    if (!name || !email || !code) {
-      res.status(400).json({ error: "Nome, e-mail e código exclusivo de afiliado são obrigatórios." });
-      return;
-    }
-
-    const affId = 'aff_' + Date.now();
-    if (isPostgresActive && pgPool) {
-      await pgPool.query(`
-        INSERT INTO affiliates (id, name, email, code, commission_rate, discount_rate)
-        VALUES ($1, $2, $3, $4, $5, $6)
-      `, [affId, name, email, code.trim().toUpperCase(), commission_rate || 10.00, discount_rate || 0.00]);
-    } else {
-      const affs = JSON.parse(dbInMemoryLocal.global['affiliates'] || '[]');
-      const newAff = {
-        id: affId,
-        name,
-        email,
-        code: code.trim().toUpperCase(),
-        commission_rate: parseFloat(commission_rate) || 10.00,
-        discount_rate: parseFloat(discount_rate) || 0.00,
-        clicks: 0,
-        leads: 0,
-        sales_count: 0,
-        commission_paid: 0.00,
-        commission_pending: 0.00,
-        created_at: new Date().toISOString()
-      };
-      affs.push(newAff);
-      dbInMemoryLocal.global['affiliates'] = JSON.stringify(affs);
-      scheduleSaveLocalFallback();
-    }
-
-    res.json({ success: true, message: "Parceiro Afiliado registrado estrategicamente com sucesso!" });
-  } catch (err: any) {
-    console.error("Erro criar afiliado:", err);
-    res.status(500).json({ error: "Erro ao criar parceiro. Verique se código já existe." });
-  }
+registerAdminAffiliateMutationRoutes(app, {
+  requireMasterAdmin,
+  getIsPostgresActive: () => isPostgresActive,
+  getPgPool: () => pgPool,
+  dbInMemoryLocal,
+  scheduleSaveLocalFallback
 });
 
 // 9. Comissões de Afiliados

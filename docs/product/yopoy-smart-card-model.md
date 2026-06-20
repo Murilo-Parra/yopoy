@@ -13,13 +13,15 @@ Tudo que entra no sistema vira um card inteligente. O card é a unidade visual d
 - Despesa;
 - Produto/estoque;
 - Pré-nota;
-- Documento fiscal;
+- Preparação fiscal/rascunho de documento;
 - Pendência;
 - Arquivado;
 - Suporte;
 - Alerta de IA.
 
 O tipo descreve a função atual do card. Conversões e arquivamentos preservam sua origem e seu histórico.
+
+No V1, um card de preparação fiscal representa somente rascunho, pré-nota ou informação organizada para o contador. Ele não é documento fiscal autorizado, não possui efeito fiscal e não comprova emissão.
 
 ## Estados universais
 
@@ -37,7 +39,7 @@ O tipo descreve a função atual do card. Conversões e arquivamentos preservam 
 - `rejeitado`;
 - `cancelado`.
 
-Nem todo estado se aplica a todo tipo. Cada fluxo futuro deverá declarar as transições válidas, sem alterar o significado universal dos estados.
+Nem todo estado se aplica a todo tipo. No MVP, `emitido`, `rejeitado` e `cancelado` não representam operações fiscais reais; ficam reservados ao fluxo fiscal pós-MVP. Cada fluxo futuro deverá declarar as transições válidas, sem alterar o significado universal dos estados.
 
 ## Ações universais
 
@@ -51,8 +53,8 @@ Nem todo estado se aplica a todo tipo. Cada fluxo futuro deverá declarar as tra
 - transformar em venda;
 - transformar em pré-nota;
 - enviar ao contador;
-- preparar emissão fiscal;
-- emitir fiscalmente somente com confirmação;
+- marcar como pronto para emitir futuramente;
+- emitir fiscalmente somente no futuro e com confirmação;
 - ignorar com justificativa.
 
 As ações disponíveis dependem do tipo, do estado, da permissão do usuário e do contexto da empresa. Toda ação crítica deve ser explícita e auditável.
@@ -83,7 +85,7 @@ Esta é uma definição conceitual. Nomes físicos, formatos, nulabilidade e per
 - pagamento pode vincular a venda ou comanda;
 - comanda pode virar venda;
 - venda pode virar pré-nota;
-- pré-nota pode virar documento fiscal;
+- pré-nota pode ficar pronta para uma emissão fiscal futura;
 - arquivar nunca apaga;
 - desvincular preserva histórico.
 
@@ -97,6 +99,14 @@ Um vínculo deve registrar origem, responsável e momento da ação. Conversão 
 - **Ação crítica:** sempre exigir confirmação, independentemente da confiança.
 
 A confiança é contexto para decisão humana, não autorização para ação irreversível.
+
+## Limite fiscal do V1
+
+- os estados internos são “sem nota”, “rascunho”, “pré-nota”, “enviar ao contador” e “pronto para emitir futuramente”;
+- rascunho e pré-nota nunca devem ser apresentados como nota emitida;
+- emitir e cancelar nota são ações futuras, fora do MVP e nunca automáticas;
+- fiscal real, SEFAZ e certificado A1 operacional dependem de uma etapa pós-MVP específica;
+- dados preparados agora devem preservar rastreabilidade para uma evolução futura, sem antecipar contrato técnico ou comercial.
 
 ## Segurança
 

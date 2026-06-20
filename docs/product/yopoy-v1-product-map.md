@@ -2,7 +2,7 @@
 
 ## Definição curta
 
-Yopoy é um ERP/SaaS mobile-first para empresas físicas brasileiras organizarem vendas, caixa, estoque, pagamentos, pré-notas, contador e fiscal por meio de uma Central Visual Inteligente.
+Yopoy é um ERP/SaaS mobile-first para empresas físicas brasileiras organizarem vendas, caixa, estoque, pagamentos, pré-notas e informações para o contador por meio de uma Central Visual Inteligente.
 
 ## Princípio principal
 
@@ -10,7 +10,7 @@ Yopoy é um ERP/SaaS mobile-first para empresas físicas brasileiras organizarem
 - organizar depois;
 - conciliar quando possível;
 - enviar ao contador se quiser;
-- emitir nota apenas quando quiser ou precisar.
+- emitir nota somente no futuro, quando a função fiscal real estiver pronta, confirmada e o usuário quiser ou precisar.
 
 ## O que o Yopoy não é
 
@@ -44,7 +44,7 @@ Yopoy é um ERP/SaaS mobile-first para empresas físicas brasileiras organizarem
 
 ## Promessa comercial
 
-Organizar a rotina da empresa física pelo celular, substituindo planilhas e papéis por cards inteligentes que podem virar venda, caixa, estoque, pré-nota, relatório para contador ou nota fiscal quando necessário.
+Organizar a rotina da empresa física pelo celular, substituindo planilhas e papéis por cards inteligentes que podem virar venda, caixa, estoque, pré-nota ou relatório para contador. A emissão fiscal real é uma evolução futura, fora do MVP.
 
 ## Módulos do Yopoy V1
 
@@ -62,7 +62,7 @@ Organizar a rotina da empresa física pelo celular, substituindo planilhas e pap
 - conciliação visual manual;
 - pré-nota;
 - pasta do contador;
-- fiscal em homologação e preparação;
+- preparação fiscal interna para evolução futura, sem emissão real;
 - IA contextual;
 - Admin/SaaS;
 - suporte;
@@ -84,14 +84,18 @@ Esses módulos formam um fluxo único ao redor da Central Visual. Não devem ser
 - produtos e estoque básico;
 - captura por foto como anexo ou rascunho;
 - pré-nota simples;
+- rascunho de nota interno;
 - exportação simples para o contador;
 - admin básico.
+
+No V1/MVP, os estados “sem nota”, “rascunho”, “pré-nota”, “enviar ao contador” e “pronto para emitir futuramente” são controles internos. Nenhum deles significa que uma nota fiscal foi autorizada ou emitida.
 
 ## O que fica para depois do MVP
 
 - conciliação automática com maquininha;
 - integração real com adquirentes;
-- fiscal real em produção;
+- emissão real de NF-e, NFC-e ou NFS-e;
+- cancelamento fiscal real, SEFAZ em produção e certificado A1 operacional;
 - IA avançada;
 - estoque avançado com lote e validade;
 - automações premium;
@@ -103,31 +107,31 @@ Esses módulos formam um fluxo único ao redor da Central Visual. Não devem ser
 
 - **Finalidade:** permitir que uma empresa conheça a organização por cards e registre uma operação pequena sem compromisso inicial.
 - **Funções liberadas:** Central Visual manual com limites, cards manuais, cadastro reduzido de produtos e clientes, venda simples, pagamento manual e histórico básico.
-- **Funções bloqueadas:** automações, fiscal, recursos avançados de contador, ações em lote, relatórios avançados e volumes maiores.
+- **Funções bloqueadas:** automações, recursos avançados de contador, ações em lote, relatórios avançados e volumes maiores; fiscal real permanece futuro para todos os planos.
 - **Motivo comercial:** reduzir a barreira de entrada e demonstrar valor antes da contratação, mantendo limites que incentivem a evolução do negócio para um plano pago.
 
 ### Básico — Controle
 
 - **Finalidade:** substituir caderno e planilha no controle diário de uma pequena empresa física.
 - **Funções liberadas:** Central Visual com limites ampliados, vendas, pagamentos e vínculos manuais, caixa diário, produtos, estoque básico, clientes, fornecedores, fotos e exportação simples.
-- **Funções bloqueadas:** fiscal operacional, IA avançada, automações premium, estoque avançado e recursos gerenciais de maior complexidade.
+- **Funções bloqueadas:** IA avançada, automações premium, estoque avançado e recursos gerenciais de maior complexidade; fiscal real permanece futuro para todos os planos.
 - **Motivo comercial:** oferecer um ganho operacional claro e acessível para o primeiro perfil pagante.
 
 ### Intermediário — Gestão Física
 
 - **Finalidade:** organizar uma operação física recorrente com maior volume, equipe e necessidade de acompanhamento.
 - **Funções liberadas:** tudo do Básico, conciliação visual manual completa, pré-nota, pasta do contador, permissões operacionais, auditoria ampliada, relatórios e recursos de revisão em lote.
-- **Funções bloqueadas:** emissão fiscal de produção, integrações premium com adquirentes e automações avançadas exclusivas.
-- **Motivo comercial:** atender empresas que precisam de gestão integrada sem obrigá-las a contratar o pacote fiscal completo.
+- **Funções bloqueadas:** emissão fiscal real, integrações premium com adquirentes e automações avançadas exclusivas.
+- **Motivo comercial:** atender empresas que precisam de gestão integrada, pré-nota e contador sem depender de emissão fiscal.
 
-### Premium — Fiscal Pro
+### Premium — Gestão Pro
 
-- **Finalidade:** conectar a organização operacional ao fluxo fiscal e às automações de maior valor, sempre sob controle do usuário.
-- **Funções liberadas:** tudo do Intermediário, fiscal quando homologado e autorizado para produção, preparação e emissão confirmada, automações premium, IA contextual avançada e integrações comerciais disponíveis.
-- **Funções bloqueadas:** ações críticas autônomas, movimentação de dinheiro pelo Yopoy e qualquer função ainda não homologada ou contratada.
-- **Motivo comercial:** monetizar necessidades fiscais e automações de maior impacto sem transformar o fiscal em requisito de entrada no produto.
+- **Finalidade:** ampliar gestão, capacidade operacional e recursos avançados, sempre sob controle do usuário.
+- **Funções liberadas:** tudo do Intermediário, maior capacidade e, quando estiverem validadas, automações premium, IA contextual e integrações comerciais disponíveis.
+- **Funções bloqueadas:** emissão fiscal real no MVP, ações críticas autônomas, movimentação de dinheiro pelo Yopoy e qualquer função ainda não validada ou contratada.
+- **Motivo comercial:** monetizar gestão avançada e automações de maior impacto sem apresentar fiscal real como requisito ou promessa do V1.
 
-Os limites exatos de uso, usuários e volume serão definidos na etapa de matriz função por plano e validados comercialmente.
+Fiscal real poderá ser avaliado como add-on futuro ou capacidade pós-MVP somente depois de desenvolvimento, homologação e validação do produto. Os limites de função por plano estão definidos na matriz função x plano; números de uso, usuários e volume ainda exigem validação comercial.
 
 ## Regra de escopo
 

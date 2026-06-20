@@ -4,7 +4,7 @@
 
 - 49.1 encerrada;
 - ciclo técnico do `server` encerrado;
-- próxima fase é produto/front-end;
+- próxima fase é produto/comercial, seguida pela construção orientada pela Central Visual;
 - não abrir novas refatorações sem risco real.
 
 A numeração abaixo representa a sequência de produto a partir deste marco. Ela não reabre nem prolonga a sequência técnica de refatoração do `server` já encerrada.
@@ -20,9 +20,9 @@ A numeração abaixo representa a sequência de produto a partir deste marco. El
 
 ### 47.1 — Matriz função x plano
 
-- **Objetivo:** transformar os planos sugeridos em ofertas comerciais comparáveis e limitáveis.
-- **Entregáveis:** matriz de funções, limites de uso, usuários, volumes, dependências e hipóteses de preço por plano.
-- **Critério de conclusão:** cada função do V1 tem plano, limite e justificativa comercial definidos.
+- **Objetivo:** transformar os planos oficiais em ofertas comerciais comparáveis, limitáveis e sem promessa fiscal prematura.
+- **Entregáveis:** matriz de funções por plano, separação MVP/pós-MVP e limites comerciais a validar.
+- **Critério de conclusão:** cada função tem plano, fase e justificativa comercial; emissão fiscal real está fora do MVP.
 - **O que não fazer:** implementar cobrança, escolher preço definitivo sem validação ou adicionar funções só para preencher planos.
 
 ### 47.2 — Modelo de dados conceitual dos cards
@@ -81,12 +81,12 @@ A numeração abaixo representa a sequência de produto a partir deste marco. El
 - **Critério de conclusão:** o usuário gera pré-nota ou relatório consistente e decide explicitamente quando enviar ao contador.
 - **O que não fazer:** emitir nota, enviar automaticamente ou substituir validação contábil profissional.
 
-### 52.0 — Fiscal em homologação
+### 52.0 — Preparação fiscal futura e pré-nota/contador
 
-- **Objetivo:** validar integrações fiscais com segurança fora da produção.
-- **Entregáveis:** configuração protegida, preparação de emissão, ambiente de homologação, tratamento de rejeições e auditoria.
-- **Critério de conclusão:** cenários homologados passam com confirmação explícita, sem emissão real indevida em desenvolvimento ou preview.
-- **O que não fazer:** liberar produção antes da homologação, cancelar automaticamente ou alterar certificado/configuração crítica por sugestão.
+- **Objetivo:** consolidar dados e estados internos que deixam a empresa organizada para uma capacidade fiscal futura, sem emitir nota.
+- **Entregáveis:** rascunho interno, pré-nota, estados “sem nota”, “enviar ao contador” e “pronto para emitir futuramente”, exportação e histórico.
+- **Critério de conclusão:** a informação fiscal preparatória é clara e rastreável, sem ser apresentada como documento autorizado.
+- **O que não fazer:** integrar SEFAZ, operar certificado A1, emitir ou cancelar NF-e, NFC-e ou NFS-e, gerar XML/DANFE fiscal real ou prometer produção fiscal.
 
 ### 53.0 — IA contextual
 
@@ -137,7 +137,7 @@ A numeração abaixo representa a sequência de produto a partir deste marco. El
 - não criar diagnóstico se já há teste reproduzindo;
 - não refatorar `server` sem risco real;
 - não implementar automação antes do fluxo manual;
-- não implementar fiscal real antes de homologação;
+- não implementar fiscal real antes de o produto ser validado e de existir etapa pós-MVP específica, homologada e aprovada;
 - não implementar integração com maquininha antes de vínculo manual;
 - não implementar IA avançada antes da Central manual.
 
@@ -150,7 +150,7 @@ Uma etapa só deve começar quando sua dependência imediata estiver concluída 
 3. **Plano gratuito limitado:** permitir entrada e demonstração de valor sem custo operacional descontrolado.
 4. **Plano básico para substituir planilha:** vender registro, caixa e controle simples para a primeira necessidade pagante.
 5. **Plano intermediário para operação física:** atender volume, equipe, pré-nota e contador.
-6. **Premium para fiscal e automação:** cobrar por capacidades de maior complexidade depois de homologadas e validadas.
+6. **Premium — Gestão Pro:** cobrar por gestão avançada e, quando confirmadas, automações de maior complexidade; fiscal real poderá ser add-on futuro, nunca promessa do MVP.
 7. **Site comercial:** publicar quando o fluxo principal estiver demonstrável, com promessas alinhadas ao produto disponível.
 
 ## Marco de conclusão do MVP
@@ -168,3 +168,9 @@ O MVP está concluído quando uma empresa consegue:
 - arquivar com histórico.
 
 Essas ações devem formar um fluxo utilizável e auditável. A existência isolada das funções não caracteriza conclusão do MVP.
+
+## Fiscal real pós-MVP
+
+Emissão, cancelamento, SEFAZ, certificado A1 em produção, XML e DANFE fiscais reais não pertencem à sequência imediata nem ao MVP. Uma etapa fiscal real só poderá ser planejada depois da validação do produto e deverá ter escopo, homologação, riscos e disponibilidade comercial próprios.
+
+A sequência imediata permanece: modelo conceitual, design system, protótipo da Central, Central manual, vendas/pagamento/vínculo, caixa/estoque e pré-nota/contador. Nenhuma integração fiscal real deve interromper ou antecipar esse caminho.

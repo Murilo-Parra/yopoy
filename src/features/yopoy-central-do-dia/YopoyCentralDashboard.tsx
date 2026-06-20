@@ -9,16 +9,43 @@ interface Props {
 }
 
 interface CentralSection {
-  id: string;
+  id: CentralSectionId;
   title: string;
   description: string;
+  emptyMessage: string;
   icon: typeof Sparkles;
   items: SmartCardItem[];
 }
 
+type CentralSectionId =
+  | 'attention'
+  | 'captures'
+  | 'unlinked-payments'
+  | 'unpaid-sales'
+  | 'review'
+  | 'ready'
+  | 'pre-invoices'
+  | 'archived';
+
+function getSectionId(item: SmartCardItem): CentralSectionId {
+  if (item.archived) return 'archived';
+  if (
+    item.kind === 'invoice-draft'
+    || item.kind === 'pre-invoice'
+    || item.kind === 'accountant-package'
+    || item.hasPreInvoice
+  ) return 'pre-invoices';
+  if (item.status === 'review') return 'review';
+  if (item.status === 'ready') return 'ready';
+  if (item.kind === 'capture') return 'captures';
+  if (item.kind === 'payment' && !item.linked) return 'unlinked-payments';
+  if (item.kind === 'sale' && !item.linked) return 'unpaid-sales';
+  return 'attention';
+}
+
 export function YopoyCentralDashboard({ theme }: Props) {
   const [items, setItems] = useState<SmartCardItem[]>(() => MOCK_SMART_CARDS.map((item) => ({ ...item, tags: [...item.tags] })));
-  const [feedback, setFeedback] = useState('Dados fictícios carregados somente nesta tela.');
+  const [feedback, setFeedback] = useState('Modo demonstração: exemplos fictícios carregados. Qualquer alteração acontece apenas nesta tela e será perdida ao sair ou recarregar.');
   const dark = theme === 'dark';
 
   const updateItem = (id: string, change: (item: SmartCardItem) => SmartCardItem, message: string) => {
@@ -27,65 +54,77 @@ export function YopoyCentralDashboard({ theme }: Props) {
   };
 
   const sections = useMemo<CentralSection[]>(() => {
-    const active = items.filter((item) => !item.archived);
+    const itemsBySection = new Map<CentralSectionId, SmartCardItem[]>();
+    items.forEach((item) => {
+      const sectionId = getSectionId(item);
+      itemsBySection.set(sectionId, [...(itemsBySection.get(sectionId) ?? []), item]);
+    });
+
+    const inSection = (id: CentralSectionId) => itemsBySection.get(id) ?? [];
     return [
       {
         id: 'attention',
         title: 'Atenção agora',
-        description: 'Pendências e sugestões que merecem conferência humana.',
+        description: 'O que precisa de uma decisão ou conferência manual primeiro.',
+        emptyMessage: 'Tudo certo por aqui. Nenhuma pendência fictícia exige atenção agora.',
         icon: Sparkles,
-        items: active.filter((item) =>
-          (item.kind === 'ai-alert' || item.kind === 'pending') && (item.status === 'new' || item.status === 'pending')
-        ),
+        items: inSection('attention'),
       },
       {
         id: 'captures',
         title: 'Novas capturas',
-        description: 'Registre primeiro; classifique quando tiver tempo.',
+        description: 'Registre rapidamente e organize quando fizer sentido para sua rotina.',
+        emptyMessage: 'Nenhuma captura fictícia aguardando organização.',
         icon: Inbox,
-        items: active.filter((item) => item.kind === 'capture' && item.status === 'new'),
+        items: inSection('captures'),
       },
       {
         id: 'unlinked-payments',
         title: 'Pagamentos sem vínculo',
-        description: 'Recebimentos fictícios aguardando conciliação visual.',
+        description: 'Recebimentos de exemplo que ainda não foram ligados a uma venda.',
+        emptyMessage: 'Nenhum pagamento fictício está sem vínculo.',
         icon: Link2Off,
-        items: active.filter((item) => item.kind === 'payment' && !item.linked && (item.status === 'new' || item.status === 'pending')),
+        items: inSection('unlinked-payments'),
       },
       {
         id: 'unpaid-sales',
         title: 'Vendas sem pagamento',
-        description: 'Vendas fictícias que ainda não possuem pagamento associado.',
+        description: 'Vendas de exemplo que ainda não têm um recebimento associado.',
+        emptyMessage: 'Nenhuma venda fictícia aguarda associação de pagamento.',
         icon: CircleDollarSign,
-        items: active.filter((item) => item.kind === 'sale' && !item.linked && !item.hasPreInvoice && (item.status === 'new' || item.status === 'pending')),
+        items: inSection('unpaid-sales'),
       },
       {
         id: 'review',
         title: 'Em revisão',
-        description: 'Itens organizados parcialmente e ainda não concluídos.',
+        description: 'Registros que você começou a organizar e ainda quer conferir.',
+        emptyMessage: 'Nenhum registro fictício está em revisão.',
         icon: ClipboardCheck,
-        items: active.filter((item) => item.status === 'review' && item.kind !== 'invoice-draft' && !item.hasPreInvoice),
+        items: inSection('review'),
       },
       {
         id: 'ready',
         title: 'Prontos',
-        description: 'Registros conferidos para o próximo passo manual.',
+        description: 'Registros conferidos e organizados para o próximo passo manual.',
+        emptyMessage: 'Nenhum registro fictício foi marcado como pronto ainda.',
         icon: ClipboardCheck,
-        items: active.filter((item) => item.status === 'ready' && item.kind !== 'pre-invoice' && item.kind !== 'accountant-package'),
+        items: inSection('ready'),
       },
       {
         id: 'pre-invoices',
-        title: 'Pré-notas / contador',
-        description: 'Preparação visual sem emissão fiscal e sem envio externo.',
+        title: 'Pré-notas e contador',
+        description: 'Resumos visuais para conferência: sem valor fiscal, emissão ou envio externo.',
+        emptyMessage: 'Nenhuma preparação fictícia para conferência ou contador.',
         icon: ClipboardCheck,
-        items: active.filter((item) => item.kind === 'invoice-draft' || item.kind === 'pre-invoice' || item.kind === 'accountant-package' || item.hasPreInvoice),
+        items: inSection('pre-invoices'),
       },
       {
         id: 'archived',
         title: 'Arquivados',
-        description: 'Itens removidos da mesa, com restauração local disponível.',
+        description: 'Itens retirados da mesa; você pode restaurá-los apenas nesta demonstração.',
+        emptyMessage: 'Nenhum item fictício foi arquivado.',
         icon: Archive,
-        items: items.filter((item) => item.archived),
+        items: inSection('archived'),
       },
     ];
   }, [items]);
@@ -100,18 +139,18 @@ export function YopoyCentralDashboard({ theme }: Props) {
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white">
-              <Sparkles className="h-3.5 w-3.5" /> MVP manual
+              <Sparkles className="h-3.5 w-3.5" /> Demonstração manual
             </span>
             <h1 className="mt-4 text-2xl font-black tracking-tight sm:text-3xl">Central Visual do Yopoy</h1>
             <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Registre primeiro, organize depois, concilie quando possível e prepare o que quiser compartilhar com o contador.
+              Sua mesa única para registrar o movimento da empresa, organizar pendências e preparar informações para conferência.
             </p>
           </div>
           <div className={`rounded-2xl border p-3 text-xs leading-relaxed md:max-w-sm ${
             dark ? 'border-amber-700/40 bg-amber-950/30 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-800'
           }`}>
-            <strong className="block">Demonstração com dados fictícios</strong>
-            As ações são apenas visuais, não persistem e não emitem nota fiscal. Uma emissão real só existirá futuramente, com função fiscal própria e confirmação do usuário.
+            <strong className="block">Ambiente demonstrativo: nada aqui é real</strong>
+            Empresas, pessoas, valores e documentos são fictícios. As ações são locais, não ficam salvas, não enviam dados e nunca emitem nota fiscal.
           </div>
         </div>
       </header>
@@ -127,7 +166,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
           const SectionIcon = section.icon;
           return (
             <section key={section.id} aria-labelledby={`central-section-${section.id}`}>
-              <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="mb-3 flex items-start justify-between gap-3 px-1">
                 <div className="flex min-w-0 items-start gap-2.5">
                   <span className={`mt-0.5 rounded-xl p-2 ${dark ? 'bg-slate-800 text-indigo-300' : 'bg-indigo-100 text-indigo-700'}`}>
                     <SectionIcon className="h-4 w-4" />
@@ -153,16 +192,16 @@ export function YopoyCentralDashboard({ theme }: Props) {
                         onReady={(id) => updateItem(id, (current) => ({ ...current, status: 'ready' }), 'Item marcado como pronto nesta demonstração.')}
                         onArchiveToggle={(id) => updateItem(id, (current) => ({ ...current, archived: !current.archived }), item.archived ? 'Item desarquivado nesta demonstração.' : 'Item arquivado nesta demonstração.')}
                         onLink={(id) => updateItem(id, (current) => ({ ...current, linked: true, status: 'review' }), 'Vínculo visual criado. Nenhuma conciliação real foi executada.')}
-                        onCreatePreInvoice={(id) => updateItem(id, (current) => ({ ...current, hasPreInvoice: true, status: 'review' }), 'Pré-nota visual criada. Nenhum documento fiscal foi emitido.')}
+                        onCreatePreInvoice={(id) => updateItem(id, (current) => ({ ...current, hasPreInvoice: true, status: 'review' }), 'Preparação visual adicionada somente nesta tela. Nenhum documento fiscal foi criado ou emitido.')}
                       />
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className={`rounded-2xl border border-dashed px-4 py-6 text-center text-xs ${
-                  dark ? 'border-slate-800 text-slate-600' : 'border-slate-200 text-slate-400'
+                <div className={`rounded-2xl border border-dashed px-4 py-7 text-center text-xs leading-relaxed ${
+                  dark ? 'border-slate-800 bg-slate-900/30 text-slate-400' : 'border-slate-200 bg-slate-50/70 text-slate-500'
                 }`}>
-                  Nenhum item fictício nesta seção.
+                  {section.emptyMessage}
                 </div>
               )}
             </section>

@@ -34,8 +34,8 @@ const KIND_LABELS: Record<SmartCardKind, string> = {
   payment: 'Pagamento',
   expense: 'Despesa',
   stock: 'Produto / estoque',
-  'invoice-draft': 'Rascunho de nota',
-  'pre-invoice': 'Pré-nota',
+  'invoice-draft': 'Rascunho sem valor fiscal',
+  'pre-invoice': 'Pré-nota visual',
   'accountant-package': 'Pacote do contador',
   pending: 'Pendência',
   'ai-alert': 'Alerta de IA',
@@ -76,7 +76,7 @@ export function SmartCard({
   const dark = theme === 'dark';
   const canLink = (item.kind === 'payment' || item.kind === 'sale') && !item.linked;
   const canCreatePreInvoice = (item.kind === 'sale' || item.kind === 'invoice-draft') && !item.hasPreInvoice;
-  const actionClass = `inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold transition-colors ${
+  const actionClass = `inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-center text-xs font-bold transition-colors sm:min-h-9 sm:w-auto sm:rounded-lg sm:px-2.5 sm:py-1.5 sm:text-[11px] ${
     dark
       ? 'border-slate-700 bg-slate-900 text-slate-200 hover:border-indigo-500 hover:text-white'
       : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:text-indigo-700'
@@ -86,7 +86,7 @@ export function SmartCard({
     <article className={`rounded-2xl border p-4 shadow-sm ${
       dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'
     } ${item.archived ? 'opacity-70' : ''}`}>
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-wide ${
@@ -106,7 +106,7 @@ export function SmartCard({
           </h3>
         </div>
         {item.amount !== undefined && (
-          <strong className={`shrink-0 text-sm ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>
+          <strong className={`shrink-0 text-base sm:text-sm ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>
             {item.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </strong>
         )}
@@ -124,10 +124,14 @@ export function SmartCard({
         ))}
         {item.linked && <span className="rounded-md bg-sky-100 px-2 py-1 text-[10px] text-sky-700 dark:bg-sky-950 dark:text-sky-300">Vínculo visual</span>}
         {item.hasPreInvoice && <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Pré-nota visual</span>}
-        <span className={`ml-auto text-[10px] ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{item.timeLabel}</span>
+        <span className={`basis-full pt-1 text-[10px] sm:ml-auto sm:basis-auto sm:pt-0 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{item.timeLabel}</span>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+      <p className={`mt-3 text-[10px] font-semibold ${dark ? 'text-amber-300/80' : 'text-amber-700'}`}>
+        Exemplo fictício · ações locais, sem persistência ou operação externa
+      </p>
+
+      <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:flex sm:flex-wrap">
         {!item.archived && item.status !== 'review' && (
           <button type="button" className={actionClass} onClick={() => onReview(item.id)}>
             <PencilLine className="h-3.5 w-3.5" /> Revisar
@@ -140,12 +144,12 @@ export function SmartCard({
         )}
         {!item.archived && canLink && (
           <button type="button" className={actionClass} onClick={() => onLink(item.id)}>
-            <Link2 className="h-3.5 w-3.5" /> Vincular
+            <Link2 className="h-3.5 w-3.5" /> Simular vínculo
           </button>
         )}
         {!item.archived && canCreatePreInvoice && (
           <button type="button" className={actionClass} onClick={() => onCreatePreInvoice(item.id)}>
-            <FolderCheck className="h-3.5 w-3.5" /> Criar pré-nota
+            <FolderCheck className="h-3.5 w-3.5" /> Preparar pré-nota visual
           </button>
         )}
         <button type="button" className={actionClass} onClick={() => onArchiveToggle(item.id)}>

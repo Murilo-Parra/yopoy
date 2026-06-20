@@ -74,6 +74,7 @@ A numeração abaixo representa a sequência de produto a partir deste marco. El
 ### 50.0 — Caixa diário e estoque básico
 
 - **50.0-A — cadastro mínimo e onboarding progressivo:** planejar entrada rápida pela conta pessoal e coleta posterior de dados empresariais, mantendo fiscal real bloqueado no MVP.
+- **50.0-B — diagnóstico do cadastro atual:** mapear o wizard, campos, validações, dependências de autenticação/backend e estado local antes da implementação mínima.
 - **Objetivo:** refletir a operação diária em caixa e quantidade simples de produtos.
 - **Entregáveis:** abertura/fechamento de caixa, resumo do dia, cadastro de produtos e movimentação básica de estoque auditável.
 - **Critério de conclusão:** a empresa fecha o dia e identifica efeitos das vendas no estoque, com divergências visíveis.

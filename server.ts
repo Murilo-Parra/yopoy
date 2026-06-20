@@ -39,6 +39,7 @@ import { registerAdminAuditLogQueryRoutes } from "./src/backend/admin/registerAd
 import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registerAdminSystemMonitoringRoutes";
 import { registerAdminCustomProviderQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderQueryRoutes";
 import { registerAdminCustomProviderMutationRoutes } from "./src/backend/admin/registerAdminCustomProviderMutationRoutes";
+import { registerAdminCustomProviderUpdateRoutes } from "./src/backend/admin/registerAdminCustomProviderUpdateRoutes";
 import { registerAdminCustomProviderMappingQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderMappingQueryRoutes";
 import { registerAdminCustomProviderMappingMutationRoutes } from "./src/backend/admin/registerAdminCustomProviderMappingMutationRoutes";
 import { registerAdminCustomProviderTemplateQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderTemplateQueryRoutes";
@@ -2185,33 +2186,9 @@ registerAdminCustomProviderMutationRoutes(app, {
   generateUuid: () => crypto.randomUUID()
 });
 
-app.put("/api/admin/custom-providers/:id", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    if (!pgPool) {
-      res.status(500).json({ error: "Banco de dados não conectado." });
-      return;
-    }
-    const { id } = req.params;
-    const {
-      name, city, state, ibge_code, production_url, homologation_url, 
-      communication_type, authentication_type, active
-    } = req.body;
-    
-    await pgPool.query(`
-      UPDATE custom_nfse_providers SET
-        name = $1, city = $2, state = $3, ibge_code = $4, production_url = $5, homologation_url = $6,
-        communication_type = $7, authentication_type = $8, active = $9, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $10
-    `, [
-      name, city, state, ibge_code, production_url, homologation_url, 
-      communication_type, authentication_type, active, id
-    ]);
-    
-    res.json({ message: "Provedor atualizado com sucesso" });
-  } catch (err: any) {
-    console.error("Erro ao atualizar provedor customizado:", err);
-    res.status(500).json({ error: "Falha ao atualizar provedor", details: err.message });
-  }
+registerAdminCustomProviderUpdateRoutes(app, {
+  requireMasterAdmin,
+  getPgPool: () => pgPool
 });
 
 app.delete("/api/admin/custom-providers/:id", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {

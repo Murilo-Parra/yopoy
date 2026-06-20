@@ -37,6 +37,7 @@ import { registerAdminCommissionQueryRoutes } from "./src/backend/admin/register
 import { registerAdminSupportQueryRoutes } from "./src/backend/admin/registerAdminSupportQueryRoutes";
 import { registerAdminAuditLogQueryRoutes } from "./src/backend/admin/registerAdminAuditLogQueryRoutes";
 import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registerAdminSystemMonitoringRoutes";
+import { registerAdminCustomProviderQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderQueryRoutes";
 import { registerSyncRoutes } from "./src/backend/sync/registerSyncRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
@@ -2168,20 +2169,9 @@ registerAdminSystemMonitoringRoutes(app, {
 // ADMIN CUSTOM PROVIDERS ROUTES
 // ==========================================
 
-app.get("/api/admin/custom-providers", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    if (!pgPool) {
-      res.json([]);
-      return;
-    }
-    const result = await pgPool.query(`
-      SELECT * FROM custom_nfse_providers ORDER BY created_at DESC
-    `);
-    res.json(result.rows);
-  } catch (err: any) {
-    console.error("Erro ao listar provedores customizados:", err);
-    res.status(500).json({ error: "Falha ao listar provedores customizados", details: err.message });
-  }
+registerAdminCustomProviderQueryRoutes(app, {
+  requireMasterAdmin,
+  getPgPool: () => pgPool
 });
 
 app.post("/api/admin/custom-providers", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {

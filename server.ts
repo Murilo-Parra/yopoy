@@ -38,6 +38,7 @@ import { registerAdminSupportQueryRoutes } from "./src/backend/admin/registerAdm
 import { registerAdminAuditLogQueryRoutes } from "./src/backend/admin/registerAdminAuditLogQueryRoutes";
 import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registerAdminSystemMonitoringRoutes";
 import { registerAdminCustomProviderQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderQueryRoutes";
+import { registerAdminCustomProviderMappingQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderMappingQueryRoutes";
 import { registerSyncRoutes } from "./src/backend/sync/registerSyncRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
@@ -2253,21 +2254,9 @@ app.delete("/api/admin/custom-providers/:id", requireMasterAdmin, async (req: ex
   }
 });
 
-app.get("/api/admin/custom-providers/:id/mappings", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    if (!pgPool) {
-      res.json([]);
-      return;
-    }
-    const { id } = req.params;
-    const result = await pgPool.query(`
-      SELECT * FROM custom_provider_mappings WHERE provider_id = $1
-    `, [id]);
-    res.json(result.rows);
-  } catch (err: any) {
-    console.error("Erro ao listar mapeamentos:", err);
-    res.status(500).json({ error: "Falha ao listar mapeamentos", details: err.message });
-  }
+registerAdminCustomProviderMappingQueryRoutes(app, {
+  requireMasterAdmin,
+  getPgPool: () => pgPool
 });
 
 app.post("/api/admin/custom-providers/:id/mappings", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {

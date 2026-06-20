@@ -4,7 +4,7 @@ import * as path from "path";
 
 const SERVER_PATH = "server.ts";
 const TEST_PATH = "src/backend/admin/tests/admin-remaining-mutation-routes-safety.test.ts";
-const REPORT_PATH = "docs/server-refactor-49.1-AH.md";
+const REPORT_PATH = "docs/server-refactor-49.1-AN.md";
 
 function readProjectFile(relativePath: string): string {
   const filePath = path.resolve(process.cwd(), relativePath);
@@ -21,7 +21,7 @@ function routeBlock(content: string, startMarker: string, endMarker: string): st
   return content.slice(startIndex, endIndex);
 }
 
-describe("admin remaining mutation routes safety 49.1-AM", () => {
+describe("admin remaining mutation routes safety 49.1-AN", () => {
   it("mantém todos os arquivos obrigatórios da etapa", () => {
     readProjectFile(SERVER_PATH);
     readProjectFile(TEST_PATH);
@@ -142,13 +142,26 @@ describe("admin remaining mutation routes safety 49.1-AM", () => {
   it("impede a criação antecipada de novos registradores de mutação", () => {
     const serverContent = readProjectFile(SERVER_PATH);
     const forbiddenRegistrars = [
-      "registerAdminCommissionPaymentMutationRoutes",
-      "registerAdminSupportReplyMutationRoutes",
-      "registerAdminCustomProviderDeleteRoutes"
+      {
+        name: "registerAdminCommissionPaymentMutationRoutes",
+        file: "src/backend/admin/registerAdminCommissionPaymentMutationRoutes.ts"
+      },
+      {
+        name: "registerAdminSupportReplyMutationRoutes",
+        file: "src/backend/admin/registerAdminSupportReplyMutationRoutes.ts"
+      },
+      {
+        name: "registerAdminCustomProviderDeleteRoutes",
+        file: "src/backend/admin/registerAdminCustomProviderDeleteRoutes.ts"
+      }
     ];
 
     for (const registrar of forbiddenRegistrars) {
-      expect(serverContent).not.toMatch(new RegExp(`import\\s+\\{[^}]*\\b${registrar}\\b[^}]*\\}\\s+from`));
+      expect(serverContent).not.toMatch(
+        new RegExp(`import\\s+\\{[^}]*\\b${registrar.name}\\b[^}]*\\}\\s+from`)
+      );
+      expect(serverContent).not.toContain(`${registrar.name}(app,`);
+      expect(fs.existsSync(path.resolve(process.cwd(), registrar.file))).toBe(false);
     }
   });
 });

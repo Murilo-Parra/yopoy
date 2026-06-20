@@ -55,7 +55,9 @@ A numeração abaixo representa a sequência de produto a partir deste marco. El
 
 ### 49.0 — Central Visual manual
 
-- **Objetivo:** iniciar a primeira construção possível da mesa operacional na qual cards podem ser criados e organizados manualmente, somente depois da validação conceitual de 48.1.
+- **49.0-A — diagnóstico curto:** diagnosticar o front-end atual e definir o encaixe da Central sem duplicar dashboard, reabrir `server` ou antecipar backend/banco; esta etapa é exclusivamente documental e prepara a implementação.
+- **49.0-B — primeira implementação:** iniciar a primeira construção da Central Visual manual, mobile-first, usando dados mockados locais e ações visuais sob controle do usuário.
+- **Objetivo:** construir a mesa operacional na qual cards podem ser criados e organizados manualmente, somente depois do diagnóstico 49.0-A e da validação conceitual de 48.1.
 - **Entregáveis:** listagem/colunas, criação, edição, filtros essenciais, arquivar, desarquivar e histórico mínimo.
 - **Critério de conclusão:** o usuário organiza o trabalho diário por cards no mobile sem depender de automação.
 - **O que não fazer:** conciliação automática, IA avançada, fiscal real ou refatoração de `server` sem risco concreto.

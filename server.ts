@@ -39,6 +39,7 @@ import { registerAdminAuditLogQueryRoutes } from "./src/backend/admin/registerAd
 import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registerAdminSystemMonitoringRoutes";
 import { registerAdminCustomProviderQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderQueryRoutes";
 import { registerAdminCustomProviderMappingQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderMappingQueryRoutes";
+import { registerAdminCustomProviderTemplateQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderTemplateQueryRoutes";
 import { registerSyncRoutes } from "./src/backend/sync/registerSyncRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
 import { canUseLegacyBearerAuth } from "./src/backend/security/LegacyHttpAuthGuard";
@@ -2282,21 +2283,9 @@ app.post("/api/admin/custom-providers/:id/mappings", requireMasterAdmin, async (
   }
 });
 
-app.get("/api/admin/custom-providers/:id/templates", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    if (!pgPool) {
-      res.json([]);
-      return;
-    }
-    const { id } = req.params;
-    const result = await pgPool.query(`
-      SELECT * FROM custom_provider_templates WHERE provider_id = $1
-    `, [id]);
-    res.json(result.rows);
-  } catch (err: any) {
-    console.error("Erro ao listar templates:", err);
-    res.status(500).json({ error: "Falha ao listar templates", details: err.message });
-  }
+registerAdminCustomProviderTemplateQueryRoutes(app, {
+  requireMasterAdmin,
+  getPgPool: () => pgPool
 });
 
 app.post("/api/admin/custom-providers/:id/templates", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {

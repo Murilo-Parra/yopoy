@@ -97,6 +97,7 @@ A numeração abaixo representa a sequência de produto a partir deste marco. El
 
 ### 52.0 — Preparação fiscal futura e pré-nota/contador
 
+- **52.0-A — diagnóstico atual de QA da Central Visual:** comparar documentalmente a interface atual com os critérios das etapas 51.0-A a 51.0-D, sem implementar ajustes, e direcionar a próxima decisão pela evidência disponível.
 - **Objetivo:** consolidar dados e estados internos que deixam a empresa organizada para uma capacidade fiscal futura, sem emitir nota.
 - **Entregáveis:** rascunho interno, pré-nota, estados “sem nota”, “enviar ao contador” e “pronto para emitir futuramente”, exportação e histórico.
 - **Critério de conclusão:** a informação fiscal preparatória é clara e rastreável, sem ser apresentada como documento autorizado.

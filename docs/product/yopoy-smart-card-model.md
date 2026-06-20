@@ -4,20 +4,23 @@
 
 Tudo que entra no sistema vira um card inteligente. O card é a unidade visual de organização do Yopoy: reúne contexto, estado, vínculos, ações e histórico sem obrigar o usuário a completar de imediato todo o fluxo operacional, contábil ou fiscal.
 
+O detalhamento de entidades, relações, transições, auditoria e isolamento multi-tenant está em `docs/product/yopoy-card-conceptual-data-model.md`. Os padrões visuais e os fluxos da Central estão em `docs/product/yopoy-mobile-first-design-system.md` e `docs/product/yopoy-central-visual-ux-blueprint.md`. Este arquivo permanece como visão curta de tipos, estados e experiência dos cards.
+
 ## Tipos de card
 
-- Comanda fotografada;
-- Captura/OCR;
-- Venda;
-- Pagamento;
-- Despesa;
-- Produto/estoque;
-- Pré-nota;
-- Preparação fiscal/rascunho de documento;
-- Pendência;
-- Arquivado;
-- Suporte;
-- Alerta de IA.
+- `capture`: captura/OCR revisável;
+- `command`: comanda;
+- `sale`: venda;
+- `payment`: pagamento;
+- `expense`: despesa;
+- `product`: produto;
+- `stock_movement`: movimentação de estoque;
+- `internal_invoice_draft`: pré-nota ou rascunho interno;
+- `accountant_package`: pacote do contador;
+- `pending`: pendência;
+- `support`: suporte;
+- `ai_alert`: alerta de IA;
+- `archived_reference`: referência arquivada.
 
 O tipo descreve a função atual do card. Conversões e arquivamentos preservam sua origem e seu histórico.
 
@@ -25,21 +28,20 @@ No V1, um card de preparação fiscal representa somente rascunho, pré-nota ou 
 
 ## Estados universais
 
-- `rascunho`;
-- `revisar`;
-- `sem_vinculo`;
-- `vinculado`;
-- `divergente`;
-- `pronto`;
-- `arquivado`;
-- `convertido_em_venda`;
-- `convertido_em_pre_nota`;
-- `enviado_ao_contador`;
-- `emitido`;
-- `rejeitado`;
-- `cancelado`.
+- `draft`;
+- `needs_review`;
+- `unlinked`;
+- `linked`;
+- `divergent`;
+- `ready`;
+- `archived`;
+- `converted_to_sale`;
+- `converted_to_internal_invoice_draft`;
+- `sent_to_accountant`;
+- `ready_for_future_fiscal_issue`;
+- `ignored_with_reason`.
 
-Nem todo estado se aplica a todo tipo. No MVP, `emitido`, `rejeitado` e `cancelado` não representam operações fiscais reais; ficam reservados ao fluxo fiscal pós-MVP. Cada fluxo futuro deverá declarar as transições válidas, sem alterar o significado universal dos estados.
+Nem todo estado se aplica a todo tipo. `issued`, `rejected` e `cancelled` ficam reservados para eventual fluxo fiscal real pós-MVP e não são estados operacionais do MVP.
 
 ## Ações universais
 
@@ -61,24 +63,7 @@ As ações disponíveis dependem do tipo, do estado, da permissão do usuário e
 
 ## Campos mínimos de um SmartCard
 
-- `id`;
-- `company_id`;
-- `tipo`;
-- `origem`;
-- `status`;
-- `título`;
-- `descrição`;
-- `valor_total`;
-- `data/hora`;
-- `anexos`;
-- `vínculos`;
-- `confiança`;
-- `criado_por`;
-- `atualizado_por`;
-- `audit_log`;
-- `metadata`.
-
-Esta é uma definição conceitual. Nomes físicos, formatos, nulabilidade e persistência serão decididos em etapa própria, sem antecipar migration ou banco.
+O catálogo de campos conceituais e entidades relacionadas está no modelo conceitual detalhado. Nomes físicos, formatos, nulabilidade e persistência serão decididos em etapa própria, sem antecipar migration ou banco.
 
 ## Regras de vínculo
 

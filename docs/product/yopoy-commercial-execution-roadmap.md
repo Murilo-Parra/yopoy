@@ -28,23 +28,23 @@ A numeração abaixo representa a sequência de produto a partir deste marco. El
 ### 47.2 — Modelo de dados conceitual dos cards
 
 - **Objetivo:** detalhar entidades, relações, transições e auditoria necessárias ao fluxo manual.
-- **Entregáveis:** diagrama conceitual, catálogo de campos, regras de transição e vínculos multi-tenant.
+- **Entregáveis:** `docs/product/yopoy-card-conceptual-data-model.md`, com catálogo de entidades e campos, relações, regras de transição, auditoria e vínculos multi-tenant.
 - **Critério de conclusão:** produto e engenharia conseguem avaliar o modelo antes de qualquer decisão física de persistência.
 - **O que não fazer:** criar migration, tabela, endpoint ou antecipar automações.
 
 ### 48.0 — Design system mobile-first
 
 - **Objetivo:** definir os padrões visuais e de interação necessários à Central em telas pequenas.
-- **Entregáveis:** tokens, tipografia, cores, acessibilidade, componentes conceituais, estados e padrões de confirmação/desfazer.
+- **Entregáveis:** `docs/product/yopoy-mobile-first-design-system.md` e `docs/product/yopoy-central-visual-ux-blueprint.md`, com fundações visuais, acessibilidade, componentes conceituais, estados, padrões de confirmação/desfazer e fluxos da Central.
 - **Critério de conclusão:** os fluxos prioritários podem ser prototipados com padrões consistentes e acessíveis.
-- **O que não fazer:** construir páginas completas, criar variações sem uso real ou depender exclusivamente de drag-and-drop.
+- **O que não fazer:** construir páginas ou componentes, criar código, backend, rota ou migration, antecipar fiscal real, criar variações sem uso real ou depender exclusivamente de drag-and-drop.
 
 ### 48.1 — Protótipo da Central Visual
 
 - **Objetivo:** validar navegação, entendimento dos cards e organização manual antes da implementação.
-- **Entregáveis:** protótipo mobile-first navegável e variante desktop para criar, revisar, vincular, converter e arquivar cards.
+- **Entregáveis:** `docs/product/yopoy-central-visual-prototype.md` e `docs/product/yopoy-central-visual-screen-map.md`, com protótipo conceitual mobile-first navegável e variante desktop para criar, revisar, vincular, converter e arquivar cards, ainda sem implementação final ou backend.
 - **Critério de conclusão:** testes com usuários representativos demonstram compreensão do fluxo principal e indicam ajustes concretos.
-- **O que não fazer:** conectar backend, simular automação como pronta ou ampliar o protótipo para módulos periféricos.
+- **O que não fazer:** criar código ou implementação final, conectar backend, criar rota, banco, migration ou persistência, simular automação ou fiscal real como disponíveis, ou ampliar o protótipo para módulos periféricos.
 
 ### 48.2 — Captura por foto simples
 
@@ -55,7 +55,7 @@ A numeração abaixo representa a sequência de produto a partir deste marco. El
 
 ### 49.0 — Central Visual manual
 
-- **Objetivo:** entregar a mesa operacional na qual cards podem ser criados e organizados manualmente.
+- **Objetivo:** iniciar a primeira construção possível da mesa operacional na qual cards podem ser criados e organizados manualmente, somente depois da validação conceitual de 48.1.
 - **Entregáveis:** listagem/colunas, criação, edição, filtros essenciais, arquivar, desarquivar e histórico mínimo.
 - **Critério de conclusão:** o usuário organiza o trabalho diário por cards no mobile sem depender de automação.
 - **O que não fazer:** conciliação automática, IA avançada, fiscal real ou refatoração de `server` sem risco concreto.

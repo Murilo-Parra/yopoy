@@ -88,6 +88,8 @@ A numeração abaixo representa a sequência de produto a partir deste marco. El
 
 - **51.0-A — plano de QA visual e validação comercial:** documentar público, roteiros, critérios e evidências para validar a Central Visual manual sem reabrir infraestrutura ou fiscal real.
 - **51.0-B — template de sessões manuais:** padronizar o registro dos primeiros testes e simulações guiadas da Central Visual, sem executar testes nem gerar resultados fictícios.
+- **51.0-C — guia de execução dos primeiros testes:** definir amostra, convite, condução, consolidação e critérios para transformar evidências em backlog, sem executar testes ou implementar ajustes.
+- **51.0-D — template de consolidação dos resultados:** padronizar padrões, critérios, frases, backlog e decisão pós-rodada, sem executar sessões, inventar resultados ou autorizar implementação.
 - **Objetivo:** preparar e compartilhar informações organizadas sem obrigar emissão fiscal.
 - **Entregáveis:** pré-nota simples, revisão, pasta/exportação para contador, confirmação de envio e histórico.
 - **Critério de conclusão:** o usuário gera pré-nota ou relatório consistente e decide explicitamente quando enviar ao contador.

@@ -34,6 +34,7 @@ describe("admin remaining mutation routes safety 49.1-AH", () => {
       "registerAdminCustomProviderQueryRoutes",
       "registerAdminCustomProviderMutationRoutes",
       "registerAdminCustomProviderMappingQueryRoutes",
+      "registerAdminCustomProviderMappingMutationRoutes",
       "registerAdminCustomProviderTemplateQueryRoutes",
       "registerAdminAffiliateQueryRoutes",
       "registerAdminAffiliateMutationRoutes",
@@ -49,14 +50,13 @@ describe("admin remaining mutation routes safety 49.1-AH", () => {
     }
   });
 
-  it("mantém as seis mutações restantes inline", () => {
+  it("mantém as cinco mutações restantes inline", () => {
     const serverContent = readProjectFile(SERVER_PATH);
     const inlineRoutes = [
       'app.post("/api/admin/commissions/:id/pay"',
       'app.post("/api/admin/support/:id/reply"',
       'app.put("/api/admin/custom-providers/:id"',
       'app.delete("/api/admin/custom-providers/:id"',
-      'app.post("/api/admin/custom-providers/:id/mappings"',
       'app.post("/api/admin/custom-providers/:id/templates"'
     ];
 
@@ -71,6 +71,7 @@ describe("admin remaining mutation routes safety 49.1-AH", () => {
     expect(serverContent).not.toContain('app.get("/api/admin/custom-providers"');
     expect(serverContent).not.toContain('app.post("/api/admin/custom-providers"');
     expect(serverContent).not.toContain('app.get("/api/admin/custom-providers/:id/mappings"');
+    expect(serverContent).not.toContain('app.post("/api/admin/custom-providers/:id/mappings"');
     expect(serverContent).not.toContain('app.get("/api/admin/custom-providers/:id/templates"');
   });
 
@@ -82,7 +83,7 @@ describe("admin remaining mutation routes safety 49.1-AH", () => {
       'app.put("/api/admin/custom-providers/:id"',
       'app.delete("/api/admin/custom-providers/:id"',
       "registerAdminCustomProviderMappingQueryRoutes(app, {",
-      'app.post("/api/admin/custom-providers/:id/mappings"',
+      "registerAdminCustomProviderMappingMutationRoutes(app, {",
       "registerAdminCustomProviderTemplateQueryRoutes(app, {",
       'app.post("/api/admin/custom-providers/:id/templates"'
     ];
@@ -136,11 +137,6 @@ describe("admin remaining mutation routes safety 49.1-AH", () => {
       'app.delete("/api/admin/custom-providers/:id"',
       "registerAdminCustomProviderMappingQueryRoutes(app, {"
     );
-    const mappingBlock = routeBlock(
-      serverContent,
-      'app.post("/api/admin/custom-providers/:id/mappings"',
-      "registerAdminCustomProviderTemplateQueryRoutes(app, {"
-    );
     const templateBlock = routeBlock(
       serverContent,
       'app.post("/api/admin/custom-providers/:id/templates"',
@@ -149,7 +145,6 @@ describe("admin remaining mutation routes safety 49.1-AH", () => {
 
     expect(updateBlock).toContain("UPDATE custom_nfse_providers");
     expect(deleteBlock).toContain("DELETE FROM custom_nfse_providers");
-    expect(mappingBlock).toContain("INSERT INTO custom_provider_mappings");
     expect(templateBlock).toContain("INSERT INTO custom_provider_templates");
   });
 
@@ -160,7 +155,6 @@ describe("admin remaining mutation routes safety 49.1-AH", () => {
       "registerAdminSupportReplyMutationRoutes",
       "registerAdminCustomProviderUpdateRoutes",
       "registerAdminCustomProviderDeleteRoutes",
-      "registerAdminCustomProviderMappingMutationRoutes",
       "registerAdminCustomProviderTemplateMutationRoutes"
     ];
 

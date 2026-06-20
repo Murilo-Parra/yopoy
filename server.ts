@@ -40,6 +40,7 @@ import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registe
 import { registerAdminCustomProviderQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderQueryRoutes";
 import { registerAdminCustomProviderMutationRoutes } from "./src/backend/admin/registerAdminCustomProviderMutationRoutes";
 import { registerAdminCustomProviderMappingQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderMappingQueryRoutes";
+import { registerAdminCustomProviderMappingMutationRoutes } from "./src/backend/admin/registerAdminCustomProviderMappingMutationRoutes";
 import { registerAdminCustomProviderTemplateQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderTemplateQueryRoutes";
 import { registerSyncRoutes } from "./src/backend/sync/registerSyncRoutes";
 import { registerStaticPdfRoutes } from "./src/backend/static/registerStaticPdfRoutes";
@@ -2234,27 +2235,10 @@ registerAdminCustomProviderMappingQueryRoutes(app, {
   getPgPool: () => pgPool
 });
 
-app.post("/api/admin/custom-providers/:id/mappings", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    if (!pgPool) {
-      res.status(500).json({ error: "Banco de dados não conectado." });
-      return;
-    }
-    const { id } = req.params;
-    const { local_field, provider_field, required, data_type } = req.body;
-    
-    const mappingId = crypto.randomUUID();
-    await pgPool.query(`
-      INSERT INTO custom_provider_mappings (
-        id, provider_id, local_field, provider_field, required, data_type
-      ) VALUES ($1, $2, $3, $4, $5, $6)
-    `, [mappingId, id, local_field, provider_field, required || false, data_type || 'string']);
-    
-    res.status(201).json({ id: mappingId, message: "Mapeamento criado com sucesso" });
-  } catch (err: any) {
-    console.error("Erro ao criar mapeamento:", err);
-    res.status(500).json({ error: "Falha ao criar mapeamento", details: err.message });
-  }
+registerAdminCustomProviderMappingMutationRoutes(app, {
+  requireMasterAdmin,
+  getPgPool: () => pgPool,
+  generateUuid: () => crypto.randomUUID()
 });
 
 registerAdminCustomProviderTemplateQueryRoutes(app, {

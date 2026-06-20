@@ -38,6 +38,7 @@ import { registerAdminSupportQueryRoutes } from "./src/backend/admin/registerAdm
 import { registerAdminAuditLogQueryRoutes } from "./src/backend/admin/registerAdminAuditLogQueryRoutes";
 import { registerAdminSystemMonitoringRoutes } from "./src/backend/admin/registerAdminSystemMonitoringRoutes";
 import { registerAdminCustomProviderQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderQueryRoutes";
+import { registerAdminCustomProviderMutationRoutes } from "./src/backend/admin/registerAdminCustomProviderMutationRoutes";
 import { registerAdminCustomProviderMappingQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderMappingQueryRoutes";
 import { registerAdminCustomProviderTemplateQueryRoutes } from "./src/backend/admin/registerAdminCustomProviderTemplateQueryRoutes";
 import { registerSyncRoutes } from "./src/backend/sync/registerSyncRoutes";
@@ -2176,37 +2177,10 @@ registerAdminCustomProviderQueryRoutes(app, {
   getPgPool: () => pgPool
 });
 
-app.post("/api/admin/custom-providers", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {
-  try {
-    if (!pgPool) {
-      res.status(500).json({ error: "Banco de dados não conectado." });
-      return;
-    }
-    const {
-      name, city, state, ibge_code, production_url, homologation_url, 
-      communication_type, authentication_type, active
-    } = req.body;
-    
-    if (!name) {
-      res.status(400).json({ error: "Nome é obrigatório." });
-      return;
-    }
-
-    const id = crypto.randomUUID();
-    await pgPool.query(`
-      INSERT INTO custom_nfse_providers (
-        id, name, city, state, ibge_code, production_url, homologation_url, communication_type, authentication_type, active
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-    `, [
-      id, name, city, state, ibge_code, production_url, homologation_url, 
-      communication_type, authentication_type, active !== false
-    ]);
-    
-    res.status(201).json({ id, message: "Provedor criado com sucesso" });
-  } catch (err: any) {
-    console.error("Erro ao criar provedor customizado:", err);
-    res.status(500).json({ error: "Falha ao criar provedor", details: err.message });
-  }
+registerAdminCustomProviderMutationRoutes(app, {
+  requireMasterAdmin,
+  getPgPool: () => pgPool,
+  generateUuid: () => crypto.randomUUID()
 });
 
 app.put("/api/admin/custom-providers/:id", requireMasterAdmin, async (req: express.Request, res: express.Response): Promise<void> => {

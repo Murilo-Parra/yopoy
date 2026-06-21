@@ -394,7 +394,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS users (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         name VARCHAR(255),
         login VARCHAR(255),
         password VARCHAR(255),
@@ -408,7 +408,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS products (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         barcode VARCHAR(255),
         name VARCHAR(255),
         location VARCHAR(255),
@@ -440,7 +440,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS employees (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         name VARCHAR(255),
         role VARCHAR(255),
         salary DECIMAL(12, 2) DEFAULT 0.00,
@@ -455,7 +455,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS transactions (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         establishment_name VARCHAR(255),
         amount DECIMAL(12, 2) DEFAULT 0.00,
         date DATE,
@@ -472,7 +472,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS invoices (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         invoice_number VARCHAR(100),
         access_key VARCHAR(100),
         type VARCHAR(50) DEFAULT 'produto',
@@ -499,7 +499,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS tasks (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         title VARCHAR(255),
         assigner_id VARCHAR(255),
         assigner_name VARCHAR(255),
@@ -526,7 +526,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS certificates (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         certificate_name VARCHAR(255) NOT NULL,
         certificate_type VARCHAR(50) NOT NULL,
         encrypted_certificate TEXT NOT NULL,
@@ -572,7 +572,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS signed_documents (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         document_id VARCHAR(255) REFERENCES fiscal_documents(id) ON DELETE CASCADE,
         certificate_id VARCHAR(255) REFERENCES certificates(id) ON DELETE SET NULL,
         signature_hash VARCHAR(255) NOT NULL,
@@ -596,7 +596,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS sefaz_protocols (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         document_id VARCHAR(255) REFERENCES fiscal_documents(id) ON DELETE CASCADE,
         receipt_number VARCHAR(100),
         protocol_number VARCHAR(100),
@@ -620,7 +620,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfe_documents (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         invoice_number INT NOT NULL,
         series INT NOT NULL,
         access_key VARCHAR(100),
@@ -650,7 +650,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfce_documents (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         number INT NOT NULL,
         series INT NOT NULL,
         access_key VARCHAR(100),
@@ -681,7 +681,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS danfe_documents (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         nfe_id VARCHAR(255) REFERENCES nfe_documents(id) ON DELETE CASCADE,
         pdf_path TEXT,
         generation_hash VARCHAR(255),
@@ -702,7 +702,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS fiscal_events (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         document_id VARCHAR(255),
         event_type VARCHAR(50) NOT NULL,
         event_sequence INT NOT NULL DEFAULT 1,
@@ -728,7 +728,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS sefaz_event_queue (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         document_id VARCHAR(255),
         event_type VARCHAR(50) NOT NULL,
         payload JSONB,
@@ -746,7 +746,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS sefaz_event_logs (
         id SERIAL PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         event_id VARCHAR(255),
         document_id VARCHAR(255),
         action VARCHAR(255),
@@ -760,7 +760,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS sefaz_distribution_documents (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         nsu VARCHAR(50) NOT NULL,
         schema_type VARCHAR(100),
         cnpj_cpf VARCHAR(20),
@@ -835,7 +835,7 @@ export async function initializeDb(): Promise<void> {
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfse_settings (
-        company_id VARCHAR(255) PRIMARY KEY REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid PRIMARY KEY REFERENCES companies(id) ON DELETE CASCADE,
         municipal_inscription VARCHAR(50),
         codigo_ibge VARCHAR(20),
         municipio VARCHAR(100),
@@ -855,7 +855,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfse_services (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         internal_code VARCHAR(50),
         description TEXT NOT NULL,
         municipal_service_code VARCHAR(50),
@@ -871,7 +871,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfse_documents (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         provider VARCHAR(100),
         invoice_number VARCHAR(50),
         verification_code VARCHAR(100),
@@ -897,7 +897,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfse_issnet_logs (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         invoice_id VARCHAR(255),
         action VARCHAR(100),
         request_xml TEXT,
@@ -910,7 +910,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfse_webiss_logs (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         invoice_id VARCHAR(255),
         action VARCHAR(100),
         request_xml TEXT,
@@ -925,7 +925,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfse_betha_logs (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         invoice_id VARCHAR(255),
         action VARCHAR(100),
         request_payload TEXT,
@@ -940,7 +940,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfse_ipm_logs (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         invoice_id VARCHAR(255),
         action VARCHAR(100),
         request_payload TEXT,
@@ -956,7 +956,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfse_dsf_logs (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         invoice_id VARCHAR(255),
         action VARCHAR(100),
         request_payload TEXT,
@@ -972,7 +972,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfse_simpliss_logs (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         invoice_id VARCHAR(255),
         action VARCHAR(100),
         request_payload TEXT,
@@ -1022,7 +1022,7 @@ export async function initializeDb(): Promise<void> {
       CREATE TABLE IF NOT EXISTS custom_provider_logs (
         id VARCHAR(255) PRIMARY KEY,
         provider_id VARCHAR(255) REFERENCES custom_nfse_providers(id) ON DELETE SET NULL,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         action VARCHAR(100),
         request_payload TEXT,
         response_payload TEXT,
@@ -1035,7 +1035,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfse_sigiss_logs (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         invoice_id VARCHAR(255),
         action VARCHAR(100),
         request_payload TEXT,
@@ -1051,7 +1051,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS nfse_fiorilli_logs (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         invoice_id VARCHAR(255),
         action VARCHAR(100),
         request_payload TEXT,
@@ -1114,8 +1114,8 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS sessions (
         id VARCHAR(255) PRIMARY KEY,
-        user_id VARCHAR(255) REFERENCES users(id) ON DELETE CASCADE,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        user_id uuid REFERENCES users(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         expires_at TIMESTAMP NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -1258,7 +1258,7 @@ export async function initializeDb(): Promise<void> {
       CREATE TABLE IF NOT EXISTS affiliate_commissions (
         id VARCHAR(255) PRIMARY KEY,
         affiliate_id VARCHAR(255) REFERENCES affiliates(id) ON DELETE CASCADE,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
         sale_amount DECIMAL(12, 2) NOT NULL,
         commission_amount DECIMAL(12, 2) NOT NULL,
         status VARCHAR(50) DEFAULT 'Pendente',
@@ -1270,7 +1270,7 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS support_tickets (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
         user_id VARCHAR(255),
         user_name VARCHAR(255),
         title VARCHAR(255) NOT NULL,
@@ -1298,8 +1298,8 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS shadow_divergence_logs (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-        user_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
+        company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+        user_id uuid REFERENCES users(id) ON DELETE SET NULL,
         request_id VARCHAR(255),
         route VARCHAR(255) NOT NULL,
         operation VARCHAR(255) NOT NULL,
@@ -1321,8 +1321,8 @@ export async function initializeDb(): Promise<void> {
     await client.query(`
       CREATE TABLE IF NOT EXISTS canary_control_records (
         id VARCHAR(255) PRIMARY KEY,
-        company_id VARCHAR(255) REFERENCES companies(id) ON DELETE CASCADE,
-        user_id VARCHAR(255) REFERENCES users(id) ON DELETE SET NULL,
+        company_id uuid REFERENCES companies(id) ON DELETE CASCADE,
+        user_id uuid REFERENCES users(id) ON DELETE SET NULL,
         action VARCHAR(255) NOT NULL,
         route VARCHAR(255) NOT NULL,
         operation VARCHAR(255) NOT NULL,
@@ -1499,9 +1499,8 @@ export async function initializeDb(): Promise<void> {
     // --- CRIAÇÃO DE ÍNDICES OTIMIZADOS PARA SAAS MULTI-TENANT ---
     console.log("⚡ Criando índices de desempenho no PostgreSQL...");
     await client.query(`CREATE INDEX IF NOT EXISTS idx_users_company ON users(company_id);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_users_login ON users(login);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_products_company_barcode ON products(company_id, barcode);`);
-    await client.query(`CREATE INDEX IF NOT EXISTS idx_products_expiration ON products(expiration_date);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_users_login ON users(email);`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_products_company_barcode ON products(company_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_employees_company ON employees(company_id);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_transactions_company_date ON transactions(company_id, date);`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_invoices_company_number ON invoices(company_id, invoice_number);`);

@@ -1,6 +1,21 @@
 import pg, { Pool } from "pg";
 import * as pgPooler from "./pgPooler";
 
+function resolvePostgresSsl(connectionString: string): false | { rejectUnauthorized: false } {
+  try {
+    const url = new URL(connectionString);
+    const hostname = url.hostname.replace(/^\[|\]$/g, "");
+    const localHosts = new Set(["localhost", "127.0.0.1", "::1", "yopoy-postgres"]);
+    const sslDisabled = url.searchParams.get("sslmode")?.toLowerCase() === "disable";
+
+    return localHosts.has(hostname) || sslDisabled
+      ? false
+      : { rejectUnauthorized: false };
+  } catch {
+    return { rejectUnauthorized: false };
+  }
+}
+
 async function enableRowLevelSecurity(client: any): Promise<void> {
   console.log("🔒 Ativando Segurança em Nível de Linha (RLS) no PostgreSQL...");
   const multiTenantTables = [
@@ -213,6 +228,7 @@ export async function initializeDb(): Promise<void> {
   try {
     console.log("🔌 Tentando conectar ao PostgreSQL...");
     
+    const ssl = resolvePostgresSsl(connectionString);
     const parsed = pgPooler.parseDatabaseUrl(connectionString);
     let success = false;
 
@@ -233,7 +249,7 @@ export async function initializeDb(): Promise<void> {
         user: parsed.user,
         password: decodedPassword,
         database: parsed.database,
-        ssl: { rejectUnauthorized: false },
+        ssl,
         connectionTimeoutMillis: 5050
       };
 
@@ -262,7 +278,7 @@ export async function initializeDb(): Promise<void> {
             user: parsed.user,
             password: decodedPassword,
             database: parsed.database,
-            ssl: { rejectUnauthorized: false },
+            ssl,
             connectionTimeoutMillis: 5050
           };
 
@@ -288,7 +304,7 @@ export async function initializeDb(): Promise<void> {
       // Fallback para poolConfig simples usando connectionString direta
       const simpleConfig = {
         connectionString,
-        ssl: { rejectUnauthorized: false },
+        ssl,
         connectionTimeoutMillis: 5050
       };
       const simplePool = new Pool(simpleConfig);

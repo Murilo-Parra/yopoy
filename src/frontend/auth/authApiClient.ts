@@ -8,32 +8,16 @@
  */
 
 export interface RegisterCompanyInput {
-  company: {
-    razaoSocial: string;
-    nomeFantasia?: string;
-    cnpj: string;
-    email: string;
-    telefone?: string;
-    endereco: {
-      rua: string;
-      numero: string;
-      cidade: string;
-      uf: string;
-    };
-    regimeTributario: string;
-  };
-  admin: {
-    nomeCompleto: string;
-    email: string;
-    senha: string;
-    confirmarSenha: string;
-  };
+  companyName: string;
+  adminName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
 }
 
 export interface LoginInput {
-  companyId: string;
   email: string;
-  password?: string; // or senha if mapped
+  password: string;
 }
 
 export interface AuthUserResponse {
@@ -55,7 +39,7 @@ export interface RegisterCompanyResponse {
     id: string;
     razaoSocial: string;
     nomeFantasia: string;
-    cnpj: string;
+    cnpj?: string | null;
   };
   user: AuthUserResponse;
   session: AuthSessionResponse;
@@ -119,7 +103,7 @@ export class AuthApiClient {
   }
 
   public static async registerCompany(input: RegisterCompanyInput): Promise<RegisterCompanyResponse> {
-    const res = await fetch('/api/auth/register-company', {
+    const res = await fetch('/api/auth/register', {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -143,7 +127,6 @@ export class AuthApiClient {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        companyId: input.companyId,
         email: input.email,
         password: input.password
       })
@@ -156,13 +139,11 @@ export class AuthApiClient {
     return await res.json();
   }
 
-  public static async getSession(companyId: string): Promise<SessionCheckResponse> {
+  public static async getSession(): Promise<SessionCheckResponse> {
     const res = await fetch(`/api/auth/session`, {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'X-Yopoy-Company-Id': companyId
-      }
+      headers: {}
     });
 
     if (!res.ok) {

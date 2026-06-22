@@ -28,7 +28,7 @@ function TestConsumer() {
       <div data-testid="companyId">{companyId || 'none'}</div>
       <div data-testid="user-email">{user?.email || 'none'}</div>
       
-      <button data-testid="btn-login" onClick={() => login('c-1', 'adm@yopoy.com', 'p-1')}>Login</button>
+      <button data-testid="btn-login" onClick={() => login('adm@yopoy.com', 'p-1')}>Login</button>
       <button data-testid="btn-logout" onClick={() => logout()}>Logout</button>
     </div>
   );
@@ -112,7 +112,6 @@ describe('AuthContext Integration Tests', () => {
     });
 
     expect(AuthApiClient.login).toHaveBeenCalledWith({
-      companyId: 'c-1',
       email: 'adm@yopoy.com',
       password: 'p-1'
     });

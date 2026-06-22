@@ -113,7 +113,6 @@ describe('AuthHttpHandlers Integration Tests', () => {
       const res = await request(app)
         .post('/api/auth/login')
         .send({
-          companyId,
           email: userEmail,
           password: userPassword
         });
@@ -144,7 +143,6 @@ describe('AuthHttpHandlers Integration Tests', () => {
       const res = await request(app)
         .post('/api/auth/login')
         .send({
-          companyId,
           email: userEmail,
           password: 'wrong_password'
         });
@@ -154,20 +152,18 @@ describe('AuthHttpHandlers Integration Tests', () => {
       expect(res.body.error.code).toBe('INVALID_CREDENTIALS');
     });
 
-    it('should fail validation with invalid UUID companyId', async () => {
+    it('should not require or validate companyId', async () => {
       if (!hasDb) return;
 
       const res = await request(app)
         .post('/api/auth/login')
         .send({
-          companyId: 'invalid-uuid-format',
           email: userEmail,
           password: userPassword
         });
 
-      expect(res.status).toBe(400);
-      expect(res.body.ok).toBe(false);
-      expect(res.body.error.code).toBe('INVALID_INPUT');
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
     });
   });
 
@@ -213,7 +209,7 @@ describe('AuthHttpHandlers Integration Tests', () => {
       expect(res.body.authenticated).toBe(false);
     });
 
-    it('should return authenticated: false if companyId header is missing', async () => {
+    it('should validate the cookie without a companyId header', async () => {
       if (!hasDb) return;
 
       const loginRes = await request(app)
@@ -232,7 +228,8 @@ describe('AuthHttpHandlers Integration Tests', () => {
         .set('Cookie', sessionCookie);
 
       expect(res.status).toBe(200);
-      expect(res.body.authenticated).toBe(false);
+      expect(res.body.authenticated).toBe(true);
+      expect(res.body.session.companyId).toBe(companyId);
     });
   });
 
@@ -324,6 +321,13 @@ describe('AuthHttpHandlers Integration Tests', () => {
   });
 
   describe('POST /api/auth/register-company', () => {
+    const validAdmin = () => ({
+      nomeCompleto: 'Administrador Principal',
+      email: `admin-${randomUUID().substring(0, 8)}@empresa.com`,
+      senha: 'N7!rKq4#vM2zLw9',
+      confirmarSenha: 'N7!rKq4#vM2zLw9'
+    });
+
     const validRegistrationPayload = () => ({
       company: {
         razaoSocial: 'Empresa Teste LTDA ' + randomUUID().substring(0, 8),
@@ -339,12 +343,74 @@ describe('AuthHttpHandlers Integration Tests', () => {
         },
         regimeTributario: 'simples_nacional'
       },
-      admin: {
-        nomeCompleto: 'Administrador Principal',
-        email: `admin-${randomUUID().substring(0, 8)}@empresa.com`,
-        senha: 'N7!rKq4#vM2zLw9',
-        confirmarSenha: 'N7!rKq4#vM2zLw9'
-      }
+      admin: validAdmin()
+    });
+
+    async function findStoredCompany(companyId: string): Promise<{ name: string; document: string | null }> {
+      return uow.transaction(companyId, async (tx) => {
+        const rows = await tx.executor.execute<Array<{ name: string; document: string | null }>>({
+          sql: 'SELECT name, document FROM companies WHERE id = $1',
+          params: [companyId],
+          mode: 'real',
+          label: 'findStoredCompanyForSignupTest'
+        });
+        return rows[0];
+      });
+    }
+
+    it('should register with only admin and workspace name, persisting no CNPJ', async () => {
+      if (!hasDb) return;
+
+      const res = await request(app)
+        .post('/api/auth/register-company')
+        .send({
+          admin: validAdmin(),
+          company: { razaoSocial: 'Meu workspace local' }
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.company.razaoSocial).toBe('Meu workspace local');
+      expect(res.body.company.cnpj).toBeNull();
+      expect(res.body.user.id).toBeDefined();
+      expect(res.body.session.id).toBeDefined();
+
+      const storedCompany = await findStoredCompany(res.body.company.id);
+      expect(storedCompany.name).toBe('Meu workspace local');
+      expect(storedCompany.document).toBeNull();
+    });
+
+    it('should use the safe workspace fallback when company is absent', async () => {
+      if (!hasDb) return;
+
+      const res = await request(app)
+        .post('/api/auth/register-company')
+        .send({ admin: validAdmin() });
+
+      expect(res.status).toBe(200);
+      expect(res.body.company.razaoSocial).toBe('Meu negócio');
+      expect(res.body.company.nomeFantasia).toBe('Meu negócio');
+      expect(res.body.company.cnpj).toBeNull();
+
+      const storedCompany = await findStoredCompany(res.body.company.id);
+      expect(storedCompany.name).toBe('Meu negócio');
+      expect(storedCompany.document).toBeNull();
+    });
+
+    it('should use the safe workspace fallback when company name is absent', async () => {
+      if (!hasDb) return;
+
+      const res = await request(app)
+        .post('/api/auth/register-company')
+        .send({ admin: validAdmin(), company: {} });
+
+      expect(res.status).toBe(200);
+      expect(res.body.company.razaoSocial).toBe('Meu negócio');
+      expect(res.body.company.cnpj).toBeNull();
+
+      const storedCompany = await findStoredCompany(res.body.company.id);
+      expect(storedCompany.name).toBe('Meu negócio');
+      expect(storedCompany.document).toBeNull();
     });
 
     it('should successfully register a company, owner, membership, and session under RLS', async () => {
@@ -362,6 +428,9 @@ describe('AuthHttpHandlers Integration Tests', () => {
       expect(res.body.company.id).toBeDefined();
       expect(res.body.company.razaoSocial).toBe(payload.company.razaoSocial);
       expect(res.body.company.cnpj).toBe('00000000000100');
+
+      const storedCompany = await findStoredCompany(res.body.company.id);
+      expect(storedCompany.document).toBe('00000000000100');
 
       expect(res.body.user.id).toBeDefined();
       expect(res.body.user.companyId).toBe(res.body.company.id);
@@ -389,7 +458,6 @@ describe('AuthHttpHandlers Integration Tests', () => {
       const loginRes = await request(app)
         .post('/api/auth/login')
         .send({
-          companyId: res.body.company.id,
           email: payload.admin.email,
           password: payload.admin.senha
         });
@@ -404,12 +472,21 @@ describe('AuthHttpHandlers Integration Tests', () => {
 
       const valRes = await request(app)
         .get('/api/auth/session')
-        .set('Cookie', valSessionCookie)
-        .set('X-Yopoy-Company-Id', res.body.company.id);
+        .set('Cookie', valSessionCookie);
 
       expect(valRes.status).toBe(200);
       expect(valRes.body.authenticated).toBe(true);
       expect(valRes.body.session.userId).toBe(res.body.user.id);
+
+      const registerCookies = getSetCookies(res);
+      const registerSessionCookie = registerCookies.find((c: string) => c.startsWith('yopoy_session='));
+      const registerSessionRes = await request(app)
+        .get('/api/auth/session')
+        .set('Cookie', registerSessionCookie);
+
+      expect(registerSessionRes.status).toBe(200);
+      expect(registerSessionRes.body.authenticated).toBe(true);
+      expect(registerSessionRes.body.session.userId).toBe(res.body.user.id);
     });
 
     it('should return 409 COMPANY_ALREADY_EXISTS on duplicate CNPJ', async () => {
@@ -435,6 +512,81 @@ describe('AuthHttpHandlers Integration Tests', () => {
       expect(res2.status).toBe(409);
       expect(res2.body.ok).toBe(false);
       expect(res2.body.error.code).toBe('COMPANY_ALREADY_EXISTS');
+    });
+
+    it('should reject an invalid CNPJ when it is supplied', async () => {
+      if (!hasDb) return;
+
+      const res = await request(app)
+        .post('/api/auth/register-company')
+        .send({
+          admin: validAdmin(),
+          company: { cnpj: '123' }
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_INPUT');
+      expect(res.body.error.message).toContain('14 dígitos');
+    });
+
+    it.each([
+      {
+        label: 'nomeCompleto',
+        admin: {
+          email: 'required-name@example.com',
+          senha: 'N7!rKq4#vM2zLw9',
+          confirmarSenha: 'N7!rKq4#vM2zLw9'
+        }
+      },
+      {
+        label: 'email',
+        admin: {
+          nomeCompleto: 'Administrador Principal',
+          senha: 'N7!rKq4#vM2zLw9',
+          confirmarSenha: 'N7!rKq4#vM2zLw9'
+        }
+      },
+      {
+        label: 'senha',
+        admin: {
+          nomeCompleto: 'Administrador Principal',
+          email: 'required-password@example.com',
+          confirmarSenha: 'N7!rKq4#vM2zLw9'
+        }
+      },
+      {
+        label: 'confirmarSenha',
+        admin: {
+          nomeCompleto: 'Administrador Principal',
+          email: 'required-confirmation@example.com',
+          senha: 'N7!rKq4#vM2zLw9'
+        }
+      }
+    ])('should reject signup without required admin field $label', async ({ admin }) => {
+      if (!hasDb) return;
+
+      const res = await request(app)
+        .post('/api/auth/register-company')
+        .send({ admin });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_INPUT');
+    });
+
+    it.each([
+      { company: { email: 'invalid-email' }, message: 'E-mail da empresa' },
+      { company: { endereco: { uf: 'S' } }, message: 'UF do endereço' },
+      { company: { regimeTributario: 'regime_desconhecido' }, message: 'Regime tributário' }
+    ])('should validate optional company data when supplied', async ({ company, message }) => {
+      if (!hasDb) return;
+
+      const res = await request(app)
+        .post('/api/auth/register-company')
+        .send({ admin: validAdmin(), company });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('INVALID_INPUT');
+      expect(res.body.error.message).toContain(message);
     });
 
     it('should return 400 on weak password (fails policy)', async () => {

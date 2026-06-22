@@ -19,26 +19,18 @@ export class AuthRequestValidators {
   /**
    * Valida se os dados de login estão corretos.
    */
-  public static validateLoginInput(body: any): { valid: boolean; message?: string } {
-    if (!body || typeof body !== 'object') {
+  public static validateLoginInput(body: unknown): { valid: boolean; message?: string } {
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
       return { valid: false, message: 'JSON inválido' };
     }
 
-    const { companyId, email, password } = body;
-
-    if (!companyId) {
-      return { valid: false, message: 'companyId é obrigatório' };
-    }
-
-    if (!this.isValidUuid(companyId)) {
-      return { valid: false, message: 'companyId deve ser um UUID válido' };
-    }
+    const { email, password } = body as Record<string, unknown>;
 
     if (!email) {
       return { valid: false, message: 'E-mail é obrigatório' };
     }
 
-    if (!this.isValidEmail(email)) {
+    if (typeof email !== 'string' || !this.isValidEmail(email)) {
       return { valid: false, message: 'E-mail inválido' };
     }
 
@@ -96,80 +88,101 @@ export class AuthRequestValidators {
   /**
    * Valida os campos da requisição de cadastro de empresa.
    */
-  public static validateRegisterCompanyInput(body: any): { valid: boolean; message?: string } {
+  public static validateRegisterCompanyInput(body: unknown): { valid: boolean; message?: string } {
     if (!body || typeof body !== 'object') {
       return { valid: false, message: 'JSON inválido' };
     }
 
-    const { company, admin } = body;
+    const { company, admin } = body as Record<string, unknown>;
 
-    if (!company || typeof company !== 'object') {
-      return { valid: false, message: 'Objeto company é obrigatório' };
+    if (company !== undefined && company !== null && (typeof company !== 'object' || Array.isArray(company))) {
+      return { valid: false, message: 'Objeto company deve ser válido quando informado' };
     }
 
-    if (!admin || typeof admin !== 'object') {
+    if (!admin || typeof admin !== 'object' || Array.isArray(admin)) {
       return { valid: false, message: 'Objeto admin é obrigatório' };
     }
 
-    // Validate Company fields
-    if (!company.razaoSocial || typeof company.razaoSocial !== 'string' || company.razaoSocial.trim() === '') {
-      return { valid: false, message: 'Razão Social é obrigatória' };
+    const companyFields = (company || {}) as Record<string, unknown>;
+    const adminFields = admin as Record<string, unknown>;
+
+    if (companyFields.razaoSocial !== undefined && typeof companyFields.razaoSocial !== 'string') {
+      return { valid: false, message: 'Nome do negócio deve ser um texto válido' };
     }
 
-    if (!company.cnpj || typeof company.cnpj !== 'string' || company.cnpj.trim() === '') {
-      return { valid: false, message: 'CNPJ é obrigatório' };
+    if (companyFields.cnpj !== undefined && companyFields.cnpj !== null && companyFields.cnpj !== '') {
+      if (typeof companyFields.cnpj !== 'string') {
+        return { valid: false, message: 'CNPJ deve ser um texto válido quando informado' };
+      }
+      const normalizedCnpj = companyFields.cnpj.replace(/\D/g, '');
+      if (normalizedCnpj.length !== 14) {
+        return { valid: false, message: 'CNPJ deve conter exatamente 14 dígitos quando informado' };
+      }
     }
 
-    // CNPJ Normalization is done in handler/usecase, let's validate format/digits
-    const normalizedCnpj = company.cnpj.replace(/\D/g, '');
-    if (normalizedCnpj.length !== 14) {
-      return { valid: false, message: 'CNPJ deve conter exatamente 14 dígitos' };
+    if (companyFields.email !== undefined && companyFields.email !== null && companyFields.email !== '') {
+      if (typeof companyFields.email !== 'string' || !this.isValidEmail(companyFields.email)) {
+        return { valid: false, message: 'E-mail da empresa é inválido quando informado' };
+      }
     }
 
-    if (!company.email || !this.isValidEmail(company.email)) {
-      return { valid: false, message: 'E-mail da empresa inválido' };
+    if (companyFields.endereco !== undefined && companyFields.endereco !== null) {
+      if (typeof companyFields.endereco !== 'object' || Array.isArray(companyFields.endereco)) {
+        return { valid: false, message: 'Endereço deve ser um objeto válido quando informado' };
+      }
+      const address = companyFields.endereco as Record<string, unknown>;
+      const addressFields = [
+        ['rua', 'Rua'],
+        ['numero', 'Número'],
+        ['cidade', 'Cidade']
+      ] as const;
+
+      for (const [field, label] of addressFields) {
+        const value = address[field];
+        if (value !== undefined && (typeof value !== 'string' || value.trim() === '')) {
+          return { valid: false, message: `${label} do endereço deve ser um texto válido quando informado` };
+        }
+      }
+
+      if (address.uf !== undefined) {
+        if (typeof address.uf !== 'string' || !/^[A-Za-z]{2}$/.test(address.uf.trim())) {
+          return { valid: false, message: 'UF do endereço deve conter 2 letras quando informada' };
+        }
+      }
     }
 
-    if (!company.endereco || typeof company.endereco !== 'object') {
-      return { valid: false, message: 'Endereço é obrigatório' };
-    }
-
-    const { rua, numero, cidade, uf } = company.endereco;
-    if (!rua || typeof rua !== 'string' || rua.trim() === '') {
-      return { valid: false, message: 'Rua do endereço é obrigatória' };
-    }
-    if (!numero || typeof numero !== 'string' || numero.trim() === '') {
-      return { valid: false, message: 'Número do endereço é obrigatório' };
-    }
-    if (!cidade || typeof cidade !== 'string' || cidade.trim() === '') {
-      return { valid: false, message: 'Cidade do endereço é obrigatória' };
-    }
-    if (!uf || typeof uf !== 'string' || uf.trim().length !== 2) {
-      return { valid: false, message: 'UF do endereço deve conter 2 letras' };
-    }
-
-    if (!company.regimeTributario || typeof company.regimeTributario !== 'string' || company.regimeTributario.trim() === '') {
-      return { valid: false, message: 'Regime tributário é obrigatório' };
+    if (
+      companyFields.regimeTributario !== undefined &&
+      companyFields.regimeTributario !== null &&
+      companyFields.regimeTributario !== ''
+    ) {
+      const acceptedTaxRegimes = ['simples_nacional', 'lucro_presumido', 'lucro_real'];
+      if (
+        typeof companyFields.regimeTributario !== 'string' ||
+        !acceptedTaxRegimes.includes(companyFields.regimeTributario.trim().toLowerCase())
+      ) {
+        return { valid: false, message: 'Regime tributário informado é inválido' };
+      }
     }
 
     // Validate Admin fields
-    if (!admin.nomeCompleto || typeof admin.nomeCompleto !== 'string' || admin.nomeCompleto.trim() === '') {
+    if (!adminFields.nomeCompleto || typeof adminFields.nomeCompleto !== 'string' || adminFields.nomeCompleto.trim() === '') {
       return { valid: false, message: 'Nome completo do administrador é obrigatório' };
     }
 
-    if (!admin.email || !this.isValidEmail(admin.email)) {
+    if (!adminFields.email || typeof adminFields.email !== 'string' || !this.isValidEmail(adminFields.email)) {
       return { valid: false, message: 'E-mail do administrador é inválido' };
     }
 
-    if (!admin.senha || typeof admin.senha !== 'string' || admin.senha.trim() === '') {
+    if (!adminFields.senha || typeof adminFields.senha !== 'string' || adminFields.senha.trim() === '') {
       return { valid: false, message: 'Senha é obrigatória' };
     }
 
-    if (!admin.confirmarSenha || typeof admin.confirmarSenha !== 'string' || admin.confirmarSenha.trim() === '') {
+    if (!adminFields.confirmarSenha || typeof adminFields.confirmarSenha !== 'string' || adminFields.confirmarSenha.trim() === '') {
       return { valid: false, message: 'Confirmação de senha é obrigatória' };
     }
 
-    if (admin.senha !== admin.confirmarSenha) {
+    if (adminFields.senha !== adminFields.confirmarSenha) {
       return { valid: false, message: 'A senha e a confirmação de senha devem ser iguais' };
     }
 

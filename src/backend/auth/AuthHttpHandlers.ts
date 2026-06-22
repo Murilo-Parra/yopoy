@@ -75,6 +75,24 @@ type UserDisplayNameFields = {
   name?: unknown;
 };
 
+type RegisterCompanyRequestBody = {
+  company?: {
+    razaoSocial?: string;
+    nomeFantasia?: string;
+    cnpj?: string;
+  } | null;
+  admin: {
+    nomeCompleto: string;
+    email: string;
+    senha: string;
+    confirmarSenha: string;
+  };
+};
+
+type CompanyLookupRow = {
+  company_id: string;
+};
+
 function getUserDisplayName(user: unknown, fallbackEmail: string): string {
   if (typeof user !== 'object' || user === null) {
     return fallbackEmail.split('@')[0];
@@ -120,6 +138,81 @@ function isAuthPermission(value: unknown): value is AuthPermission {
 export class AuthHttpHandlers {
   constructor(private readonly uow: LocalPostgresUnitOfWork) {}
 
+  private async resolveLoginCompanyId(email: string): Promise<string | null> {
+    return this.uow.transaction(randomUUID(), async (tx) => {
+      const candidateCompanies = await tx.executor.execute<CompanyLookupRow[]>({
+        sql: `
+          SELECT DISTINCT company_id
+          FROM memberships
+          WHERE active = true
+          ORDER BY company_id
+        `,
+        mode: 'real',
+        label: 'listLoginCompanyCandidates'
+      });
+
+      for (const candidate of candidateCompanies) {
+        await tx.executor.execute({
+          sql: "SELECT set_config('app.current_company_id', $1, true)",
+          params: [candidate.company_id],
+          mode: 'real',
+          label: 'setLoginCompanyCandidateContext'
+        });
+
+        const rows = await tx.executor.execute<CompanyLookupRow[]>({
+          sql: `
+            SELECT u.company_id
+            FROM users u
+            JOIN memberships m
+              ON m.user_id = u.id
+             AND m.company_id = u.company_id
+            WHERE LOWER(u.email) = LOWER($1)
+              AND u.company_id = $2
+              AND u.active = true
+              AND m.active = true
+            LIMIT 1
+          `,
+          params: [email.trim(), candidate.company_id],
+          mode: 'real',
+          label: 'resolveLoginCompanyId'
+        });
+
+        if (rows[0]) {
+          return rows[0].company_id;
+        }
+      }
+
+      return null;
+    });
+  }
+
+  private async resolveSessionCompanyId(rawSessionToken: string): Promise<string | null> {
+    const tokenService = new NodeCryptoSessionTokenService();
+    const tokenHash = tokenService.hashSessionToken(rawSessionToken);
+
+    return this.uow.transaction(randomUUID(), async (tx) => {
+      await tx.executor.execute({
+        sql: "SELECT set_config('app.bypass_rls', 'true', true)",
+        mode: 'real',
+        label: 'enableAuthSessionLookupContext'
+      });
+      const rows = await tx.executor.execute<CompanyLookupRow[]>({
+        sql: `
+          SELECT company_id
+          FROM auth_sessions
+          WHERE session_token_hash = $1
+            AND revoked_at IS NULL
+            AND expires_at > NOW()
+          LIMIT 1
+        `,
+        params: [tokenHash],
+        mode: 'real',
+        label: 'resolveSessionCompanyId'
+      });
+      return rows[0]?.company_id ?? null;
+    });
+  }
+
   /**
    * POST /api/auth/login
    */
@@ -130,7 +223,11 @@ export class AuthHttpHandlers {
         return AuthHttpErrors.sendInvalidInput(res, validation.message);
       }
 
-      const { companyId, email, password } = req.body;
+      const { email, password } = req.body as { email: string; password: string };
+      const companyId = await this.resolveLoginCompanyId(email);
+      if (!companyId) {
+        return AuthHttpErrors.sendInvalidCredentials(res);
+      }
 
       const result = await this.uow.transaction(companyId, async (tx) => {
         const userRepository = new PostgresAuthUserRepository(tx.executor);
@@ -150,7 +247,7 @@ export class AuthHttpHandlers {
           passwordHasher
         );
 
-        return await loginUseCase.execute({ email, password, companyId });
+        return await loginUseCase.execute({ email, password });
       });
 
       // Set session cookie securely
@@ -204,14 +301,14 @@ export class AuthHttpHandlers {
    */
   public handleSession = async (req: Request, res: Response): Promise<void> => {
     try {
-      const companyId = resolveAuthHeaderString(req.headers, 'x-yopoy-company-id');
-      if (!companyId || !AuthRequestValidators.isValidUuid(companyId)) {
+      const rawSessionToken = AuthCookieService.getSessionToken(req);
+      if (!rawSessionToken) {
         res.status(200).json({ authenticated: false });
         return;
       }
 
-      const rawSessionToken = AuthCookieService.getSessionToken(req);
-      if (!rawSessionToken) {
+      const companyId = await this.resolveSessionCompanyId(rawSessionToken);
+      if (!companyId) {
         res.status(200).json({ authenticated: false });
         return;
       }
@@ -261,9 +358,14 @@ export class AuthHttpHandlers {
    */
   public handleLogout = async (req: Request, res: Response): Promise<void> => {
     try {
+      const requestedCompanyId = resolveAuthHeaderString(req.headers, 'x-yopoy-company-id');
       const companyId = resolveAuthCompanyId(req);
 
-      if (!companyId || !AuthRequestValidators.isValidUuid(companyId)) {
+      if (
+        !companyId ||
+        !AuthRequestValidators.isValidUuid(companyId) ||
+        (requestedCompanyId !== undefined && requestedCompanyId !== companyId)
+      ) {
         AuthCookieService.clearSessionCookie(req, res);
         res.status(400).json({ ok: false, error: { code: 'INVALID_INPUT', message: 'companyId é obrigatório' } });
         return;
@@ -384,7 +486,12 @@ export class AuthHttpHandlers {
         return AuthHttpErrors.sendInvalidInput(res, validation.message);
       }
 
-      const { company, admin } = req.body;
+      const { company, admin } = req.body as RegisterCompanyRequestBody;
+      const companyName = company?.razaoSocial?.trim() || 'Meu negócio';
+      const tradeName = company?.nomeFantasia?.trim() || companyName;
+      const normalizedCnpj = company?.cnpj?.trim()
+        ? company.cnpj.replace(/\D/g, '')
+        : undefined;
 
       // 1. Backend pre-generates IDs and Session Token safely
       const companyId = randomUUID();
@@ -413,12 +520,12 @@ export class AuthHttpHandlers {
         );
 
         const useCaseResult = await useCase.execute({
-          companyName: company.razaoSocial,
+          companyName,
           adminFullName: admin.nomeCompleto,
           adminEmail: admin.email,
           adminPassword: admin.senha,
           companyId,
-          cnpj: company.cnpj.replace(/\D/g, '') // normalise document to only digits
+          cnpj: normalizedCnpj
         });
 
         // Set or update full_name column on user row, since RegisterCompanyUseCase only sets basic fields
@@ -450,9 +557,9 @@ export class AuthHttpHandlers {
         ok: true,
         company: {
           id: companyId,
-          razaoSocial: company.razaoSocial,
-          nomeFantasia: company.nomeFantasia || company.razaoSocial,
-          cnpj: company.cnpj.replace(/\D/g, '')
+          razaoSocial: companyName,
+          nomeFantasia: tradeName,
+          cnpj: normalizedCnpj ?? null
         },
         user: {
           id: result.useCaseResult.user.id,

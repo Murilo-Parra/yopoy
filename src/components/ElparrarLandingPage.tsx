@@ -20,16 +20,7 @@ import {
   Share2,
   Lock,
   Mail,
-  Phone,
-  MapPin,
-  Building,
-  CreditCard,
-  QrCode,
-  Barcode,
-  CheckCircle2,
   ArrowLeft,
-  Shield,
-  FileText,
   AlertCircle
 } from 'lucide-react';
 
@@ -37,37 +28,18 @@ interface ElparrarLandingPageProps {
   theme: 'light' | 'dark';
   toggleTheme: () => void;
   onSelectPlan: (plan: 'micro' | 'pequena' | 'media' | 'corporativo') => void;
-  onLoginSuccess: (user: any) => void;
+  onLoginSuccess: (user: Record<string, unknown>) => void;
 }
 
 export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, onLoginSuccess }: ElparrarLandingPageProps) {
   const { login, registerCompany } = useAuth();
   const [mode, setMode] = useState<'landing' | 'login' | 'register' | 'forgot' | 'reset'>('landing');
-  const [registerStep, setRegisterStep] = useState<1 | 2 | 3>(1);
-
-  // Estados dos novos campos robustos e seguros de empresa (Módulo 48.2-H)
   const [companyRazaoSocial, setCompanyRazaoSocial] = useState('');
-  const [companyNomeFantasia, setCompanyNomeFantasia] = useState('');
-  const [companyCnpj, setCompanyCnpj] = useState('');
-  const [companyEmail, setCompanyEmail] = useState('');
-  const [companyTelefone, setCompanyTelefone] = useState('');
-  const [companyRua, setCompanyRua] = useState('');
-  const [companyNumero, setCompanyNumero] = useState('');
-  const [companyCidade, setCompanyCidade] = useState('');
-  const [companyUf, setCompanyUf] = useState('');
-  const [companyRegimeTributario, setCompanyRegimeTributario] = useState('simples_nacional');
 
   const [adminNomeCompleto, setAdminNomeCompleto] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminSenha, setAdminSenha] = useState('');
   const [adminConfirmarSenha, setAdminConfirmarSenha] = useState('');
-
-  // Estados dos novos campos simplificados para cadastro multi-tenant (compatibilidade)
-  const [regCompanyName, setRegCompanyName] = useState('');
-  const [regAdminName, setRegAdminName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [regPassword, setRegPassword] = useState('');
-  const [regConfirmPassword, setRegConfirmPassword] = useState('');
 
   // Estados para recuperação e alteração obrigatória de senha
   const [forgotEmail, setForgotEmail] = useState('');
@@ -91,47 +63,12 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
     }
   }, []);
 
-  // States for Signup Wizard (Pessoa Física vs Jurídica)
-  const [userType, setUserType] = useState<'pf' | 'pj'>('pf');
-  
-  // Pessoa Física fields
-  const [pfNome, setPfNome] = useState('');
-  const [pfCpf, setPfCpf] = useState('');
-  const [pfEmail, setPfEmail] = useState('');
-  const [pfTelefone, setPfTelefone] = useState('');
-  const [pfEndereco, setPfEndereco] = useState('');
-  const [pfSenha, setPfSenha] = useState('');
-
-  // Pessoa Jurídica fields
-  const [pjRazaoSocial, setPjRazaoSocial] = useState('');
-  const [pjNomeFantasia, setPjNomeFantasia] = useState('');
-  const [pjCnpj, setPjCnpj] = useState('');
-  const [pjIe, setPjIe] = useState('');
-  const [pjEndereco, setPjEndereco] = useState('');
-  const [pjEmail, setPjEmail] = useState('');
-  const [pjSenha, setPjSenha] = useState('');
-
-  // Step 2 & 3: Plan selection
-  const [selectedPlanId, setSelectedPlanId] = useState<'micro' | 'pequena' | 'media' | 'corporativo' | null>(null);
-  const [showPaymentForm, setShowPaymentForm] = useState(false);
-
-  // Payment method: 'card' | 'pix' | 'boleto'
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'pix' | 'boleto'>('card');
-  const [cardNum, setCardNum] = useState('');
-  const [cardName, setCardName] = useState('');
-  const [cardExpiry, setCardExpiry] = useState('');
-  const [cardCvv, setCardCvv] = useState('');
-  const [pixChecked, setPixChecked] = useState(false);
-  const [boletoChecked, setBoletoChecked] = useState(false);
-
   // Loading States and Verification
   const [processingAuth, setProcessingAuth] = useState(false);
   const [loadingStepLabel, setLoadingStepLabel] = useState('');
-  const [signupSuccess, setSignupSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   // States for Login form
-  const [loginCompanyId, setLoginCompanyId] = useState('');
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPass, setLoginPass] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -197,79 +134,15 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
     }
   ];
 
-  // Helper para força de senha do administrador (Módulo 48.2-H)
-  const getPasswordStrength = (pass: string) => {
-    if (!pass) return { score: 0, text: '', color: 'bg-transparent', textColor: 'text-gray-400' };
-    if (pass.length < 6) return { score: 1, text: 'Senha Fraca (mínimo 6 caracteres)', color: 'bg-red-500 w-1/3', textColor: 'text-red-400' };
-    
-    const hasNumbers = /\d/.test(pass);
-    const hasUpper = /[A-Z]/.test(pass);
-    const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(pass);
-    
-    if (hasNumbers && (hasUpper || hasSpecial)) {
-      return { score: 3, text: 'Senha Forte (Excelente!)', color: 'bg-emerald-500 w-full', textColor: 'text-emerald-400' };
-    }
-    return { score: 2, text: 'Senha Média (adicione letras maiúsculas/números/especiais)', color: 'bg-amber-500 w-2/3', textColor: 'text-amber-400' };
-  };
-
-  // Validation Checks for Page 1 of Signup (Módulo 48.2-H)
-  const isRobustStep1Valid = 
-    companyRazaoSocial.trim() !== '' &&
-    companyCnpj.replace(/\D/g, '').length === 14 &&
-    companyEmail.trim().includes('@') &&
-    companyRua.trim() !== '' &&
-    companyNumero.trim() !== '' &&
-    companyCidade.trim() !== '' &&
-    companyUf.trim().length === 2 &&
-    adminNomeCompleto.trim() !== '' &&
-    adminEmail.trim().includes('@') &&
-    adminSenha.trim().length >= 6 &&
-    adminSenha === adminConfirmarSenha;
-
-  // Manter para compatibilidade legada se necessário
-  const isSimplifiedStep1Valid = isRobustStep1Valid;
-
-  // Validation Checks for Page 3 Payment Form
-  const isPaymentValid = () => {
-    if (paymentMethod === 'card') {
-      return cardNum.trim().length >= 14 && cardName.trim().length > 3 && cardExpiry.trim().length >= 4 && cardCvv.trim().length >= 3;
-    }
-    if (paymentMethod === 'pix') {
-      return pixChecked;
-    }
-    if (paymentMethod === 'boleto') {
-      return boletoChecked;
-    }
-    return false;
-  };
-
   // Click on a plan from Landing
-  const handleSelectPlanLaunch = (planId: 'micro' | 'pequena' | 'media' | 'corporativo') => {
-    setSelectedPlanId(planId);
+  const handleSelectPlanLaunch = (_planId: 'micro' | 'pequena' | 'media' | 'corporativo') => {
     setMode('register');
-    setRegisterStep(1); // Page 1 comes first anyway
-  };
-
-  // UUID Validation helper
-  const isUuid = (str: string) => {
-    const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return regex.test(str);
   };
 
   // Submit Sign In Form (unified custom check + backend postgres verification)
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoginError('');
-
-    if (!loginCompanyId.trim()) {
-      setLoginError('ID da empresa é obrigatório.');
-      return;
-    }
-
-    if (!isUuid(loginCompanyId.trim())) {
-      setLoginError('O ID da empresa deve ser um UUID válido (ex: 88888888-4444-4444-4444-121212121212).');
-      return;
-    }
 
     if (!loginEmail.trim() || !loginEmail.includes('@')) {
       setLoginError('Insira um e-mail válido.');
@@ -284,48 +157,27 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
     setProcessingAuth(true);
 
     try {
-      await login(loginCompanyId.trim(), loginEmail.trim(), loginPass);
+      await login(loginEmail.trim(), loginPass);
       setProcessingAuth(false);
       onLoginSuccess({
-        companyId: loginCompanyId.trim(),
         email: loginEmail.trim()
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setProcessingAuth(false);
-      setLoginError(err.message || 'Erro ao realizar login. Verifique suas credenciais.');
+      setLoginError(err instanceof Error ? err.message : 'Erro ao realizar login. Verifique suas credenciais.');
     }
   };
 
-  // Submit Sign Up & Checkout (Page 3 Final Validation to register)
-  const handleCheckoutSubmit = async () => {
+  const handleMinimalRegisterSubmit = async (event: FormEvent) => {
+    event.preventDefault();
     setErrorMessage('');
-    setProcessingAuth(true);
-    setLoadingStepLabel('Criando empresa multi-tenant no PostgreSQL...');
 
-    // Front-end Validations
     if (!companyRazaoSocial.trim()) {
-      setErrorMessage('Razão social é obrigatória.');
-      setProcessingAuth(false);
-      return;
-    }
-    if (!companyCnpj.trim() || companyCnpj.replace(/\D/g, '').length !== 14) {
-      setErrorMessage('CNPJ inválido. Digite 14 números.');
-      setProcessingAuth(false);
-      return;
-    }
-    if (!companyEmail.trim() || !companyEmail.includes('@')) {
-      setErrorMessage('E-mail principal da empresa é obrigatório e deve ser válido.');
-      setProcessingAuth(false);
-      return;
-    }
-    if (!companyRua.trim() || !companyNumero.trim() || !companyCidade.trim() || companyUf.trim().length !== 2) {
-      setErrorMessage('Preencha todo o endereço corretamente (UF com 2 letras).');
-      setProcessingAuth(false);
+      setErrorMessage('Nome da empresa é obrigatório.');
       return;
     }
     if (!adminNomeCompleto.trim()) {
       setErrorMessage('Nome completo do administrador é obrigatório.');
-      setProcessingAuth(false);
       return;
     }
     if (!adminEmail.trim() || !adminEmail.includes('@')) {
@@ -344,47 +196,25 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
       return;
     }
 
+    setProcessingAuth(true);
+    setLoadingStepLabel('Criando sua conta...');
+
     try {
       await registerCompany({
-        company: {
-          razaoSocial: companyRazaoSocial.trim(),
-          nomeFantasia: companyNomeFantasia.trim() || companyRazaoSocial.trim(),
-          cnpj: companyCnpj.replace(/\D/g, ''),
-          email: companyEmail.trim(),
-          telefone: companyTelefone.trim() || undefined,
-          endereco: {
-            rua: companyRua.trim(),
-            numero: companyNumero.trim(),
-            cidade: companyCidade.trim(),
-            uf: companyUf.trim().toUpperCase()
-          },
-          regimeTributario: companyRegimeTributario
-        },
-        admin: {
-          nomeCompleto: adminNomeCompleto.trim(),
-          email: adminEmail.trim(),
-          senha: adminSenha,
-          confirmarSenha: adminConfirmarSenha
-        }
+        companyName: companyRazaoSocial.trim(),
+        adminName: adminNomeCompleto.trim(),
+        email: adminEmail.trim(),
+        password: adminSenha,
+        confirmPassword: adminConfirmarSenha
       });
-
-      setLoadingStepLabel('Configurando módulos de faturamento e estoque...');
-      setTimeout(() => {
-        setLoadingStepLabel('Tabelas relacionais prontas. Iniciando sessão segura...');
-        setTimeout(() => {
-          setProcessingAuth(false);
-          // O próprio AuthContext atualizará o estado para autenticado,
-          // mas chamamos onLoginSuccess por segurança / compatibilidade.
-          onLoginSuccess({
-            cnpj: companyCnpj.replace(/\D/g, ''),
-            corporateName: companyRazaoSocial.trim()
-          });
-        }, 650);
-      }, 650);
-
-    } catch (err: any) {
       setProcessingAuth(false);
-      setErrorMessage(err.message || 'Erro ao realizar o cadastro. Por favor verifique.');
+      onLoginSuccess({
+        corporateName: companyRazaoSocial.trim(),
+        email: adminEmail.trim()
+      });
+    } catch (err: unknown) {
+      setProcessingAuth(false);
+      setErrorMessage(err instanceof Error ? err.message : 'Erro ao realizar o cadastro. Por favor verifique.');
     }
   };
 
@@ -417,7 +247,7 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
       } else {
         setForgotError(data.error || 'Erro ao processar recuperação de senha.');
       }
-    } catch (err: any) {
+    } catch {
       setProcessingAuth(false);
       setForgotError('Não foi possível conectar ao servidor. Tente de novo.');
     }
@@ -464,14 +294,11 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
       } else {
         setResetError(data.error || 'Token inválido ou expirado. Solicite a redefinição novamente.');
       }
-    } catch (err: any) {
+    } catch {
       setProcessingAuth(false);
       setResetError('Erro de conexão ao redefinir a senha.');
     }
   };
-
-  // Helper template info for contracted design view
-  const currentPlanObj = plans.find(p => p.id === selectedPlanId) || plans[2];
 
   return (
     <div className={`min-h-screen relative flex flex-col justify-between overflow-x-hidden transition-colors duration-350 ${
@@ -497,7 +324,7 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
       <nav className={`fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 sm:px-8 py-5 border-b backdrop-blur-md transition-colors ${
         theme === 'dark' ? 'bg-[#0a0a0d]/80 border-slate-900/60' : 'bg-white/85 border-slate-200'
       }`}>
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => { setMode('landing'); setRegisterStep(1); }}>
+        <div className="flex items-center gap-3 cursor-pointer" onClick={() => setMode('landing')}>
           <YopoyLogo size={36} theme={theme} />
         </div>
 
@@ -528,7 +355,7 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
           {/* Cadastrar Button */}
           <button 
             type="button"
-            onClick={() => { setMode('register'); setRegisterStep(1); setShowPaymentForm(false); }}
+            onClick={() => setMode('register')}
             className={`font-semibold py-2 px-4 rounded-xl text-xs flex items-center gap-1 transition-all active:scale-95 cursor-pointer ${
               mode === 'register'
                 ? 'bg-gradient-to-r from-orange-550 to-rose-600 text-white'
@@ -701,30 +528,6 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
 
                 <form onSubmit={handleLoginSubmit} className="space-y-4">
                   <div>
-                    <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1.5">ID da Empresa (UUID)</label>
-                    <div className="relative">
-                      <Building className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
-                      <input 
-                        type="text" 
-                        required
-                        value={loginCompanyId}
-                        onChange={(e) => setLoginCompanyId(e.target.value)}
-                        placeholder="Ex: 88888888-4444-4444-4444-121212121212"
-                        className={`w-full text-xs font-semibold pl-10 pr-4 py-3 rounded-xl border focus:outline-hidden transition-all ${
-                          theme === 'dark'
-                            ? 'bg-[#18181c] border-slate-800 focus:border-red-500 text-white'
-                            : 'bg-slate-50 border-slate-200 focus:border-indigo-500 text-slate-900'
-                        }`}
-                      />
-                    </div>
-                    {loginCompanyId && !isUuid(loginCompanyId) && (
-                      <p className="text-[9px] text-[#f87171] font-semibold mt-1">
-                        ⚠️ Formato UUID inválido. Digite um ID padrão.
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
                     <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1.5">E-mail de Trabalho</label>
                     <div className="relative">
                       <Mail className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
@@ -790,7 +593,7 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
                   <p className="text-gray-500">
                     Não possui uma licença?{' '}
                     <span 
-                      onClick={() => { setMode('register'); setRegisterStep(1); }} 
+                      onClick={() => setMode('register')}
                       className="text-rose-500 hover:underline font-bold cursor-pointer"
                     >
                       Criar conta e contratar plano de teste
@@ -1009,86 +812,30 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
             </motion.div>
           )}
 
-          {/* MODE 3: MULTI-STEP CADASTRO WIZARD */}
+          {/* MODE 3: CADASTRO INICIAL MÍNIMO */}
           {mode === 'register' && (
             <motion.div
-              key="register"
+              key="register-minimal"
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.3 }}
-              className="w-full max-w-2xl"
+              className="w-full max-w-xl"
             >
-              {/* Wizard Status Bar */}
-              <div className="flex justify-between items-center mb-6 max-w-md mx-auto">
-                <div className="flex flex-col items-center gap-1.5 relative w-1/3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                    registerStep >= 1 
-                      ? 'bg-rose-600 text-white shadow-md shadow-rose-955'
-                      : 'bg-slate-200 dark:bg-slate-805 text-gray-500'
-                  }`}>
-                    1
-                  </div>
-                  <span className={`text-[9px] font-black uppercase tracking-wider ${registerStep >= 1 ? 'text-rose-500' : 'text-gray-500'}`}>Dados</span>
-                </div>
-                
-                <div className="w-10 h-0.5 bg-slate-350 dark:bg-slate-800 shrink-0"></div>
-
-                <div className="flex flex-col items-center gap-1.5 relative w-1/3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                    registerStep >= 2
-                      ? 'bg-rose-600 text-white shadow-md shadow-rose-955'
-                      : 'bg-slate-200 dark:bg-slate-805 text-gray-500'
-                  }`}>
-                    2
-                  </div>
-                  <span className={`text-[9px] font-black uppercase tracking-wider ${registerStep >= 2 ? 'text-rose-500' : 'text-gray-500'}`}>Plano</span>
-                </div>
-
-                <div className="w-10 h-0.5 bg-slate-350 dark:bg-slate-800 shrink-0"></div>
-
-                <div className="flex flex-col items-center gap-1.5 relative w-1/3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all ${
-                    registerStep >= 3
-                      ? 'bg-rose-600 text-white shadow-md shadow-rose-955'
-                      : 'bg-slate-200 dark:bg-slate-805 text-gray-500'
-                  }`}>
-                    3
-                  </div>
-                  <span className={`text-[9px] font-black uppercase tracking-wider ${registerStep >= 3 ? 'text-rose-500' : 'text-gray-500'}`}>Pagamento</span>
-                </div>
-              </div>
-
-              {/* Box Content Cards */}
               <div className={`p-8 rounded-3xl border shadow-2xl relative ${
                 theme === 'dark' ? 'bg-[#0f0f13] border-slate-900 text-white' : 'bg-white border-slate-200 text-slate-800'
               }`}>
-                {/* Visual Top Accent header bar */}
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 via-orange-500 to-red-650"></div>
-
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 via-orange-500 to-red-650" />
                 <div className="flex justify-between items-center mb-6">
                   <div>
-                    <h2 className="text-xl font-black uppercase tracking-tight">
-                      {registerStep === 1 && 'PÁGINA 1: DADOS CADASTRAIS'}
-                      {registerStep === 2 && 'PÁGINA 2: ESCOLHER SEU PLANO'}
-                      {registerStep === 3 && 'PÁGINA 3: CONFIRMAÇÃO & PAGAMENTO'}
-                    </h2>
+                    <h2 className="text-xl font-black uppercase tracking-tight">Criar conta</h2>
                     <p className="text-[10px] text-gray-500 mt-1 uppercase font-extrabold tracking-wider">
-                      {registerStep === 1 && 'Preencha suas informações cadastrais para emissão e conta'}
-                      {registerStep === 2 && 'Selecione o limite corporativo recomendado para seu faturamento'}
-                      {registerStep === 3 && 'Ative sua conta e libere o painel principal do ERP'}
+                      Comece com os dados essenciais
                     </p>
                   </div>
-                  <button 
+                  <button
                     type="button"
-                    onClick={() => {
-                      if (registerStep > 1) {
-                        setRegisterStep((step) => (step - 1) as any);
-                      } else {
-                        setMode('landing');
-                      }
-                    }}
-                    className="p-1 px-3 rounded-lg border text-[10px] font-bold uppercase transition-all hover:bg-slate-100 dark:hover:bg-slate-800 text-gray-400 hover:text-gray-100 cursor-pointer flex items-center gap-1"
+                    onClick={() => setMode('landing')}
+                    className="p-1 px-3 rounded-lg border text-[10px] font-bold uppercase text-gray-400 cursor-pointer flex items-center gap-1"
                   >
                     <ArrowLeft className="w-3 h-3" />
                     Voltar
@@ -1102,585 +849,42 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
                   </div>
                 )}
 
-                {/* STEP 1: DADOS CADASTRAIS (COMPLETO E SEGURO - MÓDULO 48.2-H) */}
-                {registerStep === 1 && (
-                  <div className="space-y-6">
-                    {/* SEÇÃO 1: DADOS DA EMPRESA */}
-                    <div>
-                      <h3 className="text-xs font-bold text-rose-500 uppercase tracking-widest border-b border-gray-800 pb-2 mb-4">
-                        1. Dados da Empresa
-                      </h3>
+                <form onSubmit={handleMinimalRegisterSubmit} className="space-y-4">
+                  {[
+                    { label: 'Nome da empresa / workspace', type: 'text', value: companyRazaoSocial, setter: setCompanyRazaoSocial, autocomplete: 'organization' },
+                    { label: 'Nome completo', type: 'text', value: adminNomeCompleto, setter: setAdminNomeCompleto, autocomplete: 'name' },
+                    { label: 'E-mail', type: 'email', value: adminEmail, setter: setAdminEmail, autocomplete: 'email' },
+                    { label: 'Senha', type: 'password', value: adminSenha, setter: setAdminSenha, autocomplete: 'new-password' },
+                    { label: 'Confirmar senha', type: 'password', value: adminConfirmarSenha, setter: setAdminConfirmarSenha, autocomplete: 'new-password' }
+                  ].map((field) => (
+                    <label key={field.label} className="block">
+                      <span className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">{field.label}</span>
+                      <input
+                        type={field.type}
+                        required
+                        value={field.value}
+                        onChange={(event) => field.setter(event.target.value)}
+                        autoComplete={field.autocomplete}
+                        className={`w-full text-xs font-semibold px-4 py-3 rounded-xl border focus:outline-hidden transition-all ${
+                          theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
+                        }`}
+                      />
+                    </label>
+                  ))}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Razão Social *</label>
-                          <input 
-                            type="text" 
-                            required
-                            value={companyRazaoSocial}
-                            onChange={(e) => setCompanyRazaoSocial(e.target.value)}
-                            placeholder="Ex: Minha Empresa Distribuidora Ltda"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Nome Fantasia (Opcional)</label>
-                          <input 
-                            type="text" 
-                            value={companyNomeFantasia}
-                            onChange={(e) => setCompanyNomeFantasia(e.target.value)}
-                            placeholder="Ex: Yopoy Alimentos"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">CNPJ (14 dígitos) *</label>
-                          <input 
-                            type="text" 
-                            required
-                            maxLength={18}
-                            value={companyCnpj}
-                            onChange={(e) => {
-                              // Simple CNPJ formatting suggestion
-                              const raw = e.target.value.replace(/\D/g, '');
-                              setCompanyCnpj(raw);
-                            }}
-                            placeholder="Apenas números (ex: 12345678000100)"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                          {companyCnpj && companyCnpj.replace(/\D/g, '').length !== 14 && (
-                            <p className="text-[9px] text-red-400 font-semibold mt-1">⚠️ CNPJ deve conter exatamente 14 números.</p>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">E-mail Principal da Empresa *</label>
-                          <input 
-                            type="email" 
-                            required
-                            value={companyEmail}
-                            onChange={(e) => setCompanyEmail(e.target.value)}
-                            placeholder="Ex: financeiro@suaempresa.com"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Telefone de Contato</label>
-                          <input 
-                            type="text" 
-                            value={companyTelefone}
-                            onChange={(e) => setCompanyTelefone(e.target.value)}
-                            placeholder="Ex: 11999999999"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Regime Tributário *</label>
-                          <select
-                            value={companyRegimeTributario}
-                            onChange={(e) => setCompanyRegimeTributario(e.target.value)}
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          >
-                            <option value="simples_nacional">Simples Nacional</option>
-                            <option value="lucro_presumido">Lucro Presumido</option>
-                            <option value="lucro_real">Lucro Real</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      {/* ENDEREÇO */}
-                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mt-4">
-                        <div className="sm:col-span-2">
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Logradouro / Rua *</label>
-                          <input 
-                            type="text" 
-                            required
-                            value={companyRua}
-                            onChange={(e) => setCompanyRua(e.target.value)}
-                            placeholder="Ex: Avenida Paulista"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Número *</label>
-                          <input 
-                            type="text" 
-                            required
-                            value={companyNumero}
-                            onChange={(e) => setCompanyNumero(e.target.value)}
-                            placeholder="Ex: 1000"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">UF (Estado) *</label>
-                          <input 
-                            type="text" 
-                            required
-                            maxLength={2}
-                            value={companyUf}
-                            onChange={(e) => setCompanyUf(e.target.value.toUpperCase().replace(/[^A-Z]/g, ''))}
-                            placeholder="SP"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border text-center focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="mt-4">
-                        <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Cidade *</label>
-                        <input 
-                          type="text" 
-                          required
-                          value={companyCidade}
-                          onChange={(e) => setCompanyCidade(e.target.value)}
-                          placeholder="Ex: São Paulo"
-                          className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                            theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                          }`}
-                        />
-                      </div>
-                    </div>
-
-                    {/* SEÇÃO 2: ADMINISTRADOR PRINCIPAL */}
-                    <div>
-                      <h3 className="text-xs font-bold text-rose-500 uppercase tracking-widest border-b border-gray-800 pb-2 mb-4">
-                        2. Administrador Principal da Conta
-                      </h3>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Nome Completo *</label>
-                          <input 
-                            type="text" 
-                            required
-                            value={adminNomeCompleto}
-                            onChange={(e) => setAdminNomeCompleto(e.target.value)}
-                            placeholder="Seu nome completo"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">E-mail Administrativo *</label>
-                          <input 
-                            type="email" 
-                            required
-                            value={adminEmail}
-                            onChange={(e) => setAdminEmail(e.target.value)}
-                            placeholder="Ex: admin@seuemail.com"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Senha de Acesso *</label>
-                          <input 
-                            type="password" 
-                            required
-                            value={adminSenha}
-                            onChange={(e) => setAdminSenha(e.target.value)}
-                            placeholder="Mínimo de 6 caracteres"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                          {/* Visual Indicator of strength */}
-                          {adminSenha && (
-                            <div className="mt-2 space-y-1">
-                              <div className="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
-                                <div className={`h-full transition-all duration-300 ${getPasswordStrength(adminSenha).color}`} />
-                              </div>
-                              <p className={`text-[10px] font-bold ${getPasswordStrength(adminSenha).textColor}`}>
-                                {getPasswordStrength(adminSenha).text}
-                              </p>
-                            </div>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className="text-[10px] uppercase font-black tracking-widest text-gray-500 block mb-1">Confirmar Senha *</label>
-                          <input 
-                            type="password" 
-                            required
-                            value={adminConfirmarSenha}
-                            onChange={(e) => setAdminConfirmarSenha(e.target.value)}
-                            placeholder="Digite novamente a senha"
-                            className={`w-full text-xs font-semibold px-4 py-2.5 rounded-xl border focus:outline-hidden transition-all ${
-                              theme === 'dark' ? 'bg-[#18181c] border-slate-800 text-white focus:border-rose-500' : 'bg-slate-50 border-slate-200 text-slate-900 focus:border-rose-500'
-                            }`}
-                          />
-                          {adminSenha && adminConfirmarSenha && adminSenha !== adminConfirmarSenha && (
-                            <p className="text-[10px] text-red-400 font-bold mt-1">⚠️ As senhas não conferem.</p>
-                          )}
-                          {adminSenha && adminConfirmarSenha && adminSenha === adminConfirmarSenha && adminSenha.length >= 6 && (
-                            <p className="text-[10px] text-emerald-400 font-bold mt-1">✓ Senhas idênticas.</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* DYNAMIC PROGRESS BUTTON */}
-                    {isRobustStep1Valid && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="pt-4"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setRegisterStep(2)}
-                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-[#f8fafc] text-xs font-black uppercase py-4 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md transform hover:scale-[1.01] transition-all animate-bounce"
-                        >
-                          Ir para o Passo 2: Escolha de Planos
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
-                      </motion.div>
-                    )}
-                  </div>
-                )}
-
-                {/* STEP 2: ESCOLHER SEU PLANO */}
-                {registerStep === 2 && (
-                  <div className="space-y-6">
-                    <p className="text-xs text-gray-400 font-semibold mb-4 text-center">
-                      Clique em um dos três planos comerciais listados abaixo para selecioná-lo e prosseguir.
-                    </p>
-
-                    <div className="grid grid-cols-1 gap-4">
-                      {plans.map((p) => {
-                        const isSelected = selectedPlanId === p.id;
-                        return (
-                          <div
-                            key={p.id}
-                            onClick={() => setSelectedPlanId(p.id)}
-                            className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
-                              isSelected
-                                ? 'bg-rose-500/10 border-rose-500 ring-2 ring-rose-500/20'
-                                : 'bg-[#131318]/50 border-slate-900/60 hover:border-slate-800'
-                            }`}
-                          >
-                            <div className="flex items-center gap-4">
-                              <span className={`w-5 h-5 rounded-full flex items-center justify-center border text-[9px] font-black ${
-                                isSelected ? 'bg-rose-600 border-rose-550 text-white' : 'border-gray-500 text-transparent'
-                              }`}>
-                                <Check className="w-3 h-3" />
-                              </span>
-                              <div>
-                                <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${p.color}`}>
-                                  {p.name}
-                                </span>
-                                <h3 className="text-sm font-extrabold mt-1">{p.description}</h3>
-                              </div>
-                            </div>
-
-                            <div className="text-right">
-                              <p className="text-lg font-black font-mono leading-none">{p.price}</p>
-                              <p className="text-[10px] text-gray-550 block mt-0.5">{p.period}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* DYNAMIC NEXT BUTTON */}
-                    {selectedPlanId && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="pt-4"
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setRegisterStep(3)}
-                          className="w-full bg-emerald-600 hover:bg-emerald-700 text-[#f8fafc] text-xs font-black uppercase py-4 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-md transform hover:scale-[1.01] transition-all"
-                        >
-                          Confirmar Plano Selecionado &amp; Avançar
-                          <ArrowRight className="w-4 h-4" />
-                        </button>
-                      </motion.div>
-                    )}
-                  </div>
-                )}
-
-                {/* STEP 3: PAGAMENTO E CONVENIÊNCIA */}
-                {registerStep === 3 && (
-                  <div className="space-y-6">
-                    {/* Nota do que está contratando */}
-                    <div className={`p-5 rounded-2xl border ${
-                      theme === 'dark' ? 'bg-[#15151c]/80 border-slate-800' : 'bg-slate-50 border-slate-200'
-                    }`}>
-                      <h4 className="text-[10px] uppercase font-black tracking-widest text-[#94a3b8] mb-2 block">Nota de Contratação</h4>
-                      <div className="flex justify-between items-center text-xs">
-                        <div>
-                          <p className="font-extrabold text-sm uppercase text-rose-500">
-                            {currentPlanObj.name}
-                          </p>
-                          <p className="text-gray-500 mt-0.5">{currentPlanObj.description}</p>
-                        </div>
-                        <div className="text-right bg-rose-550/10 border border-rose-500/20 p-2.5 rounded-xl">
-                          <span className="text-lg font-mono font-black">{currentPlanObj.price}</span>
-                          <span className="text-[10px] block font-semibold text-gray-500">{currentPlanObj.period}</span>
-                        </div>
-                      </div>
-
-                      <div className="border-t border-slate-800/80 mt-4 pt-3 text-[11px] space-y-1 text-gray-400">
-                        <p>🔹 <b>Ciclo:</b> Cobrança Mensal no cartão ou PIX</p>
-                        <p>🔹 <b>Benefícios:</b> Licença de teste imediata grátis sem carência</p>
-                      </div>
-                    </div>
-
-                    {/* CONFIRMAÇÃO DE COMPRA BUTTON */}
-                    {!showPaymentForm ? (
-                      <button
-                        type="button"
-                        onClick={() => setShowPaymentForm(true)}
-                        className="w-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-black uppercase py-4 rounded-xl flex items-center justify-center gap-1.5 cursor-pointer shadow-lg transform hover:scale-[1.01] transition-all"
-                      >
-                        Confirmar Compra
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    ) : (
-                      /* APÓS CLICADO EM CONFIRMAR COMPRA, APARECE A FORMA DE PAGAMENTO ABAIXO */
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="space-y-6 border-t border-slate-800/80 pt-6"
-                      >
-                        <div>
-                          <h3 className="text-xs uppercase font-black tracking-widest mb-3 flex items-center gap-2">
-                            <CreditCard className="w-4 h-4 text-emerald-500 animate-bounce" />
-                            Preencha as Informações de Pagamento
-                          </h3>
-
-                          {/* PAYMENT TABS SELECTOR */}
-                          <div className="grid grid-cols-3 gap-2 mb-4">
-                            <button
-                              type="button"
-                              onClick={() => setPaymentMethod('card')}
-                              className={`py-2.5 px-3 rounded-lg border text-[10px] font-extrabold uppercase transition-all flex items-center justify-center gap-1 ${
-                                paymentMethod === 'card'
-                                  ? 'border-indigo-500 bg-indigo-500/15 text-indigo-400 font-black'
-                                  : 'border-slate-800 hover:border-slate-700 text-gray-450'
-                              }`}
-                            >
-                              <CreditCard className="w-3.5 h-3.5" />
-                              Cartão
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setPaymentMethod('pix')}
-                              className={`py-2.5 px-3 rounded-lg border text-[10px] font-extrabold uppercase transition-all flex items-center justify-center gap-1 ${
-                                paymentMethod === 'pix'
-                                  ? 'border-indigo-500 bg-indigo-500/15 text-indigo-400 font-black'
-                                  : 'border-slate-800 hover:border-slate-700 text-gray-450'
-                              }`}
-                            >
-                              <QrCode className="w-3.5 h-3.5" />
-                              Pix
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => setPaymentMethod('boleto')}
-                              className={`py-2.5 px-3 rounded-lg border text-[10px] font-extrabold uppercase transition-all flex items-center justify-center gap-1 ${
-                                paymentMethod === 'boleto'
-                                  ? 'border-indigo-500 bg-indigo-500/15 text-indigo-400 font-black'
-                                  : 'border-slate-800 hover:border-slate-700 text-gray-450'
-                              }`}
-                            >
-                              <Barcode className="w-3.5 h-3.5" />
-                              Boleto
-                            </button>
-                          </div>
-
-                          {/* PAYMENT METHOD DETAILED CONTENT */}
-                          <div className="space-y-4">
-                            
-                            {/* PAYMENT OPTION A: CREDIT CARD */}
-                            {paymentMethod === 'card' && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                                <div className="sm:col-span-2">
-                                  <label className="text-[9px] uppercase font-bold text-gray-500 block mb-1">Número do Cartão de Crédito</label>
-                                  <input 
-                                    type="text" 
-                                    required
-                                    maxLength={19}
-                                    value={cardNum}
-                                    onChange={(e) => setCardNum(e.target.value)}
-                                    placeholder="4444 4444 4444 4444"
-                                    className={`w-full text-xs font-semibold px-3 py-2 rounded-lg border focus:outline-hidden transition-all ${
-                                      theme === 'dark' ? 'bg-[#18181c] border-slate-800' : 'bg-slate-50 border-slate-200'
-                                    }`}
-                                  />
-                                </div>
-
-                                <div className="sm:col-span-2">
-                                  <label className="text-[9px] uppercase font-bold text-gray-500 block mb-1">Nome Impresso no Cartão</label>
-                                  <input 
-                                    type="text" 
-                                    required
-                                    value={cardName}
-                                    onChange={(e) => setCardName(e.target.value)}
-                                    placeholder="JOÃO S SILVA"
-                                    className={`w-full text-xs font-semibold px-3 py-2 rounded-lg border focus:outline-hidden transition-all ${
-                                      theme === 'dark' ? 'bg-[#18181c] border-slate-800' : 'bg-slate-50 border-slate-200'
-                                    }`}
-                                  />
-                                </div>
-
-                                <div>
-                                  <label className="text-[9px] uppercase font-bold text-gray-500 block mb-1">Data de Validade (MM/AA)</label>
-                                  <input 
-                                    type="text" 
-                                    required
-                                    maxLength={5}
-                                    value={cardExpiry}
-                                    onChange={(e) => setCardExpiry(e.target.value)}
-                                    placeholder="12/29"
-                                    className={`w-full text-xs font-semibold px-3 py-2 rounded-lg border focus:outline-hidden transition-all ${
-                                      theme === 'dark' ? 'bg-[#18181c] border-slate-800' : 'bg-slate-50 border-slate-200'
-                                    }`}
-                                  />
-                                </div>
-
-                                <div>
-                                  <label className="text-[9px] uppercase font-bold text-gray-500 block mb-1">Código CVV</label>
-                                  <input 
-                                    type="text" 
-                                    required
-                                    maxLength={4}
-                                    value={cardCvv}
-                                    onChange={(e) => setCardCvv(e.target.value)}
-                                    placeholder="123"
-                                    className={`w-full text-xs font-semibold px-3 py-2 rounded-lg border focus:outline-hidden transition-all ${
-                                      theme === 'dark' ? 'bg-[#18181c] border-slate-800' : 'bg-slate-50 border-slate-200'
-                                    }`}
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            {/* PAYMENT OPTION B: PIX WITH QR CODE */}
-                            {paymentMethod === 'pix' && (
-                              <div className="flex flex-col items-center gap-3 p-4 bg-emerald-950/10 border border-emerald-900/25 rounded-2xl">
-                                <QrCode className="w-24 h-24 text-emerald-400 p-2 border border-emerald-500/25 rounded-xl bg-[#0e1610]" />
-                                <div className="text-center">
-                                  <p className="text-xs font-bold text-emerald-400 uppercase">PIX GERADO COM SUCESSO</p>
-                                  <p className="text-[10px] text-gray-400 mt-1 max-w-[280px]">Copie a chave aleatória abaixo ou leia o QR Code no seu aplicativo do banco.</p>
-                                </div>
-                                <code className="block text-[9px] bg-slate-900/60 p-2 py-1.5 rounded border border-slate-800 font-mono text-center select-all w-full truncate text-slate-300">
-                                  00020126580014br.gov.bcb.pix0136elparrar_erp_mock_uuid_3929424_pay
-                                </code>
-                                <div className="flex items-center gap-2 mt-2">
-                                  <input
-                                    type="checkbox"
-                                    id="pix-check"
-                                    checked={pixChecked}
-                                    onChange={(e) => setPixChecked(e.target.checked)}
-                                    className="w-4 h-4 border border-rose-500 rounded text-rose-500 focus:ring-0 cursor-pointer"
-                                  />
-                                  <label htmlFor="pix-check" className="text-[10px] font-black uppercase text-gray-300 select-none cursor-pointer">
-                                    Simulei o pagamento do Pix pelo app bancário
-                                  </label>
-                                </div>
-                              </div>
-                            )}
-
-                            {/* PAYMENT OPTION C: BOLETO */}
-                            {paymentMethod === 'boleto' && (
-                              <div className="flex flex-col items-center gap-3 p-4 bg-slate-950/20 border border-slate-900 rounded-2xl">
-                                <Barcode className="w-24 h-12 text-gray-300 p-1 bg-white rounded" />
-                                <div className="text-center">
-                                  <p className="text-xs font-bold text-gray-300 uppercase">BOLETO BANCÁRIO DIGITAL</p>
-                                  <p className="text-[10px] text-gray-500 mt-1 max-w-[280px]">Utilize a numeração copiada abaixo para registrar a quitação no internet banking.</p>
-                                </div>
-                                <code className="block text-[9px] bg-slate-900 p-2 py-1.5 rounded border border-slate-800 font-mono text-center select-all w-full text-slate-305">
-                                  34191.79001 01043.513184 91020.150008 7 98250000029990
-                                </code>
-                                <div className="flex items-center gap-2 mt-2">
-                                  <input
-                                    type="checkbox"
-                                    id="boleto-check"
-                                    checked={boletoChecked}
-                                    onChange={(e) => setBoletoChecked(e.target.checked)}
-                                    className="w-4 h-4 border border-rose-500 rounded text-rose-505 focus:ring-0 cursor-pointer"
-                                  />
-                                  <label htmlFor="boleto-check" className="text-[10px] font-black uppercase text-gray-300 select-none cursor-pointer">
-                                    Simulei a quitação do boleto no banco
-                                  </label>
-                                </div>
-                              </div>
-                            )}
-
-                          </div>
-
-                          {/* FINAL SUBMISSION ACCORDING TO BANK CONFER CHECK */}
-                          <div className="pt-6">
-                            <button
-                              type="button"
-                              onClick={handleCheckoutSubmit}
-                              disabled={processingAuth}
-                              className={`w-full text-xs font-black uppercase py-4 rounded-xl flex items-center justify-center gap-1.5 transition-all shadow-md group ${
-                                isPaymentValid()
-                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95'
-                                  : 'bg-slate-300/20 text-gray-500 cursor-not-allowed border border-slate-850'
-                              }`}
-                            >
-                              {processingAuth ? (
-                                <span className="flex items-center gap-2">
-                                  <span className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin"></span>
-                                  {loadingStepLabel}
-                                </span>
-                              ) : signupSuccess ? (
-                                <span className="flex items-center gap-1">
-                                  <CheckCircle2 className="w-4 h-4 text-emerald-400 animate-bounce" />
-                                  CONFIRMADO! REDIRECIONANDO PARA O ERP...
-                                </span>
-                              ) : (
-                                <>
-                                  Concluir Pagamento &amp; Licenciar ERP
-                                  <ArrowRight className="w-4.5 h-4.5 group-hover:translate-x-1 transition-transform" />
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
-                  </div>
-                )}
+                  <button
+                    type="submit"
+                    disabled={processingAuth}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase py-4 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {processingAuth ? loadingStepLabel : 'Criar conta e entrar'}
+                    {!processingAuth && <ArrowRight className="w-4 h-4" />}
+                  </button>
+                </form>
               </div>
             </motion.div>
           )}
+
 
         </AnimatePresence>
       </main>
@@ -1704,7 +908,7 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
             <span>&bull;</span>
             <span className="cursor-pointer hover:text-amber-500" onClick={() => { setMode('login'); setLoginError(''); }}>Acessar</span>
             <span>&bull;</span>
-            <span className="cursor-pointer hover:text-amber-500" onClick={() => { setMode('register'); setRegisterStep(1); }}>Cadastro Rápido</span>
+            <span className="cursor-pointer hover:text-amber-500" onClick={() => setMode('register')}>Cadastro Rápido</span>
           </div>
 
           <div className="flex gap-3 text-gray-500 text-slate-500">

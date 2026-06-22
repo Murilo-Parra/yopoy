@@ -22,7 +22,7 @@ export interface AuthState {
 
 export interface AuthContextType extends AuthState {
   registerCompany: (input: RegisterCompanyInput) => Promise<void>;
-  login: (companyId: string, email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
   requirePermission: (permission: string) => Promise<boolean>;
@@ -39,21 +39,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session: null
   });
 
-  // Função para carregar a sessão baseada no company_id do sessionStorage
+  // O cookie HttpOnly é a fonte de verdade para restaurar a sessão.
   const refreshSession = async () => {
-    const savedCompanyId = sessionStorage.getItem('yopoy_company_id');
-    if (!savedCompanyId) {
-      setState(prev => ({ ...prev, loading: false }));
-      return;
-    }
-
     try {
-      const sessResp = await AuthApiClient.getSession(savedCompanyId);
+      const sessResp = await AuthApiClient.getSession();
       if (sessResp.authenticated && sessResp.session) {
+        sessionStorage.setItem('yopoy_company_id', sessResp.session.companyId);
         setState({
           authenticated: true,
           loading: false,
-          companyId: savedCompanyId,
+          companyId: sessResp.session.companyId,
           user: {
             id: sessResp.session.userId,
             companyId: sessResp.session.companyId,
@@ -121,16 +116,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (companyId: string, email: string, password: string) => {
+  const login = async (email: string, password: string) => {
     setState(prev => ({ ...prev, loading: true }));
     try {
-      const res = await AuthApiClient.login({ companyId, email, password });
-      sessionStorage.setItem('yopoy_company_id', companyId);
+      const res = await AuthApiClient.login({ email, password });
+      sessionStorage.setItem('yopoy_company_id', res.user.companyId);
 
       setState({
         authenticated: true,
         loading: false,
-        companyId,
+        companyId: res.user.companyId,
         user: {
           id: res.user.id,
           companyId: res.user.companyId,

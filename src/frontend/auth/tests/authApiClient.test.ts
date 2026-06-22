@@ -23,26 +23,46 @@ describe('AuthApiClient Unit Tests', () => {
     });
 
     const res = await AuthApiClient.registerCompany({
-      company: {
-        razaoSocial: 'Yopoy SA',
-        cnpj: '111',
-        email: 'adm@yopoy.com',
-        endereco: { rua: 'Test', numero: '1', cidade: 'SP', uf: 'SP' },
-        regimeTributario: 'simples_nacional'
-      },
-      admin: {
-        nomeCompleto: 'Admin Yopoy',
-        email: 'adm@yopoy.com',
-        senha: 'admin-strong-pass',
-        confirmarSenha: 'admin-strong-pass'
-      }
+      companyName: 'Yopoy SA',
+      adminName: 'Admin Yopoy',
+      email: 'adm@yopoy.com',
+      password: 'admin-strong-pass',
+      confirmPassword: 'admin-strong-pass'
     });
 
-    expect(mockFetch).toHaveBeenCalledWith('/api/auth/register-company', expect.objectContaining({
+    expect(mockFetch).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({
       method: 'POST',
       credentials: 'include'
     }));
     expect(res.company.razaoSocial).toBe('Yopoy SA');
+  });
+
+  it('deve aceitar cadastro mínimo sem dados empresariais', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        ok: true,
+        company: { id: 'c-minimal', razaoSocial: 'Meu negócio', nomeFantasia: 'Meu negócio', cnpj: null },
+        user: { id: 'u-minimal', email: 'murilo@example.com', role: 'owner' },
+        session: { id: 'sess-minimal', expiresAt: '2026-06-22T00:00:00.000Z' }
+      })
+    });
+
+    const input = {
+      companyName: 'Meu negócio',
+      adminName: 'Murilo Parra',
+      email: 'murilo@example.com',
+      password: 'SenhaForte123!',
+      confirmPassword: 'SenhaForte123!'
+    };
+
+    const res = await AuthApiClient.registerCompany(input);
+
+    expect(mockFetch).toHaveBeenCalledWith('/api/auth/register', expect.objectContaining({
+      body: JSON.stringify(input)
+    }));
+    expect(res.company.razaoSocial).toBe('Meu negócio');
+    expect(res.company.cnpj).toBeNull();
   });
 
   it('deve realizar login com credentials include', async () => {
@@ -56,14 +76,14 @@ describe('AuthApiClient Unit Tests', () => {
     });
 
     const res = await AuthApiClient.login({
-      companyId: 'company-uuid',
       email: 'adm@yopoy.com',
       password: 'mypassword'
     });
 
     expect(mockFetch).toHaveBeenCalledWith('/api/auth/login', expect.objectContaining({
       method: 'POST',
-      credentials: 'include'
+      credentials: 'include',
+      body: JSON.stringify({ email: 'adm@yopoy.com', password: 'mypassword' })
     }));
     expect(res.user.email).toBe('adm@yopoy.com');
   });
@@ -76,7 +96,6 @@ describe('AuthApiClient Unit Tests', () => {
     });
 
     await expect(AuthApiClient.login({
-      companyId: 'company-uuid',
       email: 'wrong@yopoy.com',
       password: 'wrong'
     })).rejects.toThrow('E-mail ou senha inválidos.');
@@ -92,23 +111,15 @@ describe('AuthApiClient Unit Tests', () => {
     });
 
     await expect(AuthApiClient.registerCompany({
-      company: {
-        razaoSocial: 'Yopoy SA',
-        cnpj: '111',
-        email: 'adm@yopoy.com',
-        endereco: { rua: 'Test', numero: '1', cidade: 'SP', uf: 'SP' },
-        regimeTributario: 'simples_nacional'
-      },
-      admin: {
-        nomeCompleto: 'Admin Yopoy',
-        email: 'adm@yopoy.com',
-        senha: 'admin-strong-pass',
-        confirmarSenha: 'admin-strong-pass'
-      }
+      companyName: 'Yopoy SA',
+      adminName: 'Admin Yopoy',
+      email: 'adm@yopoy.com',
+      password: 'admin-strong-pass',
+      confirmPassword: 'admin-strong-pass'
     })).rejects.toThrow('Já existe uma empresa com este CNPJ.');
   });
 
-  it('deve buscar sessão ativa incluindo header X-Yopoy-Company-Id', async () => {
+  it('deve buscar sessão ativa somente pelo cookie', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => ({
@@ -117,14 +128,12 @@ describe('AuthApiClient Unit Tests', () => {
       })
     });
 
-    const res = await AuthApiClient.getSession('company-uuid-123');
+    const res = await AuthApiClient.getSession();
 
     expect(mockFetch).toHaveBeenCalledWith('/api/auth/session', expect.objectContaining({
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'X-Yopoy-Company-Id': 'company-uuid-123'
-      }
+      headers: {}
     }));
     expect(res.authenticated).toBe(true);
   });

@@ -1,4 +1,7 @@
+import { useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
+  ArrowLeft,
+  ArrowRight,
   Archive,
   ArchiveRestore,
   Boxes,
@@ -8,9 +11,10 @@ import {
   FileClock,
   FileText,
   FolderCheck,
+  ListChecks,
   Link2,
+  PackageOpen,
   PackageCheck,
-  PencilLine,
   Receipt,
   ShoppingBag,
   Sparkles,
@@ -21,11 +25,20 @@ import { SmartCardItem, SmartCardKind } from './types';
 interface SmartCardProps {
   item: SmartCardItem;
   theme: 'light' | 'dark';
-  onReview: (id: string) => void;
-  onReady: (id: string) => void;
+  onMoveNext: (id: string) => void;
+  onMovePrevious: (id: string) => void;
+  onMarkResolved: (id: string) => void;
   onArchiveToggle: (id: string) => void;
   onLink: (id: string) => void;
+  onSendToAccountant: (id: string) => void;
   onCreatePreInvoice: (id: string) => void;
+  onDragPointerDown?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
+  onDragPointerMove?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
+  onDragPointerUp?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
+  onConnectionStart?: (event: ReactPointerEvent<HTMLButtonElement>, id: string) => void;
+  onConnectionEnd?: (event: ReactPointerEvent<HTMLButtonElement>, id: string) => void;
+  isConnecting?: boolean;
+  canReceiveConnection?: boolean;
 }
 
 const KIND_LABELS: Record<SmartCardKind, string> = {
@@ -46,6 +59,7 @@ const STATUS_LABELS = {
   pending: 'Pendente',
   review: 'Em revisão',
   ready: 'Pronto',
+  resolved: 'Resolvido',
 } as const;
 
 function KindIcon({ kind }: { kind: SmartCardKind }) {
@@ -67,15 +81,29 @@ function KindIcon({ kind }: { kind: SmartCardKind }) {
 export function SmartCard({
   item,
   theme,
-  onReview,
-  onReady,
+  onMoveNext,
+  onMovePrevious,
+  onMarkResolved,
   onArchiveToggle,
   onLink,
+  onSendToAccountant,
   onCreatePreInvoice,
+  onDragPointerDown,
+  onDragPointerMove,
+  onDragPointerUp,
+  onConnectionStart,
+  onConnectionEnd,
+  isConnecting = false,
+  canReceiveConnection = false,
 }: SmartCardProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const dark = theme === 'dark';
   const canLink = (item.kind === 'payment' || item.kind === 'sale') && !item.linked;
   const canCreatePreInvoice = (item.kind === 'sale' || item.kind === 'invoice-draft') && !item.hasPreInvoice;
+  const canSendToAccountant = ['sale', 'expense', 'invoice-draft', 'pre-invoice', 'accountant-package'].includes(item.kind)
+    && !item.sentToAccountant;
+  const canMovePrevious = item.status !== 'new' && item.status !== 'resolved';
+  const canMoveNext = item.status !== 'resolved';
   const actionClass = `inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-center text-xs font-bold transition-colors sm:min-h-9 sm:w-auto sm:rounded-lg sm:px-2.5 sm:py-1.5 sm:text-[11px] ${
     dark
       ? 'border-slate-700 bg-slate-900 text-slate-200 hover:border-indigo-500 hover:text-white'
@@ -83,9 +111,68 @@ export function SmartCard({
   }`;
 
   return (
-    <article className={`rounded-2xl border p-4 shadow-sm ${
+    <article
+      data-card-id={item.id}
+      onPointerDown={(event) => onDragPointerDown?.(event, item.id)}
+      onPointerMove={(event) => onDragPointerMove?.(event, item.id)}
+      onPointerUp={(event) => onDragPointerUp?.(event, item.id)}
+      onPointerCancel={(event) => onDragPointerUp?.(event, item.id)}
+      className={`relative h-full select-none rounded-2xl border p-4 shadow-lg transition-shadow ${
       dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'
-    } ${item.archived ? 'opacity-70' : ''}`}>
+    } ${item.archived ? 'opacity-70' : ''} ${onDragPointerDown ? 'cursor-grab active:cursor-grabbing' : ''}`}
+    >
+      {onConnectionEnd && (
+        <button
+          type="button"
+          data-no-card-drag
+          data-connector="input"
+          data-connector-card-id={item.id}
+          aria-label={`Conectar em ${item.title}`}
+          title="Solte uma conexão aqui"
+          onPointerDown={(event) => event.stopPropagation()}
+          onPointerUp={(event) => {
+            event.stopPropagation();
+            onConnectionEnd(event, item.id);
+          }}
+          className="group absolute -left-[22px] top-[46px] z-20 flex h-11 w-11 touch-none items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+        >
+          <span className={`h-6 w-6 rounded-full border-4 shadow-sm transition-all ${
+              canReceiveConnection
+                ? 'scale-125 border-emerald-300 bg-emerald-500'
+                : dark
+                  ? 'border-[#121218] bg-slate-500 group-hover:bg-emerald-400'
+                  : 'border-white bg-slate-400 group-hover:bg-emerald-500'
+            }`}
+          />
+        </button>
+      )}
+
+      {onConnectionStart && (
+        <button
+          type="button"
+          data-no-card-drag
+          data-connector="output"
+          aria-label={`Iniciar conexão de ${item.title}`}
+          title="Arraste para o conector de outro card"
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            onConnectionStart(event, item.id);
+          }}
+          className="group absolute -right-[22px] top-[46px] z-20 flex h-11 w-11 touch-none items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400"
+        >
+          <span className={`flex h-6 w-6 items-center justify-center rounded-full border-4 shadow-sm transition-all ${
+              isConnecting
+                ? 'scale-125 border-indigo-300 bg-indigo-500'
+                : dark
+                  ? 'border-[#121218] bg-indigo-500 group-hover:bg-indigo-400'
+                  : 'border-white bg-indigo-600 group-hover:bg-indigo-500'
+            }`}
+          >
+            <Link2 className="h-2.5 w-2.5 text-white" />
+          </span>
+        </button>
+      )}
+
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
@@ -124,22 +211,58 @@ export function SmartCard({
         ))}
         {item.linked && <span className="rounded-md bg-sky-100 px-2 py-1 text-[10px] text-sky-700 dark:bg-sky-950 dark:text-sky-300">Vínculo visual</span>}
         {item.hasPreInvoice && <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Pré-nota visual</span>}
+        {item.sentToAccountant && <span className="rounded-md bg-violet-100 px-2 py-1 text-[10px] text-violet-700 dark:bg-violet-950 dark:text-violet-300">Separado para contador</span>}
         <span className={`basis-full pt-1 text-[10px] sm:ml-auto sm:basis-auto sm:pt-0 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{item.timeLabel}</span>
       </div>
+
+      <button
+        type="button"
+        data-no-card-drag
+        aria-expanded={detailsOpen}
+        aria-controls={`smart-card-details-${item.id}`}
+        className={`${actionClass} mt-3`}
+        onClick={() => setDetailsOpen((current) => !current)}
+      >
+        <ListChecks className="h-3.5 w-3.5" /> {detailsOpen ? 'Fechar detalhes' : 'Abrir detalhes'}
+      </button>
+
+      {detailsOpen && (
+        <div
+          id={`smart-card-details-${item.id}`}
+          className={`mt-3 rounded-xl border p-3 text-xs leading-relaxed ${
+            dark ? 'border-slate-800 bg-slate-950/60 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'
+          }`}
+        >
+          <dl className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
+            <div><dt className="font-bold">Etapa atual</dt><dd>{item.archived ? 'Arquivado' : STATUS_LABELS[item.status]}</dd></div>
+            <div><dt className="font-bold">Origem</dt><dd>{KIND_LABELS[item.kind]}</dd></div>
+          </dl>
+          <p className="mt-2">Arraste o card livremente pela mesa ou use estas ações como alternativa.</p>
+        </div>
+      )}
 
       <p className={`mt-3 text-[10px] font-semibold ${dark ? 'text-amber-300/80' : 'text-amber-700'}`}>
         Exemplo fictício · ações locais, sem persistência ou operação externa
       </p>
 
-      <div className="mt-4 grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 sm:flex sm:flex-wrap">
-        {!item.archived && item.status !== 'review' && (
-          <button type="button" className={actionClass} onClick={() => onReview(item.id)}>
-            <PencilLine className="h-3.5 w-3.5" /> Revisar
+      <div data-no-card-drag className={`mt-4 rounded-xl border border-dashed p-2 ${dark ? 'border-slate-800' : 'border-slate-200'}`}>
+        <p className={`mb-2 text-[9px] font-black uppercase tracking-wider ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+          Ações alternativas
+        </p>
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+        {!item.archived && canMovePrevious && (
+          <button type="button" className={actionClass} onClick={() => onMovePrevious(item.id)}>
+            <ArrowLeft className="h-3.5 w-3.5" /> Voltar etapa
           </button>
         )}
-        {!item.archived && item.status !== 'ready' && (
-          <button type="button" className={actionClass} onClick={() => onReady(item.id)}>
-            <Check className="h-3.5 w-3.5" /> Marcar pronto
+        {!item.archived && canMoveNext && (
+          <button type="button" className={actionClass} onClick={() => onMoveNext(item.id)}>
+            <ArrowRight className="h-3.5 w-3.5" /> Avançar etapa
+          </button>
+        )}
+        {!item.archived && item.status !== 'resolved' && (
+          <button type="button" className={actionClass} onClick={() => onMarkResolved(item.id)}>
+            <Check className="h-3.5 w-3.5" /> Resolver / Pronto
           </button>
         )}
         {!item.archived && canLink && (
@@ -152,10 +275,16 @@ export function SmartCard({
             <FolderCheck className="h-3.5 w-3.5" /> Preparar pré-nota visual
           </button>
         )}
+        {!item.archived && canSendToAccountant && (
+          <button type="button" className={actionClass} onClick={() => onSendToAccountant(item.id)}>
+            <PackageOpen className="h-3.5 w-3.5" /> Enviar ao contador (simulado)
+          </button>
+        )}
         <button type="button" className={actionClass} onClick={() => onArchiveToggle(item.id)}>
           {item.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
           {item.archived ? 'Desarquivar' : 'Arquivar'}
         </button>
+        </div>
       </div>
     </article>
   );

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   DollarSign, 
@@ -38,10 +38,12 @@ import {
   CheckCircle2,
   CreditCard,
   Shield,
-  Menu
+  Menu,
+  ClipboardList
 } from 'lucide-react';
 import { Product, Employee, Transaction, Task, isTransactionRevenue } from './types';
 import { YopoyCentralDashboard } from './features/yopoy-central-do-dia/YopoyCentralDashboard';
+import { YopoyBusinessDashboard } from './features/yopoy-dashboard';
 import FinanceTool from './components/FinanceTool';
 import LogisticsTool from './components/LogisticsTool';
 import ChatAssistant from './components/ChatAssistant';
@@ -60,6 +62,17 @@ import ProtectedModule from './frontend/auth/ProtectedModule';
 import PermissionGate from './frontend/auth/PermissionGate';
 import { MODULE_PERMISSIONS } from './frontend/auth/modulePermissions';
 
+interface ModuleAccessProps {
+  allowLocalOwner: boolean;
+  permission: string;
+  children: ReactNode;
+}
+
+function ModuleAccess({ allowLocalOwner, permission, children }: ModuleAccessProps) {
+  if (allowLocalOwner) return <>{children}</>;
+  return <ProtectedModule permission={permission}>{children}</ProtectedModule>;
+}
+
 export default function App() {
   const { authenticated, loading: authLoading, user: authUser, companyId, logout: apiLogout, refreshSession } = useAuth();
 
@@ -71,8 +84,8 @@ export default function App() {
   const [selectedPlan, setSelectedPlan] = useState<'micro' | 'pequena' | 'media' | 'corporativo'>('media');
 
   // Controle de Abas Principais da Barra Lateral
-  // 'dashboard' (Central), 'finance' (Contábil), 'logistics' (Estoque), 'advisor' (ChatGPT do Negócio), 'hierarchy' (Organograma), 'invoice' (Emitir Nota), 'settings' (Configurações), 'master_admin' (Super Administrador)
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'finance' | 'logistics' | 'advisor' | 'hierarchy' | 'invoice' | 'settings' | 'master_admin' | 'nfce_pos'>('dashboard');
+  // 'dashboard' é a home de visão geral; 'tasks' mantém a Mesa operacional separada.
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'finance' | 'logistics' | 'advisor' | 'hierarchy' | 'invoice' | 'nfse_module' | 'settings' | 'master_admin' | 'nfce_pos'>('dashboard');
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [expandedCard, setExpandedCard] = useState<'cash' | 'alerts' | 'team' | 'activity' | 'critical_product' | null>(null);
@@ -319,29 +332,34 @@ export default function App() {
     }, 3500);
   };
 
+  const currentRole = typeof currentUser?.role === 'string' ? currentUser.role.toLowerCase() : '';
+  const hasLocalMvpOwnerAccess = currentUser?.isAdmin === true || currentRole === 'owner' || currentRole === 'admin';
+
   // Helper de acesso às abas (por plano e por permissão de funcionário)
   const isTabAllowed = (tab: string): boolean => {
+    const permissionTab = tab === 'tasks' ? 'dashboard' : tab;
+
     if (tab === 'master_admin') {
       const email = currentUser?.login || currentUser?.email;
       return email === 'admin@elparrar.com';
     }
 
-    // Plano Restrições (Aplicam-se a todos, inclusive admins)
-    if (selectedPlan === 'micro') {
-      const allowed = ['dashboard', 'finance', 'invoice', 'settings', 'nfce_pos'];
-      if (!allowed.includes(tab)) return false;
-    } else if (selectedPlan === 'pequena') {
-      const allowed = ['dashboard', 'finance', 'invoice', 'hierarchy', 'settings', 'nfce_pos', 'logistics'];
-      if (!allowed.includes(tab)) return false;
+    // Subusuários sempre respeitam a lista explícita, mesmo se um papel administrativo
+    // for recebido por engano no estado local.
+    if (currentUser?.isSubUser && currentUser?.allowedTabs) {
+      return currentUser.allowedTabs.includes(permissionTab);
     }
 
-    if (currentUser?.isAdmin) return true;
+    // No MVP local, owner/admin controla o workspace inteiro.
+    if (hasLocalMvpOwnerAccess) return true;
 
-    // Sub-unidades e Funcionários
-    if (currentUser?.isSubUser && currentUser?.allowedTabs) {
-      if (!currentUser.allowedTabs.includes(tab)) {
-        return false;
-      }
+    // Restrições de plano para usuários que não administram o workspace.
+    if (selectedPlan === 'micro') {
+      const allowed = ['dashboard', 'finance', 'invoice', 'settings', 'nfce_pos'];
+      if (!allowed.includes(permissionTab)) return false;
+    } else if (selectedPlan === 'pequena') {
+      const allowed = ['dashboard', 'finance', 'invoice', 'hierarchy', 'settings', 'nfce_pos', 'logistics'];
+      if (!allowed.includes(permissionTab)) return false;
     }
 
     return true;
@@ -350,11 +368,11 @@ export default function App() {
   // Garante que o usuário não permaneça em uma aba não permitida
   useEffect(() => {
     if (!isTabAllowed(activeTab)) {
-      const fallbackList = ['dashboard', 'finance', 'logistics', 'invoice', 'hierarchy', 'advisor', 'settings', 'nfce_pos', 'master_admin'];
+      const fallbackList = ['dashboard', 'tasks', 'finance', 'logistics', 'invoice', 'hierarchy', 'advisor', 'settings', 'nfce_pos', 'master_admin'];
       const firstAllowed = fallbackList.find(t => isTabAllowed(t)) || 'dashboard';
-      setActiveTab(firstAllowed as any);
+      setActiveTab(firstAllowed as typeof activeTab);
     }
-  }, [selectedPlan, activeTab, currentUser]);
+  }, [selectedPlan, activeTab, currentUser, hasLocalMvpOwnerAccess]);
 
   // Estados reativos baseados nas configurações locais
   const [corporateName, setCorporateName] = useState(() => {
@@ -688,6 +706,17 @@ export default function App() {
                   </button>
                 )}
 
+                {isTabAllowed('tasks') && (
+                  <button
+                    id="sidebar-nav-tasks"
+                    onClick={() => handleTabChange('tasks')}
+                    className={getSidebarBtnClass('tasks')}
+                  >
+                    <ClipboardList className="w-4 h-4 text-indigo-500" />
+                    Mesa de Tarefas
+                  </button>
+                )}
+
                 {isTabAllowed('finance') && (
                   <button
                     id="sidebar-nav-finance"
@@ -718,6 +747,17 @@ export default function App() {
                   >
                     <FileText className="w-4 h-4 text-indigo-500" />
                     Emitir Nota (Sebrae)
+                  </button>
+                )}
+
+                {isTabAllowed('nfse_module') && (
+                  <button
+                    id="sidebar-nav-nfse"
+                    onClick={() => handleTabChange('nfse_module')}
+                    className={getSidebarBtnClass('nfse_module')}
+                  >
+                    <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
+                    NFS-e (Serviços)
                   </button>
                 )}
 
@@ -982,6 +1022,16 @@ export default function App() {
                   Dashboard
                 </button>
               )}
+              {isTabAllowed('tasks') && (
+                <button
+                  onClick={() => handleTabChange('tasks')}
+                  className={`py-2 px-3 text-[11px] font-bold rounded-lg transition-colors whitespace-nowrap ${
+                    activeTab === 'tasks' ? 'bg-indigo-600 text-white' : 'text-[#94a3b8]'
+                  }`}
+                >
+                  Mesa de Tarefas
+                </button>
+              )}
               {isTabAllowed('finance') && (
                 <button
                   onClick={() => handleTabChange('finance')}
@@ -1066,7 +1116,7 @@ export default function App() {
           )}
 
           {/* ÁREA DE CONTEÚDO PRINCIPAL DINÂMICO */}
-          <main className="p-6 md:p-8 flex-1 space-y-8">
+          <main className="flex-1 space-y-8 p-3 sm:p-6 md:p-8">
             
             {/* BANNER DE MODO FOCO ATIVO */}
             {isExpanded && (
@@ -1093,14 +1143,20 @@ export default function App() {
             )}
 
             {activeTab === 'dashboard' && (
-              <div id="central-dashboard-view" className="space-y-8 w-full">
+              <div id="business-dashboard-view" className="space-y-8 w-full">
+                <YopoyBusinessDashboard theme={theme} onOpenTaskBoard={() => handleTabChange('tasks')} />
+              </div>
+            )}
+
+            {activeTab === 'tasks' && (
+              <div id="task-board-view" className="space-y-8 w-full">
                 <YopoyCentralDashboard theme={theme} />
               </div>
             )}
 
             {/* TAB 2: AUXILIAR DE CONTABILIDADE E CAIXA */}
             {activeTab === 'finance' && (
-              <ProtectedModule permission={MODULE_PERMISSIONS.finance.view}>
+              <ModuleAccess allowLocalOwner={hasLocalMvpOwnerAccess} permission={MODULE_PERMISSIONS.finance.view}>
                 <div id="finance-tab-view" className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -1131,12 +1187,12 @@ export default function App() {
                     selectedPlan={selectedPlan}
                   />
                 </div>
-              </ProtectedModule>
+              </ModuleAccess>
             )}
 
             {/* TAB 3: CONTROLE DE LOGÍSTICA DE MERCADORIAS */}
             {activeTab === 'logistics' && (
-              <ProtectedModule permission={MODULE_PERMISSIONS.logistics.view}>
+              <ModuleAccess allowLocalOwner={hasLocalMvpOwnerAccess} permission={MODULE_PERMISSIONS.logistics.view}>
                 <div id="logistics-tab-view" className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -1168,12 +1224,12 @@ export default function App() {
                     userPlan={selectedPlan}
                   />
                 </div>
-              </ProtectedModule>
+              </ModuleAccess>
             )}
 
             {/* TAB EXTRA: EMISSÃO DE NOTAS FISCAIS (SEBRAE INTEGRADO) */}
             {activeTab === 'invoice' && (
-              <ProtectedModule permission={MODULE_PERMISSIONS.fiscal.view}>
+              <ModuleAccess allowLocalOwner={hasLocalMvpOwnerAccess} permission={MODULE_PERMISSIONS.fiscal.view}>
                 <div id="invoice-tab-view" className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -1201,12 +1257,12 @@ export default function App() {
                     selectedPlan={selectedPlan}
                   />
                 </div>
-              </ProtectedModule>
+              </ModuleAccess>
             )}
 
             {/* TAB NOVA: MÓDULO DE SERVIÇOS MUNICIPAL NFS-E */}
             {activeTab === 'nfse_module' && (
-              <ProtectedModule permission={MODULE_PERMISSIONS.fiscal.view}>
+              <ModuleAccess allowLocalOwner={hasLocalMvpOwnerAccess} permission={MODULE_PERMISSIONS.fiscal.view}>
                 <div id="nfse-tab-view" className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
@@ -1216,7 +1272,7 @@ export default function App() {
                   </div>
                   <NfseTool theme={theme} />
                 </div>
-              </ProtectedModule>
+              </ModuleAccess>
             )}
 
             {/* TAB 4: MÓDULO DE ORIENTAÇÃO E CONSULTORIA FISCAL IA (CHAT) */}
@@ -1261,7 +1317,7 @@ export default function App() {
 
             {/* TAB 6: ABA DE CONFIGURAÇÕES CADASTRAIS, REGIME FISCAL, CERTIFICADOS E SÓCIOS */}
             {activeTab === 'settings' && (
-              <ProtectedModule permission={MODULE_PERMISSIONS.settings.view}>
+              <ModuleAccess allowLocalOwner={hasLocalMvpOwnerAccess} permission={MODULE_PERMISSIONS.settings.view}>
                 <div id="settings-tab-view" className="space-y-4 w-full">
                   <SettingsTool 
                     theme={theme} 
@@ -1271,11 +1327,11 @@ export default function App() {
                     currentUser={currentUser}
                   />
                 </div>
-              </ProtectedModule>
+              </ModuleAccess>
             )}
 
             {activeTab === 'nfce_pos' && (
-              <ProtectedModule permission={MODULE_PERMISSIONS.fiscal.view}>
+              <ModuleAccess allowLocalOwner={hasLocalMvpOwnerAccess} permission={MODULE_PERMISSIONS.fiscal.view}>
                 <div id="nfce-pos-tab-view" className="space-y-4 w-full">
                   <NfcePosTool 
                     theme={theme}
@@ -1304,7 +1360,7 @@ export default function App() {
                     }}
                   />
                 </div>
-              </ProtectedModule>
+              </ModuleAccess>
             )}
 
             {activeTab === 'master_admin' && (

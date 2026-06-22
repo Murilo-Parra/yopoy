@@ -10,7 +10,21 @@ export type SmartCardKind =
   | 'pending'
   | 'ai-alert';
 
-export type SmartCardStatus = 'new' | 'pending' | 'review' | 'ready';
+export const SMART_CARD_STATUS_FLOW = ['new', 'pending', 'review', 'ready', 'resolved'] as const;
+
+export type SmartCardStatus = typeof SMART_CARD_STATUS_FLOW[number];
+
+export interface CanvasCardPosition {
+  x: number;
+  y: number;
+}
+
+export interface CanvasCardConnection {
+  id: string;
+  fromId: string;
+  toId: string;
+  label?: string;
+}
 
 export interface SmartCardItem {
   id: string;
@@ -23,5 +37,6 @@ export interface SmartCardItem {
   archived: boolean;
   linked: boolean;
   hasPreInvoice: boolean;
+  sentToAccountant?: boolean;
   tags: string[];
 }

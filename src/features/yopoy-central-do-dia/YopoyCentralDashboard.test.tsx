@@ -135,7 +135,7 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getAllByText(/separado neste navegador/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/sem envio automático/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/sem valor fiscal/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/revise antes de enviar ao contador/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/revise antes de compartilhar manualmente com o contador/i).length).toBeGreaterThan(0);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
 
     fireEvent.click(within(getCaptureCard()).getByRole('button', { name: /avançar etapa/i }));
@@ -283,7 +283,7 @@ describe('YopoyCentralDashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: /copiar resumo/i }));
 
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(summary.value));
-    expect(screen.getByText(/resumo local copiado\. revise antes de enviar ao contador/i)).toBeTruthy();
+    expect(screen.getByText(/resumo local copiado\. revise antes de compartilhar manualmente com o contador/i)).toBeTruthy();
   });
 
   it('mantém resumo visível e mostra fallback quando clipboard falha', async () => {

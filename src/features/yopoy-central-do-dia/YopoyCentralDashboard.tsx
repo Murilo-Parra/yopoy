@@ -417,7 +417,7 @@ function formatAccountantPackageText(items: SmartCardItem[], connections: Canvas
   const lines = [
     'Pacote local para contador',
     'Separado neste navegador. Sem envio automático. Sem valor fiscal.',
-    'Revise antes de enviar ao contador.',
+    'Revise antes de compartilhar manualmente com o contador.',
     '',
     `Total de cards separados: ${packageItems.length}`,
     `Vendas internas separadas: ${totals.sales}`,
@@ -770,7 +770,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
 
     try {
       await navigator.clipboard.writeText(accountantPackageSummaryText);
-      setFeedback('Resumo local copiado. Revise antes de enviar ao contador.');
+      setFeedback('Resumo local copiado. Revise antes de compartilhar manualmente com o contador.');
     } catch {
       setFeedback('Não foi possível copiar automaticamente. O resumo está visível para seleção manual.');
     }
@@ -1091,7 +1091,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
             </span>
             <h2 className={`mt-2 text-base font-black ${dark ? 'text-slate-100' : 'text-slate-900'}`}>Pacote local para contador</h2>
             <p className={`mt-1 text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Sem envio automático. Sem valor fiscal. Revise antes de enviar ao contador.
+              Sem envio automático. Sem valor fiscal. Revise antes de compartilhar manualmente com o contador.
               <span className="hidden sm:inline"> Organização interna local: não substitui contador, não é documento fiscal, não emite nota, não valida tributo e não sincroniza fora do navegador.</span>
             </p>
           </div>

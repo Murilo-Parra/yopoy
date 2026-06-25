@@ -308,7 +308,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
     setAddedItems(prev => prev.filter(item => item.id !== id));
   };
 
-  // Turn active form state into a valid XML and trigger simulation steps
+  // Turn active form state into an internal pre-invoice draft and trigger visual steps
   const handleEmitNfe = async () => {
     const validationErrors = triggerValidation();
     if (validationErrors.length > 0) {
@@ -319,11 +319,11 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       return;
     }
 
-    setFeedback({ status: 'info', message: 'Iniciando pipeline de transmissão com a SEFAZ...' });
+    setFeedback({ status: 'info', message: 'Iniciando preparação demonstrativa da pré-nota interna...' });
     setEmissionSteps(['draft']);
-    setEmissionLog(['[SISTEMA] Iniciando preparação do faturamento eletrônico de mercadorias...']);
+    setEmissionLog(['[SISTEMA] Iniciando preparação de rascunho interno sem valor fiscal...']);
 
-    // Build the structural XML input schema
+    // Build the structural draft input schema
     const xmlInput = {
       documentType: 'NF-e' as const,
       documentNumber: parseInt(manualInvoiceNumber, 10) || 122,
@@ -383,9 +383,9 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       }
     };
 
-    // 1. GERAÇÃO DO XML
+    // 1. GERAÇÃO DO RASCUNHO
     setEmissionSteps(prev => [...prev, 'validating']);
-    setEmissionLog(prev => [...prev, '[XML] Geração do arquivo XML estruturado de acordo com o Schema XML 4.00 Nacional da SEFAZ...', '[INFO] Carregando chaves e regras fiscais pré-configuradas.']);
+    setEmissionLog(prev => [...prev, '[RASCUNHO] Montagem de dados internos para pré-nota sem valor fiscal.', '[INFO] Preparando dados para conferência e pacote do contador.']);
     
     // Generate actual original XML using XmlGenerator
     const originalXmlString = XmlGenerator.xml_serializer(xmlInput);
@@ -419,10 +419,10 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       return;
     }
 
-    // 2. ASSINATURA DIGITAL
+    // 2. CONFERÊNCIA INTERNA
     await new Promise(resolve => setTimeout(resolve, 1500));
     setEmissionSteps(prev => [...prev, 'validated', 'signing']);
-    setEmissionLog(prev => [...prev, '[ASSINATURA] Extraindo chaves e certificados ICP-Brasil cadastrados para o tenant empresarial...', '[ASSINATURA] Aplicando assinatura RSA-SHA256 sobre a Tag infNfe usando SignatureService.']);
+    setEmissionLog(prev => [...prev, '[CONFERÊNCIA] Verificando campos internos do tenant empresarial.', '[CONFERÊNCIA] Marcando rascunho para uso demonstrativo. Emissão real não disponível no MVP.']);
 
     // Call Sign service API
     let signedXmlValue = '';
@@ -440,18 +440,18 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       });
       const signData = await signRes.json();
       if (!signData.success) {
-        throw new Error(signData.error || 'Falha de assinatura fiscal.');
+        throw new Error(signData.error || 'Falha ao salvar conferência interna.');
       }
     } catch (err: any) {
-      setFeedback({ status: 'error', message: `Erro na assinatura digital: ${err.message}` });
+      setFeedback({ status: 'error', message: `Erro na conferência interna: ${err.message}` });
       setEmissionSteps(prev => [...prev, 'error']);
       return;
     }
 
-    // 3. TRANSMISSÃO SEFAZ
+    // 3. FECHAMENTO DO ESPELHO INTERNO
     await new Promise(resolve => setTimeout(resolve, 1500));
     setEmissionSteps(prev => [...prev, 'signed', 'transmitting', 'waiting_response']);
-    setEmissionLog(prev => [...prev, '[SEFAZ] Estabelecendo conexão do lote fiscal de forma segura...', `[SEFAZ] Enviando XML para ambiente de ${emitterData.sefazEnv.toUpperCase()}...`, '[SEFAZ] Aguardando confirmação do lote contábil de resposta da SEFAZ...']);
+    setEmissionLog(prev => [...prev, '[INTERNO] Finalizando espelho visual da pré-nota.', '[INTERNO] Sem transmissão fiscal, sem autorização externa e sem valor fiscal.', '[CONTADOR] Separando dados para revisão externa.']);
 
     // Invoke actual sefaz transmission simulate endpoint
     try {
@@ -459,7 +459,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       const protNum = '1526' + Math.floor(Math.random() * 1000000000000);
       const accessKey = '522606' + emitterData.cnpj.replace(/\D/g, '') + '55001' + String(xmlInput.documentNumber).padStart(9, '0') + '1' + Math.floor(Math.random() * 1000000000).toString().padStart(9, '0');
       
-      let authorizedXmlValue = signedXmlValue.replace('</infNFe>', `</infNFe><protNFe><infProt><tpAmb>2</tpAmb><verAplic>GO4.0</verAplic><chNFe>${accessKey}</chNFe><dhRecbto>${new Date().toISOString()}</dhRecbto><nProt>${protNum}</nProt><cStat>100</cStat><xMotivo>Autorizado o uso da NF-e</xMotivo></infProt></protNFe>`);
+      let authorizedXmlValue = signedXmlValue.replace('</infNFe>', `</infNFe><protNFe><infProt><tpAmb>2</tpAmb><verAplic>MVP</verAplic><chNFe>${accessKey}</chNFe><dhRecbto>${new Date().toISOString()}</dhRecbto><nProt>${protNum}</nProt><cStat>100</cStat><xMotivo>Rascunho interno sem valor fiscal</xMotivo></infProt></protNFe>`);
 
       const transmitRes = await authFetch(`/api/nfe/${uniqueDocId}/status`, {
         method: 'POST',
@@ -479,12 +479,12 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
         setEmissionSteps(prev => [...prev, 'authorized']);
         setEmissionLog(prev => [
           ...prev, 
-          `[SEFAZ] RETORNO: Sucesso! Código 100 - Autorizado o uso da NF-e Comercial no ambiente de ${emitterData.sefazEnv.toUpperCase()}.`, 
-          `[INFO] Chave de acesso única gerada: ${accessKey}`, 
-          `[INFO] Protocolo retornado: ${protNum}`,
-          `[SISTEMA] Conforme as diretrizes, nota fiscal eletrônica salva e registrada para auditoria.`
+          '[INTERNO] Rascunho de pré-nota concluído para conferência.',
+          `[INFO] Identificador visual interno gerado: ${accessKey}`,
+          `[INFO] Referência interna: ${protNum}`,
+          '[SISTEMA] Pré-nota interna salva como demonstrativo, não emitida e sem valor fiscal.'
         ]);
-        setFeedback({ status: 'success', message: `NF-e Nº ${xmlInput.documentNumber} emitida e homologada pela SEFAZ com sucesso!` });
+        setFeedback({ status: 'success', message: `Pré-nota interna Nº ${xmlInput.documentNumber} preparada. Emissão real não disponível no MVP.` });
         
         // Reset form variables
         setAddedItems([]);
@@ -493,7 +493,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
         // Reload Nfe List
         fetchNfeList();
       } else {
-        throw new Error(transmitData.error || 'Erro na transmissão do lote fiscal.');
+        throw new Error(transmitData.error || 'Erro ao finalizar rascunho interno.');
       }
     } catch (err: any) {
       setFeedback({ status: 'error', message: err.message });
@@ -545,7 +545,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       theme === 'dark' ? 'bg-[#0b0c10] border-[#1e2030]/80 text-[#c8d0e7]' : 'bg-white border-slate-205 text-slate-800'
     }`} id="nfe-emissor-module">
       
-      {/* Header com ambiente SEFAZ destacado de forma profissional */}
+      {/* Header de pré-nota demonstrativa */}
       <div className={`p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${
         theme === 'dark' ? 'bg-[#12131a]/80 border-[#1e2030]/80' : 'bg-slate-50/50 border-slate-100'
       }`}>
@@ -556,17 +556,17 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
           </div>
           <div>
             <h2 className="text-sm font-black tracking-tight flex items-center gap-2">
-              Emissor Completo de NF-e
+              Pré-nota Interna Demonstrativa
               <span className={`text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full ${
                 emitterData.sefazEnv === 'homologacao' 
                   ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' 
                   : 'bg-[#1dd1a1]/10 text-[#1dd1a1] border border-[#1dd1a1]/20'
               }`}>
-                {emitterData.sefazEnv === 'homologacao' ? 'Ambiente Homologação' : 'Produção Autorizado'}
+                {emitterData.sefazEnv === 'homologacao' ? 'MVP bloqueado' : 'Uso interno'}
               </span>
             </h2>
             <p className="text-[11px] text-slate-500 font-medium max-w-lg mt-0.5">
-              Faturamento mercantil multi-tenant com certificação digital ICP-Brasil e comunicação XML direta com a SEFAZ.
+              Rascunho interno para organizar venda, conferir dados e separar pacote para contador. Sem transmissão fiscal.
             </p>
           </div>
         </div>
@@ -581,7 +581,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                 : 'text-slate-500 hover:text-slate-350'
             }`}
           >
-            Faturas Emitidas ({nfeList.length})
+            Pré-notas internas ({nfeList.length})
           </button>
           
           <button
@@ -593,7 +593,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
             }`}
           >
             <Plus className="w-3.5 h-3.5" />
-            Nova NF-e
+            Nova pré-nota
           </button>
 
           <button
@@ -637,7 +637,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       </AnimatePresence>
 
       <div className="p-6">
-        {/* LISTA DE NOTAS EMITIDAS */}
+        {/* LISTA DE PRÉ-NOTAS INTERNAS */}
         {activeSubTab === 'lista' && (
           <div className="space-y-6">
             
@@ -647,7 +647,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
             }`}>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 w-full">
                 <div>
-                  <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-500 mb-1">Nº da Nota</label>
+                  <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-500 mb-1">Nº da pré-nota</label>
                   <input
                     type="number"
                     value={filters.invoice_number}
@@ -689,7 +689,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                 </div>
 
                 <div>
-                  <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-500 mb-1">Status SEFAZ</label>
+                  <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-500 mb-1">Status interno</label>
                   <select
                     value={filters.status}
                     onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
@@ -699,9 +699,9 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                   >
                     <option value="">Filtro de todos os status...</option>
                     <option value="DRAFT">Draft (Rascunho)</option>
-                    <option value="AUTHORIZED">Authorized (Autorizada)</option>
-                    <option value="REJECTED">Rejected (Rejeitada)</option>
-                    <option value="CANCELLED">Cancelled (Cancelada)</option>
+                    <option value="AUTHORIZED">Pronto para contador</option>
+                    <option value="REJECTED">Pendente de revisão</option>
+                    <option value="CANCELLED">Arquivado internamente</option>
                   </select>
                 </div>
               </div>
@@ -721,17 +721,17 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
               {loadingList ? (
                 <div className="p-16 text-center space-y-3">
                   <RefreshCw className="w-8 h-8 text-indigo-505 animate-spin mx-auto" />
-                  <p className="text-xs font-bold text-slate-500">Buscando notas fiscais faturadas no Postgres...</p>
+                  <p className="text-xs font-bold text-slate-500">Buscando pré-notas internas no Postgres...</p>
                 </div>
               ) : nfeList.length === 0 ? (
                 <div className="p-16 text-center space-y-3">
                   <FileText className="w-10 h-10 text-slate-600 mx-auto opacity-40" />
-                  <p className="text-xs font-bold text-slate-500">Nenhum documento mercantil NF-e correspondente aos filtros foi localizado para seu tenant.</p>
+                  <p className="text-xs font-bold text-slate-500">Nenhuma pré-nota interna correspondente aos filtros foi localizada para seu tenant.</p>
                   <button 
                     onClick={() => setActiveSubTab('emissao')}
                     className="bg-indigo-600 text-white font-black px-4 py-2 rounded-xl text-xs uppercase cursor-pointer tracking-wider"
                   >
-                    Emitir Primeira NF-e
+                    Criar primeira pré-nota
                   </button>
                 </div>
               ) : (
@@ -743,10 +743,10 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                       }`}>
                         <th className="p-4">Número / Série</th>
                         <th className="p-4">Identificação Destinatário</th>
-                        <th className="p-4">Data Emissão</th>
+                        <th className="p-4">Data do rascunho</th>
                         <th className="p-4">Valor Total</th>
-                        <th className="p-4">Status SEFAZ</th>
-                        <th className="p-4 text-right">Ações Fiscais</th>
+                        <th className="p-4">Status interno</th>
+                        <th className="p-4 text-right">Ações internas</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/10 text-xs">
@@ -756,7 +756,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                         return (
                           <tr key={item.id} className="hover:bg-slate-500/5 transition-colors">
                             <td className="p-4">
-                              <div className="font-extrabold">NF-e Nº {item.invoice_number}</div>
+                              <div className="font-extrabold">Pré-nota Nº {item.invoice_number}</div>
                               <div className="text-[10px] text-slate-500 font-medium">Série {item.series} | Proc 4.00</div>
                             </td>
                             <td className="p-4">
@@ -907,7 +907,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
               }`}>
                 <div className="absolute top-1 right-2 inline-flex gap-1 items-center px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[8.5px] font-extrabold uppercase tracking-wider border border-indigo-500/20">
                   <Check className="w-3 h-3" />
-                  Emitente Verificado
+                  Emitente cadastrado
                 </div>
 
                 <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-slate-500 mb-4 flex items-center gap-2">
@@ -916,7 +916,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                 </h3>
 
                 <p className="text-[10px] text-amber-500 font-extrabold mb-3 bg-amber-500/5 p-2 rounded-xl border border-amber-500/10">
-                  ⚠️ NOTA: Conforme instrução da SEFAZ, o cadastro tributário do emitente é carregado de forma automática de seu Cadastro Fiscal e sua alteração é BLOQUEADA durante a montagem da emissão.
+                  Nota: dados do emitente são carregados do cadastro interno para preparação da pré-nota. Este rascunho não é emitido, não transmite dados externos e não tem valor fiscal.
                 </p>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs opacity-85">
@@ -1004,7 +1004,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                     </motion.div>
                   ) : (
                     <div className="text-[10px] text-slate-500 italic p-3 text-center bg-slate-500/5 rounded-xl">
-                      Nenhum cliente selecionado. Selecione acima para carregar dados cadastrais para validação eletrônica da SEFAZ.
+                      Nenhum cliente selecionado. Selecione acima para carregar dados cadastrais e preparar o pacote para contador.
                     </div>
                   )}
                 </div>
@@ -1016,7 +1016,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
               }`}>
                 <h3 className="text-[11px] font-extrabold uppercase tracking-widest text-[#6366f1] mb-4 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-indigo-505" />
-                  4. Detalhamento de Produtos e Configurações Fiscais
+                  4. Detalhamento de Produtos e Dados Internos
                 </h3>
 
                 {/* Seletor de novos itens */}
@@ -1088,7 +1088,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                       className="bg-indigo-600 hover:bg-indigo-755 disabled:opacity-40 text-white font-extrabold py-2 px-4 rounded-xl text-[10px] uppercase tracking-wider flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
                     >
                       <Plus className="w-3.5 h-3.5" />
-                      Adicionar Produto à NF-e
+                      Adicionar produto à pré-nota
                     </button>
                   </div>
                 </div>
@@ -1338,7 +1338,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
 
             </div>
 
-            {/* LADO VALIDAÇÕES E PIPELINE SEFAZ EM TEMPO REAL (4 COLS) */}
+            {/* LADO DE VALIDAÇÕES E PREPARAÇÃO INTERNA (4 COLS) */}
             <div className="lg:col-span-4 space-y-6">
               
               {/* Painel de Validações Preventivas */}
@@ -1346,7 +1346,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                 theme === 'dark' ? 'bg-[#0f1015] border-[#1e2030]/80' : 'bg-slate-50 border-slate-105'
               }`}>
                 <h3 className="text-[11px] font-extrabold uppercase tracking-widest mb-3 text-[#6366f1]">
-                  Filtro de Consistência NF-e
+                  Filtro de Consistência da Pré-nota
                 </h3>
                 
                 <div className="space-y-4 text-xs">
@@ -1398,7 +1398,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                       permission={MODULE_PERMISSIONS.fiscal.emit}
                       fallback={
                         <div className="p-3 bg-red-500/10 border border-red-500/25 text-red-500 text-center font-bold text-[10px] rounded-xl uppercase tracking-wider">
-                          Sem permissão para transmitir nota fiscal
+                          Sem permissão para preparar pré-nota interna
                         </div>
                       }
                     >
@@ -1408,14 +1408,14 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                         className="w-full bg-indigo-650 hover:bg-indigo-750 text-white font-black py-3 px-4 rounded-xl text-xs uppercase tracking-wide flex items-center justify-center gap-2 cursor-pointer shadow-lg hover:shadow-indigo-500/20 active:scale-95 transition-all"
                       >
                         <Send className="w-4 h-4" />
-                        Validar, Assinar e Transmitir
+                        Preparar pré-nota interna
                       </button>
                     </PermissionGate>
                   </div>
                 </div>
               </div>
 
-              {/* Console de Comunicação Direta SEFAZ */}
+              {/* Console de preparação interna */}
               {emissionSteps.length > 0 && (
                 <div className={`p-5 rounded-2xl border flex flex-col gap-4 font-mono ${
                   theme === 'dark' ? 'bg-[#090a0f] border-[#222436]' : 'bg-[#fafafa] border-slate-202'
@@ -1423,7 +1423,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                   <div className="flex items-center justify-between">
                     <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
                       <History className="w-3.5 h-3.5 text-indigo-505" />
-                      Console Sincronizador SEFAZ
+                      Console de Pré-nota Interna
                     </h4>
                     
                     <span className="inline-flex h-2 w-2 relative">
@@ -1444,7 +1444,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                       SIGNED
                     </div>
                     <div className={`p-1.5 rounded ${emissionSteps.includes('authorized') ? 'bg-emerald-500/10 text-emerald-450 font-black border border-emerald-500/20' : emissionSteps.includes('error') ? 'bg-rose-500/10 text-rose-500 border border-rose-505/20' : 'bg-slate-500/5 text-slate-650'}`}>
-                      {emissionSteps.includes('error') ? 'ERR' : 'AUTH'}
+                      {emissionSteps.includes('error') ? 'ERR' : 'OK'}
                     </div>
                   </div>
 
@@ -1453,7 +1453,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                     theme === 'dark' ? 'bg-black text-[#adbac7]' : 'bg-slate-100 text-slate-600'
                   }`}>
                     {emissionLog.map((log, index) => (
-                      <div key={index} className={log.startsWith('[SEFAZ] RETORNO') ? 'text-emerald-400 font-bold' : log.includes('Erro') ? 'text-rose-500 font-bold' : ''}>
+                      <div key={index} className={log.startsWith('[INTERNO]') ? 'text-emerald-400 font-bold' : log.includes('Erro') ? 'text-rose-500 font-bold' : ''}>
                         {log}
                       </div>
                     ))}
@@ -1474,23 +1474,23 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
             }`}>
               <div className="flex items-center gap-2 mb-2">
                 <BookOpen className="w-5 h-5 text-indigo-505" />
-                <h3 className="text-sm font-black text-slate-150">Manual Técnico de Transmissão Corporativa de Notas Fiscais</h3>
+                <h3 className="text-sm font-black text-slate-150">Guia de Preparação de Pré-nota Interna</h3>
               </div>
               
               <div>
-                <h4 className="font-extrabold text-[#6366f1] select-none">1. Fluxo Obrigatório de Emissão Comercial</h4>
+                <h4 className="font-extrabold text-[#6366f1] select-none">1. Fluxo interno do MVP</h4>
                 <p className="text-slate-400 mt-1">
-                  Qualquer documento mercantil gerado deve seguir o rigoroso processo fiscal para receber autorização definitiva no Fisco:
+                  O Yopoy registra a venda, organiza dados, concilia quando possível e prepara uma pré-nota interna para revisão:
                   <code className="block bg-slate-500/5 p-2 rounded-xl mt-1.5 font-mono text-[10px] text-indigo-400 leading-normal">
-                    Empresa (Emitente) &rarr; Cliente (Comprador) &rarr; Produtos Fiscais (NCM/CST) &rarr; Tributação &rarr; Validação de Estrutura &rarr; Geração XML &rarr; Assinatura RSA-SHA256 &rarr; Envio Lote SEFAZ &rarr; Protocolo SEFAZ &rarr; Autorização Contábil &rarr; Armazenamento Permanente
+                    Empresa &rarr; Cliente &rarr; Produtos &rarr; Conferência &rarr; Rascunho sem valor fiscal &rarr; Pré-nota interna &rarr; Pacote para contador
                   </code>
                 </p>
               </div>
 
               <div>
-                <h4 className="font-extrabold text-[#6366f1] select-none">2. Estados de Operação da NF-e</h4>
+                <h4 className="font-extrabold text-[#6366f1] select-none">2. Estados internos da pré-nota</h4>
                 <p className="text-slate-400 mt-1">
-                  Nossos sistemas PostgreSQL multi-tenant suportam o ciclo de vida completo de faturamento mercantil:
+                  No MVP, os estados abaixo representam apenas organização interna e preparação futura:
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                   <div className="p-3 bg-slate-500/5 rounded-xl border border-slate-205/10">
@@ -1498,12 +1498,12 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                     <p className="text-[10px] text-slate-500 mt-0.5">Montagem primária e análise de dados cadastrais obrigatórios.</p>
                   </div>
                   <div className="p-3 bg-slate-500/5 rounded-xl border border-slate-205/10">
-                    <span className="font-black text-slate-300 font-mono text-[10px]">SIGNING / SIGNED</span>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Extração do certificado digital A1 IPC-Brasil e injeção do XML.</p>
+                    <span className="font-black text-slate-300 font-mono text-[10px]">CONFERIDO</span>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Campos internos revisados para gerar espelho visual.</p>
                   </div>
                   <div className="p-3 bg-slate-500/5 rounded-xl border border-slate-205/10">
-                    <span className="font-black text-slate-300 font-mono text-[10px]">AUTHORIZED / REJECTED</span>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Conexão final com a SEFAZ de Goiânia (GO) gerando protocolo.</p>
+                    <span className="font-black text-slate-300 font-mono text-[10px]">CONTADOR / REVISÃO</span>
+                    <p className="text-[10px] text-slate-500 mt-0.5">Dados separados para contador. Emissão real não disponível no MVP.</p>
                   </div>
                 </div>
               </div>
@@ -1511,7 +1511,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
               <div>
                 <h4 className="font-extrabold text-[#6366f1] select-none">3. Segurança do Isolamento Multi-tenant (Segregação de Dados)</h4>
                 <p className="text-slate-400 mt-1">
-                  Toda NF-e emitida carrega a chave unívoca de inquilino <span className="font-mono text-indigo-400 font-bold bg-slate-500/10 p-0.5 rounded">company_id</span>. O banco de dados valida via queries seguras que nenhuma empresa transacione ou consulte XML de filiais externas, atendendo também aos regulamentos de auditoria e logs de desvios operacionais.
+                  Toda pré-nota interna carrega a chave unívoca de inquilino <span className="font-mono text-indigo-400 font-bold bg-slate-500/10 p-0.5 rounded">company_id</span>. Os dados permanecem internos, sem valor fiscal e separados por empresa.
                 </p>
               </div>
             </div>

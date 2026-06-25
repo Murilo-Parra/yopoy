@@ -93,7 +93,7 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
       color: 'bg-slate-500/10 text-slate-500 border-slate-500/20 dark:bg-slate-400/10 dark:text-slate-450',
       btnColor: 'bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100',
       features: [
-        { icon: DollarSign, text: 'Emissão de Notas Simplificada' },
+        { icon: DollarSign, text: 'Pré-nota interna sem valor fiscal' },
         { icon: Layers, text: 'Estoque Básico (Sem Lotes)' },
         { icon: User, text: '1 Usuário Administrador' },
       ]
@@ -398,7 +398,7 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
                 <p className={`text-sm sm:text-base md:text-lg max-w-2xl mx-auto font-medium ${
                   theme === 'dark' ? 'text-gray-400' : 'text-slate-600'
                 }`}>
-                  Automatize processos, emita notas fiscais (Sebrae), controle estoque inteligente por lote e regule sua contabilidade de forma impecável.
+                  Registre primeiro, organize depois, concilie quando possível e prepare pré-notas internas com pacote para contador. No MVP, tudo é interno e sem valor fiscal.
                 </p>
               </div>
 

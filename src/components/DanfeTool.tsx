@@ -84,7 +84,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
   const [filterSeries, setFilterSeries] = useState('');
   const [filterCustomerId, setFilterCustomerId] = useState('');
   const [filterDate, setFilterDate] = useState('');
-  const [filterStatus, setFilterStatus] = useState('AUTHORIZED'); // Default to target authorized notes
+  const [filterStatus, setFilterStatus] = useState('AUTHORIZED'); // Default to target legacy records
 
   // PDF Preview State
   const [selectedDanfeId, setSelectedDanfeId] = useState<string | null>(null);
@@ -110,7 +110,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch Authorized NFes
+      // Fetch legacy pre-invoice records
       const qNfe = new URLSearchParams();
       if (filterNumber) qNfe.set('invoice_number', filterNumber);
       if (filterSeries) qNfe.set('series', filterSeries);
@@ -126,7 +126,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
         setNfeList(nfeData.documents || []);
       }
 
-      // Fetch DANFEs history
+      // Fetch visual mirror history
       const danfeRes = await authFetch('/api/danfe', {
         headers: {
         }
@@ -137,7 +137,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
       }
     } catch (err: any) {
       console.error('Erro ao buscar dados do DanfeTool:', err);
-      showFeedback('Erro ao conectar ao servidor para extração fiscal.', 'error');
+      showFeedback('Erro ao conectar ao servidor para carregar espelhos internos.', 'error');
     } finally {
       setLoading(false);
     }
@@ -147,7 +147,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
     fetchData();
   }, [filterNumber, filterSeries, filterCustomerId, filterDate, filterStatus, activeTab]);
 
-  // Handle Generate/Regenerate DANFE
+  // Handle Generate/Regenerate internal mirror
   const handleGenerateDanfe = async (nfeId: string) => {
     try {
       const response = await authFetch('/api/danfe', {
@@ -157,10 +157,10 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
       });
       const data = await response.json();
       if (data.success) {
-        showFeedback(data.message || 'DANFE gerado e auditado com sucesso!', 'success');
+        showFeedback(data.message || 'Espelho interno de pré-nota gerado para uso demonstrativo.', 'success');
         fetchData();
       } else {
-        showFeedback(data.error || 'Erro ao gerar o DANFE fiscal.', 'error');
+        showFeedback(data.error || 'Erro ao gerar o espelho interno de pré-nota.', 'error');
       }
     } catch (err) {
       showFeedback('Falha de rede ao tentar criar o documento auxiliar.', 'error');
@@ -197,10 +197,10 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
         // Log auditing for View
         logAuditAction(danfeDoc.id, 'VIEW');
       } else {
-        showFeedback(data.error || 'Erro ao obter informações do DANFE.', 'error');
+        showFeedback(data.error || 'Erro ao obter informações do espelho interno.', 'error');
       }
     } catch (err) {
-      showFeedback('Falha de rede ao visualizar DANFE.', 'error');
+      showFeedback('Falha de rede ao visualizar espelho interno.', 'error');
     }
   };
 
@@ -212,7 +212,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
     const link = document.createElement('a');
     link.href = downloadUrl;
     link.target = '_blank';
-    link.download = `DANFE_Document_${danfeId}.pdf`;
+    link.download = `pre_nota_interna_${danfeId}.pdf`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -238,7 +238,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
         printWindow.document.write(`
           <html>
             <head>
-              <title>DANFE Impressão Oficial</title>
+              <title>Espelho Interno de Pré-nota</title>
               <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
               <style>
                 @media print {
@@ -320,7 +320,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
     return [];
   }, [selectedNfe]);
 
-  // Pagination for items inside DANFE to ensure clean printing A4 bounds
+  // Pagination for items inside the internal mirror to keep A4 bounds clean
   const paginatedItems = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return parsedItems.slice(start, start + itemsPerPage);
@@ -374,8 +374,8 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
               <FileText className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight">Módulo de Impressão e DANFE</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Representação gráfica oficial da NF-e autorizada pela SEFAZ</p>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight">Espelho Interno de Pré-nota</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Visualização demonstrativa, não emitida e sem valor fiscal para conferência e contador</p>
             </div>
           </div>
         </div>
@@ -391,7 +391,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
             }`}
           >
             <CheckCircle className="w-4 h-4" />
-            Gerar DANFE
+            Gerar espelho
           </button>
           
           <button 
@@ -404,7 +404,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
             }`}
           >
             <History className="w-4 h-4" />
-            Histórico & Versões
+            Histórico demonstrativo
             {danfeList.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 text-xs bg-red-500 text-white font-extrabold rounded-full">
                 {danfeList.length}
@@ -484,7 +484,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
             onChange={(e) => setFilterStatus(e.target.value)}
             className="w-full px-3 py-2 text-sm bg-white dark:bg-[#1e1e2e] border border-slate-200 dark:border-[#313244] rounded-xl outline-none focus:border-[#6366f1]"
           >
-            <option value="AUTHORIZED">Autorizadas (Sefaz)</option>
+            <option value="AUTHORIZED">Registros internos prontos</option>
             <option value="">Qualquer Status</option>
           </select>
         </div>
@@ -505,18 +505,18 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
         <div id="tab_content_generate">
           <div className="flex items-center gap-2 mb-4 p-3 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-semibold">
             <Info className="w-4 h-4 shrink-0" />
-            <span>Este painel exibe notas fiscais carregadas na SEFAZ. O DANFE deve ser impresso para transporte ou conformidade após autorização da nota.</span>
+            <span>Este painel exibe pré-notas internas para conferência visual. O espelho é demonstrativo, não emitido, sem valor fiscal e pode compor pacote para contador.</span>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-[#313244]">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50 dark:bg-[#11111b] border-b border-slate-200 dark:border-[#313244]">
-                  <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Nota (Série)</th>
-                  <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Data de Emissão</th>
+                  <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Pré-nota (Série)</th>
+                  <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Data do rascunho</th>
                   <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Destinatário</th>
                   <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 text-right">Valor Total</th>
-                  <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 text-center">Status Sefaz</th>
+                  <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 text-center">Status interno</th>
                   <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 text-center">Ações</th>
                 </tr>
               </thead>
@@ -524,7 +524,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                 {nfeList.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-slate-400 dark:text-slate-500 font-bold bg-slate-50/50 dark:bg-transparent">
-                      Nenhuma NF-e autorizada encontrada com os filtros especificados.
+                      Nenhuma pré-nota interna encontrada com os filtros especificados.
                     </td>
                   </tr>
                 ) : (
@@ -552,7 +552,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                             {isAuthorized ? (
                               <span className="px-2.5 py-1 text-xs font-extrabold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-full flex items-center gap-1">
                                 <CheckCircle className="w-3.5 h-3.5" />
-                                AUTORIZADA
+                                NÃO EMITIDO
                               </span>
                             ) : (
                               <span className="px-2.5 py-1 text-xs font-extrabold bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-full flex items-center gap-1">
@@ -573,7 +573,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                                     className="flex items-center gap-1 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-500 transition-all px-3 py-1.5 rounded-lg active:scale-95"
                                   >
                                     <FileText className="w-3.5 h-3.5" />
-                                    Gerar DANFE
+                                    Gerar espelho
                                   </button>
                                 ) : (
                                   <div className="flex items-center gap-1.5">
@@ -584,13 +584,13 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                                       title="Visualizar representação gráfica"
                                     >
                                       <Eye className="w-3.5 h-3.5" />
-                                      Ver DANFE
+                                      Ver espelho
                                     </button>
                                     <button
                                       id={`btn_download_${matchedDanfes[0].id}`}
                                       onClick={() => handleDownloadPDF(matchedDanfes[0].id)}
                                       className="p-1.5 text-slate-500 hover:text-emerald-500 rounded-lg border border-slate-200 dark:border-[#313244] hover:border-emerald-250 transition-all"
-                                      title="Baixar PDF Original"
+                                      title="Baixar PDF demonstrativo"
                                     >
                                       <Download className="w-4 h-4" />
                                     </button>
@@ -605,7 +605,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                                 )}
                               </>
                             ) : (
-                              <span className="text-xs text-slate-400 font-semibold italic">Requer autorização SEFAZ</span>
+                              <span className="text-xs text-slate-400 font-semibold italic">Rascunho sem valor fiscal</span>
                             )}
                           </div>
                         </td>
@@ -621,7 +621,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
         <div id="tab_content_history">
           <div className="flex items-center gap-2 mb-4 p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-semibold">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>Abaixo constam as gerações auditadas dos documentos. Modificações ou regerações são salvas com novo Hash de Versionamento, mantendo o histórico legal intacto.</span>
+            <span>Abaixo constam versões demonstrativas dos espelhos internos. Modificações ou regerações preservam histórico operacional, sem efeito fiscal.</span>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-[#313244]">
@@ -629,7 +629,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
               <thead>
                 <tr className="bg-slate-50 dark:bg-[#11111b] border-b border-slate-200 dark:border-[#313244]">
                   <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">ID / Hash</th>
-                  <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Nota Faturada</th>
+                  <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Pré-nota interna</th>
                   <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Gerado Em</th>
                   <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Gerado Por</th>
                   <th className="p-4 text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 text-center">Ações</th>
@@ -639,7 +639,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                 {danfeList.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-slate-400 dark:text-slate-500 font-bold bg-slate-50/50 dark:bg-transparent">
-                      Nenhuma versão de DANFE gerada anteriormente.
+                      Nenhuma versão de espelho interno gerada anteriormente.
                     </td>
                   </tr>
                 ) : (
@@ -652,7 +652,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className="font-semibold text-slate-800 dark:text-white">NF-e Nº {doc.invoice_number}</span>
+                        <span className="font-semibold text-slate-800 dark:text-white">Pré-nota interna Nº {doc.invoice_number}</span>
                         <span className="ml-1 text-xs text-slate-400">Série: {doc.series}</span>
                       </td>
                       <td className="p-4 text-xs text-slate-500">
@@ -700,7 +700,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
         </div>
       )}
 
-      {/* DANFE PORTRAIT GRAPHIC MODAL PREVIEW */}
+      {/* INTERNAL PRE-INVOICE MODAL PREVIEW */}
       <AnimatePresence>
         {selectedDanfeId && selectedNfe && selectedDanfe && (
           <div className="fixed inset-0 z-50 bg-[#09090b]/85 backdrop-blur-sm flex justify-center items-start overflow-y-auto p-4 sm:p-6 md:p-10">
@@ -715,7 +715,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
               <div className="flex flex-wrap items-center justify-between border-b pb-4 mb-6 hover:border-slate-350 no-print">
                 <div className="flex items-center gap-3">
                   <span className="px-3 py-1 bg-indigo-100 text-indigo-700 font-extrabold text-xs rounded-full">
-                    VISUALIZADOR DANFE
+                    VISUALIZADOR DE PRÉ-NOTA
                   </span>
                   <span className="text-xs text-slate-400 font-bold hidden sm:inline">
                     Versão ID: {selectedDanfeId}
@@ -743,7 +743,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                     className="flex items-center gap-1.5 text-xs font-black text-white bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded-lg transition-all"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    Imprimir DANFE (A4)
+                    Imprimir espelho (A4)
                   </button>
 
                   <button
@@ -761,13 +761,13 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
 
               {/* DRAFT WATERMARK SIGN */}
               <div className="no-print absolute top-28 left-6 right-6 flex items-center justify-center pointer-events-none opacity-[0.06] select-none">
-                <p className="text-[90px] font-black tracking-widest text-[#6366f1] rotate-[-25deg]">DANFE AUXILIAR</p>
+                <p className="text-[72px] font-black tracking-widest text-[#6366f1] rotate-[-25deg]">SEM VALOR FISCAL</p>
               </div>
 
               {/* PRINT AREA CONTAINER (FORCES WHITE BG AND STANDARD TEXT COLOR) */}
               <div ref={printAreaRef} p-id="printable_area" className="bg-white text-slate-900 font-sans p-2">
                 
-                {/* 1. EMITENTE E DADOS NFE */}
+                {/* 1. EMITENTE E DADOS DE PRÉ-NOTA */}
                 <div p-id="grid_block_1" className="grid grid-cols-12 border-2 border-slate-950 text-xs">
                   {/* EMITENTE EM LOGO */}
                   <div className="col-span-4 p-3 border-r-2 border-slate-950 flex flex-col justify-between">
@@ -782,11 +782,11 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                     </div>
                   </div>
 
-                  {/* IDENTIFICAÇÃO DANFE TIPO (0-ENTRADA, 1-SAÍDA) */}
+                  {/* IDENTIFICAÇÃO DO ESPELHO INTERNO */}
                   <div className="col-span-3 p-2 border-r-2 border-slate-950 text-center flex flex-col justify-between">
                     <div>
-                      <h4 className="font-black text-[13px] tracking-widest">DANFE</h4>
-                      <p className="text-[8px] font-bold text-slate-500 leading-tight">DOCUMENTO AUXILIAR DA NOTA FISCAL ELETRÔNICA</p>
+                      <h4 className="font-black text-[13px] tracking-widest">PRÉ-NOTA</h4>
+                      <p className="text-[8px] font-bold text-slate-500 leading-tight">ESPELHO INTERNO SEM VALOR FISCAL</p>
                     </div>
                     
                     <div className="grid grid-cols-3 border border-slate-950 my-1 font-bold text-[10px]">
@@ -802,7 +802,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                     </div>
                   </div>
 
-                  {/* CHAVE DE ACESSO COM CÓDIGO BARRAS */}
+                  {/* CÓDIGO VISUAL INTERNO */}
                   <div className="col-span-5 p-2 flex flex-col justify-between">
                     {/* Barcode Simulated pattern */}
                     <div className="flex flex-col items-center">
@@ -821,22 +821,22 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                     </div>
 
                     <div className="border-t border-slate-350 pt-2 text-[9px] font-bold leading-tight">
-                      <p>Consulta de autenticidade no portal nacional da NF-e</p>
-                      <p className="text-[8px] text-[#3b82f6] underline select-all">www.nfe.fazenda.gov.br/portal ou no site da Sefaz Autorizadora</p>
+                      <p>Identificação visual interna para conferência operacional</p>
+                      <p className="text-[8px] text-[#3b82f6] underline select-all">Uso demonstrativo. Não emitido e sem valor fiscal.</p>
                     </div>
                   </div>
                 </div>
 
-                {/* 2. NATUREZA E PROTOCOLO */}
+                {/* 2. NATUREZA E STATUS INTERNO */}
                 <div p-id="grid_block_2" className="mt-[2px] grid grid-cols-12 border-2 border-slate-950 text-xs">
                   <div className="col-span-6 p-1.5 border-r border-slate-950">
                     <span className="block text-[8px] font-black text-slate-500">NATUREZA DA OPERAÇÃO</span>
                     <span className="font-extrabold uppercase">VENDA DE MERCADORIA ADQUIRIDA DE TERCEIROS</span>
                   </div>
                   <div className="col-span-6 p-1.5">
-                    <span className="block text-[8px] font-black text-slate-500">PROTOCOLO DE AUTORIZAÇÃO DE USO</span>
+                    <span className="block text-[8px] font-black text-slate-500">STATUS DO RASCUNHO INTERNO</span>
                     <span className="font-mono font-black text-[11px]">
-                      {selectedNfe.protocol_number || '152163920194821'} - {new Date(selectedNfe.issue_date).toLocaleDateString('pt-BR')} às {new Date(selectedNfe.issue_date).toLocaleTimeString('pt-BR')}
+                      NÃO EMITIDO - {new Date(selectedNfe.issue_date).toLocaleDateString('pt-BR')} às {new Date(selectedNfe.issue_date).toLocaleTimeString('pt-BR')}
                     </span>
                   </div>
                 </div>
@@ -1112,14 +1112,14 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                   <div className="col-span-9 border-2 border-slate-950 p-2 text-[9px] leading-relaxed">
                     <h5 className="font-black text-[8px] text-slate-500 uppercase">DADOS ADICIONAIS / INFORMAÇÕES COMPLEMENTARES</h5>
                     <div className="font-semibold break-words whitespace-pre-wrap text-slate-700 mt-1">
-                      <p>DOCUMENTO EMITIDO NOS TERMOS DO ARTIGO 159 DA LEI COMPLEMENTAR FEDERAL Nº 123/2006.</p>
-                      <p>Valor aproximado dos tributos federais e estaduais incidentes sobre os produtos listados nesta nota: R$ {(selectedNfe.total_value * 0.1645).toFixed(2)} (16.45% conforme IBPT).</p>
-                      <p className="mt-1 font-mono text-[8px] text-slate-500">Hash de Conexão SEFAZ: {selectedDanfe.generation_hash.substring(0, 32)}...</p>
-                      <p>Observações Fiscais: Mercadoria destinada à revenda ou insumo secundário.</p>
+                      <p>RASCUNHO INTERNO SEM VALOR FISCAL. EMISSÃO REAL NÃO DISPONÍVEL NO MVP.</p>
+                      <p>Valores e produtos servem para conferência visual, organização operacional e pacote para contador.</p>
+                      <p className="mt-1 font-mono text-[8px] text-slate-500">Hash interno do espelho: {selectedDanfe.generation_hash.substring(0, 32)}...</p>
+                      <p>Observações internas: dados preparados para revisão antes de qualquer processo externo futuro.</p>
                     </div>
                   </div>
 
-                  {/* QR CODE SIMULATION BOX (FOR PORTAL INQUIRY COMPLIANCE) */}
+                  {/* QR CODE DEMONSTRATIVO INTERNO */}
                   <div className="col-span-3 border-2 border-slate-950 p-2 flex flex-col items-center justify-between text-center select-none bg-slate-50">
                     <span className="block text-[8px] font-black text-slate-500">COTA / QR CODE</span>
                     
@@ -1155,13 +1155,13 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                       <rect x="52" y="82" width="6" height="8" fill="#0f172a" />
                     </svg>
 
-                    <span className="block text-[6px] font-bold text-slate-400 uppercase leading-none">NFC-e Consulta Pública</span>
+                    <span className="block text-[6px] font-bold text-slate-400 uppercase leading-none">Código visual interno</span>
                   </div>
                 </div>
 
                 {/* FOOTER AUDIT STAMP SIGNATURE FOR THE PREVIEW CONTAINER */}
                 <div className="mt-4 pt-2 border-t border-dashed border-slate-300 text-center text-[8px] font-mono text-slate-400 flex items-center justify-between">
-                  <span>DANFE Emissor Pro-Audit: {selectedDanfeId}</span>
+                  <span>Espelho interno demonstrativo: {selectedDanfeId}</span>
                   <span>Hash Seguração: {selectedDanfe.generation_hash}</span>
                   <span>Data: {new Date(selectedDanfe.generated_at).toLocaleString('pt-BR')}</span>
                 </div>

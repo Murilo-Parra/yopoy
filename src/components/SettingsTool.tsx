@@ -139,7 +139,7 @@ export default function SettingsTool({
   const [backupSuccess, setBackupSuccess] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  // Estados de Gestão de Certificados Digitais
+  // Estados de preparação futura de certificados digitais
   const [certificatesList, setCertificatesList] = useState<any[]>(() => {
     const saved = localStorage.getItem('biz_certificates');
     if (saved) {
@@ -148,22 +148,22 @@ export default function SettingsTool({
     return [
       {
         id: 'cert-1',
-        alias: 'Emissão Principal - Matriz',
+        alias: 'Preparação futura - Matriz',
         companyName: 'AUXILIAR BIZ DISTRIBUIDORA LTDA',
         cnpj: '48.174.526/0001-85',
         type: 'A1',
-        fileName: 'auxiliarbiz_producao_2026.pfx',
-        password: 'senha_segura_sefaz',
+        fileName: 'arquivo_referencia_mvp_2026.pfx',
+        password: 'senha_referencia_mvp',
         issuer: 'ICP-Brasil v10 - AC Certisign RFB G5',
         subject: 'AUXILIAR BIZ DISTRIBUIDORA LTDA:48174526000185',
         validFrom: '2025-06-01',
         validUntil: '2027-06-01',
-        scopes: ['NF-e', 'NFC-e', 'NFS-e', 'MDF-e', 'Distribuição DF-e'],
-        status: 'Ativo'
+        scopes: ['Pré-nota interna', 'Pacote do contador', 'Dados internos', 'Preparação futura'],
+        status: 'Somente cadastro'
       },
       {
         id: 'cert-2',
-        alias: 'Inbound Fiscal Filial RJ - CT-e e MDF-e',
+        alias: 'Referência futura Filial RJ',
         companyName: 'Ramos Logística Integrada',
         cnpj: '12.345.678/0002-99',
         type: 'A1',
@@ -173,8 +173,8 @@ export default function SettingsTool({
         subject: 'RAMOS LOGISTICA INTEGRADA LTDA:12345678000299',
         validFrom: '2024-03-10',
         validUntil: '2025-03-10',
-        scopes: ['CT-e', 'MDF-e', 'Distribuição DF-e'],
-        status: 'Expirado'
+        scopes: ['Dados internos', 'Preparação futura'],
+        status: 'Somente cadastro'
       }
     ];
   });
@@ -186,7 +186,7 @@ export default function SettingsTool({
   const [certTypeForm, setCertTypeForm] = useState<'A1' | 'A3'>('A1');
   const [certPasswordForm, setCertPasswordForm] = useState('');
   const [certValidForm, setCertValidForm] = useState('2027-06-03');
-  const [certScopesForm, setCertScopesForm] = useState<string[]>(['NF-e', 'NFC-e', 'NFS-e', 'MDF-e']);
+  const [certScopesForm, setCertScopesForm] = useState<string[]>(['Pré-nota interna', 'Pacote do contador', 'Dados internos']);
   const [certFileName, setCertFileName] = useState('');
   const [certTestingId, setCertTestingId] = useState<string | null>(null);
   const [certTestLogs, setCertTestLogs] = useState<string[]>([]);
@@ -196,9 +196,9 @@ export default function SettingsTool({
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     return [
-      { id: '1', date: '2026-06-03 10:14:02', action: 'Upload de arquivo certificado', detail: 'Certificado auxiliarbiz_producao_2026.pfx assinado e carregado.', user: 'admin@auxiliarbiz.com' },
-      { id: '2', date: '2026-06-03 10:15:20', action: 'Validar Senha', detail: 'Chave privada lida e validada com sucesso com hash OID SHA-256.', user: 'admin@auxiliarbiz.com' },
-      { id: '3', date: '2026-06-03 10:16:11', action: 'Sincronizar SEFAZ', detail: 'Status de serviço SEFAZ Homologação Goiânia verificado: Ativo.', user: 'sistema' }
+      { id: '1', date: '2026-06-03 10:14:02', action: 'Cadastro de referência', detail: 'Arquivo de referência registrado para preparação futura. Sem transmissão fiscal no MVP.', user: 'admin@auxiliarbiz.com' },
+      { id: '2', date: '2026-06-03 10:15:20', action: 'Conferir dados internos', detail: 'Dados internos conferidos para pacote do contador.', user: 'admin@auxiliarbiz.com' },
+      { id: '3', date: '2026-06-03 10:16:11', action: 'Marcar como preparação futura', detail: 'Recurso fiscal real não disponível no MVP.', user: 'sistema' }
     ];
   });
 
@@ -332,7 +332,7 @@ export default function SettingsTool({
   const handleAddCertificate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!certAlias || !certCompanyName || !certCnpjForm || (certTypeForm === 'A1' && !certFileName)) {
-      setCertErrorMessage('Por favor, preencha todos os campos obrigatórios e envie um arquivo de certificado válido.');
+      setCertErrorMessage('Por favor, preencha todos os campos obrigatórios do cadastro de preparação futura.');
       return;
     }
 
@@ -344,7 +344,7 @@ export default function SettingsTool({
       companyName: certCompanyName,
       cnpj: certCnpjForm,
       type: certTypeForm,
-      fileName: certFileName || 'certificado_manual_upload.pfx',
+      fileName: certFileName || 'arquivo_referencia_mvp_upload.pfx',
       password: certPasswordForm,
       issuer: 'ICP-Brasil v10 - AC Autoridade Parra Certificadora',
       subject: `${certCompanyName.toUpperCase()}:${certCnpjForm.replace(/\D/g, '')}`,
@@ -362,8 +362,8 @@ export default function SettingsTool({
     const newAuditLog = {
       id: `${Date.now()}`,
       date: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      action: 'Upload de arquivo certificado',
-      detail: `Certificado ${newCert.fileName} carregado para "${newCert.alias}" (${newCert.cnpj}).`,
+      action: 'Cadastro de referência',
+      detail: `Arquivo ${newCert.fileName} registrado para "${newCert.alias}" (${newCert.cnpj}). Sem transmissão fiscal no MVP.`,
       user: parentEmail
     };
     const updatedAudits = [newAuditLog, ...certAuditLogs];
@@ -375,7 +375,7 @@ export default function SettingsTool({
     setCertPasswordForm('');
     setCertFileName('');
     setIsAddingCert(false);
-    setCertSuccessMessage('Certificado cadastrado com sucesso!');
+    setCertSuccessMessage('Cadastro de preparação futura salvo. Emissão real não disponível no MVP.');
     setCertErrorMessage(null);
     setTimeout(() => setCertSuccessMessage(null), 4000);
   };
@@ -392,15 +392,15 @@ export default function SettingsTool({
     const newAuditLog = {
       id: `${Date.now()}`,
       date: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      action: 'Exclusão de certificado',
-      detail: `Certificado "${cert.alias}" revogado/excluído do painel de controle.`,
+      action: 'Remoção de cadastro futuro',
+      detail: `Cadastro "${cert.alias}" removido do painel de preparação futura.`,
       user: parentEmail
     };
     const updatedAudits = [newAuditLog, ...certAuditLogs];
     setCertAuditLogs(updatedAudits);
     localStorage.setItem('biz_cert_audits', JSON.stringify(updatedAudits));
     
-    setCertSuccessMessage('Certificado removido do cadastro.');
+    setCertSuccessMessage('Cadastro de preparação futura removido.');
     setTimeout(() => setCertSuccessMessage(null), 4500);
   };
 
@@ -409,33 +409,33 @@ export default function SettingsTool({
     if (!cert) return;
 
     setCertTestingId(certId);
-    setCertTestLogs([`[${new Date().toLocaleTimeString()}] Iniciando handshake SSL com a SEFAZ...`]);
+    setCertTestLogs([`[${new Date().toLocaleTimeString()}] Conferindo cadastro interno. Sem transmissão fiscal no MVP.`]);
 
     setTimeout(() => {
-      setCertTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Lendo arquivo de certificado "${cert.fileName}"...`]);
+      setCertTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Lendo referência de arquivo "${cert.fileName}" para preparação futura...`]);
     }, 450);
 
     setTimeout(() => {
-      setCertTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Validando senha e chave simétrica do envelope SOAP...`]);
+      setCertTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Conferindo metadados internos. Nenhum envelope externo é enviado.`]);
     }, 900);
 
     setTimeout(() => {
-      setCertTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Transmitindo requisição XML de status de serviço para SEFAZ de homologação...`]);
+      setCertTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Preparando checklist para contador. Recurso fiscal real bloqueado.`]);
     }, 1350);
 
     setTimeout(() => {
       const isExpired = new Date(cert.validUntil) < new Date();
       if (isExpired) {
-        setCertTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ❌ ERRO SEFAZ: Certificado Digital EXPIRADO em ${cert.validUntil}. Handshake rejeitado.`]);
+        setCertTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Atenção: referência vencida em ${cert.validUntil}. Atualize antes de uma preparação futura.`]);
       } else {
-        setCertTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ✅ SUCESSO SEFAZ: Conexão estabelecida! Cód 107 - Serviço em Operação.`]);
+        setCertTestLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] Conferência interna concluída. Sem transmissão fiscal e sem valor fiscal.`]);
         
         // Save test audit
         const newAuditLog = {
           id: `${Date.now()}`,
           date: new Date().toISOString().replace('T', ' ').substring(0, 19),
-          action: 'Sincronizar SEFAZ',
-          detail: `Testada comunicação do certificado "${cert.alias}" com a SEFAZ: Sucesso.`,
+          action: 'Conferir preparação futura',
+          detail: `Conferidos dados internos de "${cert.alias}". Emissão real não disponível no MVP.`,
           user: parentEmail
         };
         const updatedAudits = [newAuditLog, ...certAuditLogs];
@@ -970,9 +970,9 @@ export default function SettingsTool({
                     theme === 'dark' ? 'bg-[#16161a] border-[#222228] text-slate-200' : 'bg-white border text-slate-850'
                   }`}
                 >
-                  <option value="Comércio">Comércio de Bens (Produtos Físicos / NFC-e)</option>
-                  <option value="Serviços">Prestação de Serviços (NFS-e de faturamento)</option>
-                  <option value="Indústria">Atividade Industrial de Transformação (IPI / NF-e)</option>
+                  <option value="Comércio">Comércio de Bens (pré-nota interna)</option>
+                  <option value="Serviços">Prestação de Serviços (dados internos para contador)</option>
+                  <option value="Indústria">Atividade Industrial (organização visual de produtos)</option>
                 </select>
                 <p className="text-[10px] text-gray-500 leading-relaxed mt-1">
                   Configura o enquadramento de anexo específico para geração automática de relatórios.
@@ -985,16 +985,16 @@ export default function SettingsTool({
             }`}>
               <AlertTriangle className="w-4.5 h-4.5 text-indigo-500 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="font-bold text-xs text-indigo-500">Integração Tributária Automática Ativada:</p>
+                <p className="font-bold text-xs text-indigo-500">Organização tributária interna:</p>
                 <p className="text-[10px] text-gray-550 leading-relaxed">
-                  Ao salvar, essas alíquotas fiscais serão aplicadas de forma autônoma na contabilidade de lançamentos futuros. O caixa operacional calcula a margem líquida descontando automaticamente esta alíquota de {taxRate}% de impostos em transações de vendas do Sebrae.
+                  Ao salvar, essas alíquotas servem apenas para demonstrativos internos, conciliação possível e pacote para contador. Não há transmissão fiscal, emissão real ou documento com valor fiscal no MVP.
                 </p>
               </div>
             </div>
           </div>
         )}
 
-        {/* SUBTAB 3: CERTIFICADO SEFAZ */}
+        {/* SUBTAB 3: PREPARAÇÃO FUTURA */}
         {activeSubTab === 'certificado' && (
           <div className="space-y-6 animate-fade-in">
             {/* Header com título */}
@@ -1003,10 +1003,10 @@ export default function SettingsTool({
                 <KeyRound className="w-5 h-5 text-indigo-500" />
                 <div>
                   <h3 className={`text-xs font-extrabold tracking-wider uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                    Infraestrutura de Certificados Digitais ERP
+                    Preparação futura de dados fiscais
                   </h3>
                   <p className="text-[10px] text-gray-500 mt-0.5">
-                    Armazenamento seguro, validação criptográfica SHA-256 e monitoramento de canais de transmissão de DF-e.
+                    Cadastro demonstrativo para dados internos. Não disponível no MVP para emissão real, XML fiscal ou transmissão fiscal.
                   </p>
                 </div>
               </div>
@@ -1015,7 +1015,7 @@ export default function SettingsTool({
                 className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-all cursor-pointer shadow-sm shadow-indigo-600/20"
               >
                 <Plus className="w-4 h-4" />
-                {isAddingCert ? 'Voltar para Lista' : 'Novo Certificado'}
+                {isAddingCert ? 'Voltar para Lista' : 'Novo Cadastro Futuro'}
               </button>
             </div>
 
@@ -1038,22 +1038,22 @@ export default function SettingsTool({
                 {/* Painel de Monitoramento (KPIs) */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-[#111115] border-slate-800' : 'bg-slate-50 border-slate-200'} transition-all`}>
-                    <p className="text-[10px] uppercase font-bold text-gray-500">Total de Chaves</p>
+                    <p className="text-[10px] uppercase font-bold text-gray-500">Cadastros futuros</p>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className={`text-xl font-black ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
                         {certificatesList.length}
                       </span>
-                      <span className="text-[10px] text-gray-400">Ativos no ERP</span>
+                      <span className="text-[10px] text-gray-400">Somente internos</span>
                     </div>
                   </div>
 
                   <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-[#111115] border-slate-800' : 'bg-slate-50 border-slate-200'} transition-all`}>
-                    <p className="text-[10px] uppercase font-bold text-gray-500">Certificados Ativos</p>
+                    <p className="text-[10px] uppercase font-bold text-gray-500">Referências válidas</p>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className="text-xl font-black text-emerald-500">
                         {certificatesList.filter(c => new Date(c.validUntil) > new Date()).length}
                       </span>
-                      <span className="text-[10px] text-gray-400">Prontos p/ uso</span>
+                      <span className="text-[10px] text-gray-400">Não disponível no MVP</span>
                     </div>
                   </div>
 
@@ -1071,12 +1071,12 @@ export default function SettingsTool({
                   </div>
 
                   <div className={`p-4 rounded-xl border ${theme === 'dark' ? 'bg-[#111115] border-slate-800' : 'bg-slate-50 border-slate-200'} transition-all`}>
-                    <p className="text-[10px] uppercase font-bold text-gray-500">Vencidos renegociar</p>
+                    <p className="text-[10px] uppercase font-bold text-gray-500">Referências vencidas</p>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className="text-xl font-black text-red-500">
                         {certificatesList.filter(c => new Date(c.validUntil) <= new Date()).length}
                       </span>
-                      <span className="text-[10px] text-gray-400">Sefaz Rejeitará</span>
+                      <span className="text-[10px] text-gray-400">Atualizar para contador</span>
                     </div>
                   </div>
                 </div>
@@ -1086,10 +1086,10 @@ export default function SettingsTool({
                   <div className="p-4 border-b border-slate-200/10 flex items-center justify-between">
                     <h4 className="text-xs font-bold uppercase text-gray-400 tracking-wider flex items-center gap-1.5">
                       <Building className="w-4 h-4 text-indigo-400" />
-                      Certificados Disponibilizados por Empresa
+                      Cadastros de preparação futura por empresa
                     </h4>
                     <span className="text-[10px] bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded font-mono">
-                      Multiempresa Ativo
+                      Sem transmissão fiscal
                     </span>
                   </div>
 
@@ -1102,7 +1102,7 @@ export default function SettingsTool({
                             <th className="p-3">Titular / CNPJ</th>
                             <th className="p-3">Tipo / Arquivo</th>
                             <th className="p-3">Validade Restante</th>
-                            <th className="p-3">Escopos Atribuídos</th>
+                            <th className="p-3">Usos internos</th>
                             <th className="p-3 text-right">Controles operacionais</th>
                           </tr>
                         </thead>
@@ -1110,7 +1110,7 @@ export default function SettingsTool({
                           {certificatesList.length === 0 ? (
                             <tr>
                               <td colSpan={6} className="p-8 text-center text-gray-500">
-                                Nenhum certificado digital registrado no sistema. Adicione um novo no botão superior.
+                                Nenhum cadastro de preparação futura registrado. Adicione um novo no botão superior.
                               </td>
                             </tr>
                           ) : (
@@ -1177,17 +1177,17 @@ export default function SettingsTool({
                                     <div className="flex items-center justify-end gap-1.5">
                                       <button
                                         onClick={() => handleTestCertificate(cert.id)}
-                                        title="Testar Conectividade com SEFAZ"
+                                        title="Conferir dados internos"
                                         className="p-1 px-2 text-[10px] font-bold flex items-center gap-1 rounded bg-[#312e81]/30 hover:bg-[#312e81]/50 text-indigo-400 border border-indigo-500/20 cursor-pointer"
                                       >
                                         <Activity className="w-3 h-3" />
-                                        Testar
+                                        Conferir
                                       </button>
                                       <a
                                         href="#download"
                                         onClick={(e) => {
                                           e.preventDefault();
-                                          alert(`Chave pública gerada PEM salva para ${cert.alias}. Certificado OID validado com sucesso.`);
+                                          alert(`Relatório de referência salvo para ${cert.alias}. Sem certificado operacional e sem transmissão fiscal no MVP.`);
                                         }}
                                         title="Baixar Chave Pública"
                                         className={`p-1 rounded cursor-pointer ${theme === 'dark' ? 'bg-[#1b1b1f] hover:bg-slate-800' : 'bg-slate-100 hover:bg-slate-200'}`}
@@ -1213,14 +1213,14 @@ export default function SettingsTool({
                   </div>
                 </div>
 
-                {/* Console de Saída de Teste Ativo (SEFAZ Handshake logs) */}
+                {/* Console de conferência interna */}
                 {certTestingId && (
                   <div className="p-4 rounded-xl bg-slate-950 border border-indigo-500/25 font-mono text-[11px] text-slate-300 space-y-2 max-w-full animate-pulse-once">
                     <div className="flex items-center justify-between border-b border-indigo-500/25 pb-2">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-indigo-500 animate-ping" />
                         <span className="font-extrabold text-[#818cf8] uppercase tracking-wider text-[10px]">
-                          Output do Handshake SSL / TLS (Serviço SEFAZ)
+                          Conferência interna de preparação futura
                         </span>
                       </div>
                       <button
@@ -1238,19 +1238,19 @@ export default function SettingsTool({
                   </div>
                 )}
 
-                {/* Registro de Auditoria Criptográfica das Chaves Privadas */}
+                {/* Registro de auditoria dos cadastros internos */}
                 <div className={`p-5 rounded-xl border ${theme === 'dark' ? 'bg-[#111115] border-[#222228]' : 'bg-slate-50 border-slate-200'} space-y-3`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <ShieldAlert className="w-4 h-4 text-rose-500" />
                       <h4 className={`text-xs font-extrabold uppercase ${theme === 'dark' ? 'text-slate-300' : 'text-slate-800'}`}>
-                        Trilha de Auditoria e Conformidade Fiscal (Célula de Segurança)
+                        Trilha de Auditoria Interna e Preparação para Contador
                       </h4>
                     </div>
                     <span className="text-[10px] text-gray-500 font-mono">ISO/IEC 27001 Cryptography Check</span>
                   </div>
                   <p className="text-[10px] text-gray-500">
-                    O ERP registra de forma imutável todos os uploads de arquivos pfx e p12, acessos ao contêiner de senhas corporativas e renovações de assinatura digital.
+                    O ERP registra alterações em dados internos usados para pré-nota interna, rascunho sem valor fiscal e pacote para contador.
                   </p>
                   
                   <div className="space-y-2 mt-4">
@@ -1272,22 +1272,22 @@ export default function SettingsTool({
                 </div>
               </>
             ) : (
-              /* Formulário Moderno de Upload e Cadastro de Certificados A1 / A3 */
+              /* Formulário demonstrativo de preparação futura */
               <form onSubmit={handleAddCertificate} className={`p-6 rounded-xl border ${theme === 'dark' ? 'bg-[#111115] border-[#222228]' : 'bg-white border-slate-200'} space-y-6 max-w-2xl mx-auto`}>
                 <div className="flex items-center gap-2 pb-3 border-b border-slate-200/10">
                   <KeyRound className="w-5 h-5 text-indigo-500" />
                   <h4 className={`text-xs font-extrabold uppercase tracking-widest ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                    Instalação Criptográfica de Novo Certificado Digital
+                    Cadastro de preparação futura
                   </h4>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Apelido / Razão */}
                   <div className="space-y-1.5 col-span-1 sm:col-span-2">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Apelido identificador da Chave (Alias)</label>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase">Apelido identificador do cadastro</label>
                     <input 
                       type="text" 
-                      placeholder="Ex: Emissão Sefaz-GO - Filial Bebidas"
+                      placeholder="Ex: Preparação futura - Filial Bebidas"
                       value={certAlias}
                       onChange={(e) => setCertAlias(e.target.value)}
                       className={`w-full text-xs p-2.5 rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
@@ -1299,7 +1299,7 @@ export default function SettingsTool({
 
                   {/* Empresa Beneficiária */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Empresa de Vinculação Fiscal</label>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase">Empresa para dados internos</label>
                     <select
                       value={certCompanyName}
                       onChange={(e) => setCertCompanyName(e.target.value)}
@@ -1315,7 +1315,7 @@ export default function SettingsTool({
 
                   {/* CNPJ */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">CNPJ Vinculado ao Certificado</label>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase">CNPJ de referência</label>
                     <input 
                       type="text"
                       placeholder="Ex: 48.174.526/0001-85"
@@ -1330,7 +1330,7 @@ export default function SettingsTool({
 
                   {/* Modelo do Certificado */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Modelo do Certificado</label>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase">Modelo de referência futura</label>
                     <div className="flex gap-4 p-2">
                       <label className="flex items-center gap-2 text-xs">
                         <input 
@@ -1340,7 +1340,7 @@ export default function SettingsTool({
                           onChange={() => setCertTypeForm('A1')}
                           className="text-indigo-600"
                         />
-                        Modelo A1 (Arquivo em Nuvem)
+                        Modelo A1 (referência em arquivo)
                       </label>
                       <label className="flex items-center gap-2 text-xs">
                         <input 
@@ -1350,14 +1350,14 @@ export default function SettingsTool({
                           onChange={() => setCertTypeForm('A3')}
                           className="text-indigo-600"
                         />
-                        Modelo A3 (Token Físico)
+                        Modelo A3 (referência externa)
                       </label>
                     </div>
                   </div>
 
                   {/* Senha do contêiner */}
                   <div className="space-y-1.5 font-mono">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Senha PFX / Chave Privada</label>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase">Observação restrita</label>
                     <input 
                       type="password"
                       placeholder="••••••••••••••"
@@ -1371,7 +1371,7 @@ export default function SettingsTool({
 
                   {/* Validade do Certificado */}
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Vencimento da Chave Privada</label>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase">Data de revisão</label>
                     <input 
                       type="date" 
                       value={certValidForm}
@@ -1384,13 +1384,13 @@ export default function SettingsTool({
                   </div>
                 </div>
 
-                {/* Seleção de Módulos (Escopos Autorizados) */}
+                {/* Seleção de usos internos */}
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-gray-500 uppercase block">
-                    Escopos e Módulos Fiscais Autorizados para essa Chave
+                    Usos internos do cadastro
                   </label>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {['NF-e', 'NFC-e', 'NFS-e', 'CT-e', 'MDF-e', 'Manifestação', 'Distribuição DF-e', 'Receita Federal'].map((scope) => {
+                    {['Pré-nota interna', 'Pacote do contador', 'Dados internos', 'Preparação futura', 'Rascunho sem valor fiscal', 'Organização visual'].map((scope) => {
                       const isChecked = certScopesForm.includes(scope);
                       return (
                         <label key={scope} className={`flex items-center gap-2 p-2 rounded border cursor-pointer text-[11px] font-bold ${
@@ -1425,14 +1425,14 @@ export default function SettingsTool({
                 {/* Área Criptografada Drag and Drop (Para A1) */}
                 {certTypeForm === 'A1' && (
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-500 uppercase">Arquivo do Certificado Digital (.pfx ou .p12)</label>
+                    <label className="text-[10px] font-bold text-gray-500 uppercase">Arquivo de referência (.pfx ou .p12)</label>
                     <div className="border border-dashed border-indigo-500/20 bg-indigo-500/5 rounded-xl p-6 text-center space-y-3">
                       <div className="flex flex-col items-center gap-2">
                         <Upload className="w-8 h-8 text-indigo-500 animate-bounce" />
                         <div className="text-xs">
-                          <span className="font-bold text-indigo-400">Arraste seu arquivo de certificado</span> ou clique aqui para selecionar
+                          <span className="font-bold text-indigo-400">Arraste um arquivo de referência</span> ou clique aqui para selecionar
                         </div>
-                        <p className="text-[9px] text-gray-500">Suporte a chaves de criptografia A1 de modelo ICP-Brasil (.pfx, .p12)</p>
+                        <p className="text-[9px] text-gray-500">Uso demonstrativo para preparação futura. Não disponível no MVP para transmissão fiscal.</p>
                       </div>
 
                       {/* File select handler simulated */}
@@ -1452,7 +1452,7 @@ export default function SettingsTool({
                         htmlFor="input_cert_file"
                         className="inline-block px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg cursor-pointer transition-all"
                       >
-                        Carregar Chave
+                        Registrar referência
                       </label>
 
                       {certFileName && (
@@ -1859,7 +1859,7 @@ export default function SettingsTool({
                       </div>
                     </label>
 
-                    {/* EMITIR NOTA */}
+                    {/* PRÉ-NOTA INTERNA */}
                     <label className={`p-3 rounded-xl border flex items-start gap-3 cursor-pointer select-none transition-all ${
                         newUserAllowedTabs.includes('invoice')
                           ? 'border-indigo-500/40 bg-indigo-500/5'
@@ -1876,8 +1876,8 @@ export default function SettingsTool({
                         className="rounded mt-0.5 accent-indigo-600 cursor-pointer"
                       />
                       <div>
-                        <span className="text-xs font-bold block">Emitir Nota (Sebrae)</span>
-                        <span className="text-[9px] text-gray-400 block font-sans">Simulador avançado de notas fiscais, XML e envio SEFAZ</span>
+                        <span className="text-xs font-bold block">Pré-nota / Contador</span>
+                        <span className="text-[9px] text-gray-400 block font-sans">Rascunho interno sem valor fiscal e pacote para contador</span>
                       </div>
                     </label>
 

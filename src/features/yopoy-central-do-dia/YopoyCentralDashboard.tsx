@@ -859,23 +859,31 @@ export function YopoyCentralDashboard({ theme }: Props) {
           </div>
         </div>
         {connections.length > 0 && (
-          <section
+          <details
             aria-label="Vínculos visuais"
-            className={`mt-3 rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}
+            className={`group mt-3 rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}
           >
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+            <summary className="flex cursor-pointer list-none flex-col gap-2 rounded-lg sm:flex-row sm:items-start sm:justify-between [&::-webkit-details-marker]:hidden">
               <div>
                 <h2 className={`text-sm font-extrabold ${dark ? 'text-slate-100' : 'text-slate-900'}`}>Vínculos visuais</h2>
                 <p className={`mt-1 text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-                  Conciliação visual local. Não altera financeiro real, não envia dados e fica salvo somente neste navegador.
+                  {connections.length} vínculo(s). Conciliação visual local: não altera financeiro real, não envia dados e fica salvo somente neste navegador.
                 </p>
               </div>
-              <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
-                dark ? 'bg-emerald-950 text-emerald-300' : 'bg-emerald-100 text-emerald-700'
-              }`}>
-                Salvo neste navegador
-              </span>
-            </div>
+              <div className="flex flex-wrap gap-2">
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                  dark ? 'bg-emerald-950 text-emerald-300' : 'bg-emerald-100 text-emerald-700'
+                }`}>
+                  Salvo neste navegador
+                </span>
+                <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                  dark ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-600'
+                }`}>
+                  <span className="group-open:hidden">Ver vínculos</span>
+                  <span className="hidden group-open:inline">Ocultar vínculos</span>
+                </span>
+              </div>
+            </summary>
             <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
               {connections.map((connection) => {
                 const from = itemsById.get(connection.fromId);
@@ -941,7 +949,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
                 );
               })}
             </div>
-          </section>
+          </details>
         )}
         <div className={`mt-3 rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -1059,8 +1067,8 @@ export function YopoyCentralDashboard({ theme }: Props) {
             </form>
           )}
         </div>
-        <p className={`mt-2 text-[11px] leading-relaxed sm:hidden ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-          No celular: arraste pelo corpo do card, use os pontos laterais para conectar e deslize pela área vazia para navegar no canvas.
+        <p className={`mt-2 rounded-lg px-3 py-2 text-[11px] leading-relaxed sm:hidden ${dark ? 'bg-slate-950/50 text-slate-400' : 'bg-white text-slate-500'}`}>
+          No celular: arraste pelo corpo do card, conecte pelos pontos laterais e deslize pela área vazia para navegar no canvas.
         </p>
       </section>
 
@@ -1083,7 +1091,8 @@ export function YopoyCentralDashboard({ theme }: Props) {
             </span>
             <h2 className={`mt-2 text-base font-black ${dark ? 'text-slate-100' : 'text-slate-900'}`}>Pacote local para contador</h2>
             <p className={`mt-1 text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Sem envio automático. Sem valor fiscal. Revise antes de enviar ao contador. Organização interna local: não substitui contador, não é documento fiscal, não emite nota, não valida tributo e não sincroniza fora do navegador.
+              Sem envio automático. Sem valor fiscal. Revise antes de enviar ao contador.
+              <span className="hidden sm:inline"> Organização interna local: não substitui contador, não é documento fiscal, não emite nota, não valida tributo e não sincroniza fora do navegador.</span>
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:min-w-[360px]">
@@ -1108,49 +1117,60 @@ export function YopoyCentralDashboard({ theme }: Props) {
             <p className="mt-1 text-xs">Use a ação ‘Separar contador’ em um card da Mesa.</p>
           </div>
         ) : (
-          <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-              {accountantPackageItems.map((item) => (
-                <article
-                  key={item.id}
-                  data-testid={`accountant-package-item-${item.id}`}
-                  className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}
-                >
-                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="min-w-0">
-                      <h3 className={`break-words text-sm font-extrabold ${dark ? 'text-slate-100' : 'text-slate-900'}`}>{item.title}</h3>
-                      <p className={`mt-1 text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-                        {PACKAGE_KIND_LABELS[item.kind]} · {PACKAGE_STATUS_LABELS[item.status]}
-                      </p>
+          <details className={`group mt-3 rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
+            <summary className="flex cursor-pointer list-none flex-col gap-2 rounded-lg sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
+              <span className={`text-sm font-extrabold ${dark ? 'text-slate-100' : 'text-slate-900'}`}>Resumo local visível e cards separados</span>
+              <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                dark ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-600'
+              }`}>
+                <span className="group-open:hidden">Expandir pacote</span>
+                <span className="hidden group-open:inline">Recolher pacote</span>
+              </span>
+            </summary>
+            <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                {accountantPackageItems.map((item) => (
+                  <article
+                    key={item.id}
+                    data-testid={`accountant-package-item-${item.id}`}
+                    className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'}`}
+                  >
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <h3 className={`break-words text-sm font-extrabold ${dark ? 'text-slate-100' : 'text-slate-900'}`}>{item.title}</h3>
+                        <p className={`mt-1 text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          {PACKAGE_KIND_LABELS[item.kind]} · {PACKAGE_STATUS_LABELS[item.status]}
+                        </p>
+                      </div>
+                      {typeof item.amount === 'number' && Number.isFinite(item.amount) && (
+                        <strong className={`text-sm ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>{formatCurrencyBRL(item.amount)}</strong>
+                      )}
                     </div>
-                    {typeof item.amount === 'number' && Number.isFinite(item.amount) && (
-                      <strong className={`text-sm ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>{formatCurrencyBRL(item.amount)}</strong>
-                    )}
-                  </div>
-                  <p className={`mt-2 text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    {(item.hasPreInvoice || item.kind === 'pre-invoice' || item.kind === 'invoice-draft') ? 'Tem pré-nota visual' : 'Sem pré-nota visual'} · {getPackageConnectionLabel(item, connections)}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {item.tags.map((tag) => (
-                      <span key={tag} className={`rounded-md px-2 py-1 text-[10px] ${dark ? 'bg-slate-800 text-slate-400' : 'bg-white text-slate-500'}`}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </article>
-              ))}
+                    <p className={`mt-2 text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {(item.hasPreInvoice || item.kind === 'pre-invoice' || item.kind === 'invoice-draft') ? 'Tem pré-nota visual' : 'Sem pré-nota visual'} · {getPackageConnectionLabel(item, connections)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {item.tags.map((tag) => (
+                        <span key={tag} className={`rounded-md px-2 py-1 text-[10px] ${dark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <label className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
+                Resumo local visível
+                <textarea
+                  readOnly
+                  value={accountantPackageSummaryText}
+                  className={`mt-1 min-h-36 w-full resize-y rounded-xl border p-3 font-mono text-[11px] leading-relaxed sm:min-h-48 ${
+                    dark ? 'border-slate-700 bg-slate-950 text-slate-200' : 'border-slate-200 bg-white text-slate-700'
+                  }`}
+                />
+              </label>
             </div>
-            <label className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Resumo local visível
-              <textarea
-                readOnly
-                value={accountantPackageSummaryText}
-                className={`mt-1 min-h-48 w-full resize-y rounded-xl border p-3 font-mono text-[11px] leading-relaxed ${
-                  dark ? 'border-slate-700 bg-slate-950 text-slate-200' : 'border-slate-200 bg-white text-slate-700'
-                }`}
-              />
-            </label>
-          </div>
+          </details>
         )}
 
         <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
@@ -1176,7 +1196,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
       <div
         ref={viewportRef}
         data-testid="task-canvas-viewport"
-        className={`h-[62svh] min-h-[420px] max-h-[720px] overflow-auto rounded-3xl border shadow-inner sm:h-[70vh] sm:min-h-[560px] ${
+        className={`h-[58svh] min-h-[360px] max-h-[640px] overflow-auto overscroll-contain rounded-2xl border shadow-inner sm:h-[70vh] sm:min-h-[560px] sm:max-h-[720px] sm:rounded-3xl ${
           dark ? 'border-slate-800 bg-[#0c0c11]' : 'border-slate-200 bg-slate-100'
         }`}
       >

@@ -227,6 +227,12 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getByText(/card separado localmente para o contador\. nenhum dado foi enviado/i)).toBeTruthy();
     expect(screen.getByTestId('accountant-package-item-mock-sale-01')).toBeTruthy();
     expect(within(screen.getByTestId('accountant-package-item-mock-sale-01')).getByText(/venda interna · pendente/i)).toBeTruthy();
+    const packageContentDetails = screen.getByText(/resumo local visível e cards separados/i).closest('details') as HTMLDetailsElement;
+    expect(packageContentDetails.open).toBe(false);
+    fireEvent.click(screen.getByText(/resumo local visível e cards separados/i));
+    expect(packageContentDetails.open).toBe(true);
+    fireEvent.click(screen.getByText(/resumo local visível e cards separados/i));
+    expect(packageContentDetails.open).toBe(false);
     expect(fetchSpy).not.toHaveBeenCalled();
 
     await waitFor(() => {
@@ -501,6 +507,12 @@ describe('YopoyCentralDashboard', () => {
     connectCaptureToPayment();
 
     const summary = screen.getByTestId('connection-summary-mock-capture-01->mock-payment-01');
+    const visualLinksDetails = document.querySelector('details[aria-label="Vínculos visuais"]') as HTMLDetailsElement | null;
+    expect(visualLinksDetails?.open).toBe(false);
+    fireEvent.click(screen.getByRole('heading', { name: /vínculos visuais/i }));
+    expect(visualLinksDetails?.open).toBe(true);
+    fireEvent.click(screen.getByRole('heading', { name: /vínculos visuais/i }));
+    expect(visualLinksDetails?.open).toBe(false);
     expect(screen.getByRole('heading', { name: /vínculos visuais/i })).toBeTruthy();
     expect(within(summary).getByText(/foto de comprovante/i)).toBeTruthy();
     expect(within(summary).getByText(/pix recebido/i)).toBeTruthy();

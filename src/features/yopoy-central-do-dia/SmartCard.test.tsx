@@ -52,7 +52,7 @@ describe('SmartCard', () => {
     fireEvent.click(screen.getByRole('button', { name: /voltar etapa/i }));
     fireEvent.click(screen.getByRole('button', { name: /resolver \/ pronto/i }));
     fireEvent.click(screen.getByRole('button', { name: /^arquivar$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /enviar ao contador/i }));
+    fireEvent.click(screen.getByRole('button', { name: /separar contador/i }));
     fireEvent.click(screen.getByRole('button', { name: /preparar pré-nota/i }));
 
     expect(handlers.onMoveNext).toHaveBeenCalledWith(ITEM.id);

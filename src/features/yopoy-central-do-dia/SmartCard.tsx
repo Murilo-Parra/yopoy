@@ -277,7 +277,7 @@ export function SmartCard({
         )}
         {!item.archived && canSendToAccountant && (
           <button type="button" className={actionClass} onClick={() => onSendToAccountant(item.id)}>
-            <PackageOpen className="h-3.5 w-3.5" /> Enviar ao contador (simulado)
+            <PackageOpen className="h-3.5 w-3.5" /> Separar contador
           </button>
         )}
         <button type="button" className={actionClass} onClick={() => onArchiveToggle(item.id)}>

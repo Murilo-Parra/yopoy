@@ -76,6 +76,32 @@ function connectCaptureToPayment() {
   fireEvent.pointerUp(target, { pointerId: 9, clientX: 434, clientY: 682 });
 }
 
+function writeSnapshotWithAccountantPackageMockAsPending(partialSnapshot: Partial<StoredTaskCanvasSnapshot> = {}) {
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+    version: 1,
+    items: [
+      {
+        id: 'mock-package-01',
+        kind: 'pending',
+        title: 'Agrupamento visual sem pacote',
+        description: 'Card local usado para manter o estado vazio do pacote.',
+        timeLabel: 'agora',
+        status: 'pending',
+        archived: false,
+        linked: false,
+        hasPreInvoice: false,
+        sentToAccountant: false,
+        tags: ['Controle interno'],
+      },
+      ...(partialSnapshot.items ?? []),
+    ],
+    positions: partialSnapshot.positions ?? {},
+    connections: partialSnapshot.connections ?? [],
+    activeFilter: partialSnapshot.activeFilter ?? 'all',
+    updatedAt: partialSnapshot.updatedAt ?? '2026-06-25T12:00:00.000Z',
+  }));
+}
+
 describe('YopoyCentralDashboard', () => {
   beforeEach(() => {
     Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', { configurable: true, value: vi.fn() });
@@ -105,12 +131,27 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getByRole('button', { name: /registro rápido/i })).toBeTruthy();
     expect(screen.getByText(/registre agora, organize depois/i)).toBeTruthy();
     expect(screen.getByText(/este card fica salvo neste navegador/i)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /pacote local para contador/i })).toBeTruthy();
+    expect(screen.getAllByText(/separado neste navegador/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/sem envio automático/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/sem valor fiscal/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/revise antes de enviar ao contador/i).length).toBeGreaterThan(0);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
 
     fireEvent.click(within(getCaptureCard()).getByRole('button', { name: /avançar etapa/i }));
     expect(within(getCaptureCard()).getByText(/^pendente$/i)).toBeTruthy();
     expect(document.querySelector('[draggable="true"]')).toBeNull();
     expect(screen.getByText(/no celular: arraste pelo corpo do card/i)).toBeTruthy();
+  });
+
+  it('mostra estado vazio quando não há cards separados para contador', () => {
+    writeSnapshotWithAccountantPackageMockAsPending();
+
+    render(<YopoyCentralDashboard theme="light" />);
+
+    expect(screen.getByRole('heading', { name: /pacote local para contador/i })).toBeTruthy();
+    expect(screen.getByText(/nenhum card separado para contador ainda/i)).toBeTruthy();
+    expect(screen.getByText(/use a ação ‘separar contador’ em um card da mesa/i)).toBeTruthy();
   });
 
   it('abre e fecha o formulário de registro rápido e exige título', () => {
@@ -172,6 +213,179 @@ describe('YopoyCentralDashboard', () => {
     cleanup();
     render(<YopoyCentralDashboard theme="light" />);
     expect(screen.getByRole('heading', { name: /venda interna balcão/i })).toBeTruthy();
+  });
+
+  it('separa card para contador, salva sentToAccountant e restaura o pacote local do snapshot', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    writeSnapshotWithAccountantPackageMockAsPending();
+    render(<YopoyCentralDashboard theme="light" />);
+    const saleCard = screen.getByRole('heading', { name: /venda balcão #ex-104/i }).closest('article') as HTMLElement;
+
+    fireEvent.click(within(saleCard).getByRole('button', { name: /separar contador/i }));
+
+    expect(screen.getByText(/card separado localmente para o contador\. nenhum dado foi enviado/i)).toBeTruthy();
+    expect(screen.getByTestId('accountant-package-item-mock-sale-01')).toBeTruthy();
+    expect(within(screen.getByTestId('accountant-package-item-mock-sale-01')).getByText(/venda interna · pendente/i)).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      expect(snapshot.items.find((item) => item.id === 'mock-sale-01')?.sentToAccountant).toBe(true);
+    });
+
+    cleanup();
+    render(<YopoyCentralDashboard theme="light" />);
+    expect(screen.getByTestId('accountant-package-item-mock-sale-01')).toBeTruthy();
+  });
+
+  it('gera resumo local com título, tipo, status, valor e usa clipboard quando disponível', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    writeSnapshotWithAccountantPackageMockAsPending({
+      items: [{
+        id: 'mock-sale-01',
+        kind: 'sale',
+        title: 'Venda separada para resumo',
+        description: 'Venda local.',
+        amount: 185.5,
+        timeLabel: 'agora',
+        status: 'ready',
+        archived: false,
+        linked: true,
+        hasPreInvoice: true,
+        sentToAccountant: true,
+        tags: ['Balcão', 'Conferir'],
+      }],
+      connections: [
+        { id: 'mock-sale-01->mock-payment-01', fromId: 'mock-sale-01', toId: 'mock-payment-01', status: 'reconciled' },
+      ],
+    });
+    render(<YopoyCentralDashboard theme="light" />);
+
+    const summary = screen.getByLabelText(/resumo local visível/i) as HTMLTextAreaElement;
+    expect(summary.value).toMatch(/venda separada para resumo/i);
+    expect(summary.value).toMatch(/tipo: venda interna/i);
+    expect(summary.value).toMatch(/status: pronto/i);
+    expect(summary.value).toMatch(/valor: R\$\s*185,50/i);
+    expect(summary.value).toMatch(/tem pré-nota visual/i);
+    expect(summary.value).toMatch(/vínculo visual conciliado/i);
+
+    fireEvent.click(screen.getByRole('button', { name: /copiar resumo/i }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(summary.value));
+    expect(screen.getByText(/resumo local copiado\. revise antes de enviar ao contador/i)).toBeTruthy();
+  });
+
+  it('mantém resumo visível e mostra fallback quando clipboard falha', async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error('clipboard bloqueado'));
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+    writeSnapshotWithAccountantPackageMockAsPending({
+      items: [{
+        id: 'mock-expense-01',
+        kind: 'expense',
+        title: 'Despesa separada',
+        description: 'Despesa local.',
+        amount: 72.4,
+        timeLabel: 'agora',
+        status: 'review',
+        archived: false,
+        linked: false,
+        hasPreInvoice: false,
+        sentToAccountant: true,
+        tags: ['Despesa'],
+      }],
+    });
+    render(<YopoyCentralDashboard theme="light" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /copiar resumo/i }));
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    expect(screen.getByText(/não foi possível copiar automaticamente\. o resumo está visível para seleção manual/i)).toBeTruthy();
+    expect((screen.getByLabelText(/resumo local visível/i) as HTMLTextAreaElement).value).toMatch(/despesa separada/i);
+  });
+
+  it('limpa marcações do pacote sem apagar cards, conexões ou pré-notas', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    writeSnapshotWithAccountantPackageMockAsPending({
+      items: [{
+        id: 'mock-sale-01',
+        kind: 'sale',
+        title: 'Venda com pré-nota separada',
+        description: 'Venda local.',
+        amount: 185,
+        timeLabel: 'agora',
+        status: 'review',
+        archived: false,
+        linked: true,
+        hasPreInvoice: true,
+        sentToAccountant: true,
+        tags: ['Venda manual'],
+      }],
+      connections: [
+        { id: 'mock-sale-01->mock-payment-01', fromId: 'mock-sale-01', toId: 'mock-payment-01', status: 'visual' },
+      ],
+    });
+    render(<YopoyCentralDashboard theme="light" />);
+
+    expect(screen.getByTestId('accountant-package-item-mock-sale-01')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /limpar pacote local/i }));
+
+    expect(screen.getByText(/pacote local limpo\. os cards continuam na mesa/i)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /venda com pré-nota separada/i })).toBeTruthy();
+    expect(screen.getByText(/nenhum card separado para contador ainda/i)).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      const sale = snapshot.items.find((item) => item.id === 'mock-sale-01');
+      expect(sale?.sentToAccountant).toBe(false);
+      expect(sale?.hasPreInvoice).toBe(true);
+      expect(snapshot.connections).toEqual([
+        { id: 'mock-sale-01->mock-payment-01', fromId: 'mock-sale-01', toId: 'mock-payment-01', status: 'visual' },
+      ]);
+      expect(snapshot.items.some((item) => item.id === 'mock-sale-01')).toBe(true);
+    });
+  });
+
+  it('mantém card accountant-package no pacote visual ao limpar marcações locais', async () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: 1,
+      items: [{
+        id: 'mock-package-01',
+        kind: 'accountant-package',
+        title: 'Pacote visual defensivo',
+        description: 'Agrupamento visual local.',
+        timeLabel: 'agora',
+        status: 'ready',
+        archived: false,
+        linked: false,
+        hasPreInvoice: false,
+        sentToAccountant: true,
+        tags: ['Contador'],
+      }],
+      positions: {},
+      connections: [],
+      activeFilter: 'all',
+      updatedAt: '2026-06-25T12:00:00.000Z',
+    }));
+    render(<YopoyCentralDashboard theme="light" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /limpar pacote local/i }));
+
+    expect(screen.getByTestId('accountant-package-item-mock-package-01')).toBeTruthy();
+    await waitFor(() => {
+      const packageCard = readStoredSnapshot().items.find((item) => item.id === 'mock-package-01');
+      expect(packageCard?.kind).toBe('accountant-package');
+      expect(packageCard?.sentToAccountant).toBe(true);
+    });
   });
 
   it('cria despesa, recebimento, captura, pendência e pré-nota interna com os tipos existentes', async () => {
@@ -516,8 +730,8 @@ describe('YopoyCentralDashboard', () => {
 
     render(<YopoyCentralDashboard theme="light" />);
 
-    expect(screen.getByRole('heading', { name: /foto de comprovante salva/i })).toBeTruthy();
-    const savedCard = screen.getByRole('heading', { name: /foto de comprovante salva/i }).closest('article') as HTMLElement;
+    expect(screen.getAllByRole('heading', { name: /foto de comprovante salva/i }).length).toBeGreaterThan(0);
+    const savedCard = within(screen.getByTestId('canvas-node-mock-capture-01')).getByRole('heading', { name: /foto de comprovante salva/i }).closest('article') as HTMLElement;
     expect(within(savedCard).getByText(/^pronto$/i)).toBeTruthy();
     expect(within(savedCard).getByText(/vínculo visual/i)).toBeTruthy();
     expect(within(savedCard).getByText(/pré-nota visual/i)).toBeTruthy();

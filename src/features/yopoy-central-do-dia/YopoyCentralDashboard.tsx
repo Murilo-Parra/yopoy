@@ -7,7 +7,7 @@ import {
   type FormEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { Link2, MousePointer2, Plus, RotateCcw, Sparkles, Trash2, X } from 'lucide-react';
+import { Clipboard, Link2, MousePointer2, PackageCheck, Plus, RotateCcw, Sparkles, Trash2, X } from 'lucide-react';
 import { MOCK_SMART_CARDS } from './mockData';
 import { SmartCard } from './SmartCard';
 import {
@@ -64,6 +64,27 @@ const CONNECTION_STATUS_LABELS = {
   visual: 'visual',
   reconciled: 'conciliado',
 } as const;
+
+const PACKAGE_KIND_LABELS: Record<SmartCardKind, string> = {
+  capture: 'Captura',
+  sale: 'Venda interna',
+  payment: 'Recebimento',
+  expense: 'Despesa',
+  stock: 'Produto / estoque',
+  'invoice-draft': 'Rascunho sem valor fiscal',
+  'pre-invoice': 'Pré-nota interna',
+  'accountant-package': 'Pacote do contador',
+  pending: 'Pendência',
+  'ai-alert': 'Alerta de IA',
+};
+
+const PACKAGE_STATUS_LABELS: Record<SmartCardStatus, string> = {
+  new: 'Novo',
+  pending: 'Pendente',
+  review: 'Em revisão',
+  ready: 'Pronto',
+  resolved: 'Resolvido',
+};
 
 const FILTERS: ReadonlyArray<{ id: CanvasFilter; label: string }> = [
   { id: 'all', label: 'Todos' },
@@ -368,6 +389,65 @@ function parseQuickTags(value: string, fallback: string[]) {
   return tags.length > 0 ? tags : fallback;
 }
 
+function formatCurrencyBRL(value: number) {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function getAccountantPackageItems(items: SmartCardItem[]) {
+  return items.filter((item) => item.sentToAccountant === true || item.kind === 'accountant-package');
+}
+
+function getPackageConnectionLabel(item: SmartCardItem, connections: CanvasCardConnection[]) {
+  const itemConnections = connections.filter((connection) => connection.fromId === item.id || connection.toId === item.id);
+  if (itemConnections.some((connection) => connection.status === 'reconciled')) return 'Vínculo visual conciliado';
+  if (itemConnections.length > 0 || item.linked) return 'Vínculo visual';
+  return 'Sem vínculo visual';
+}
+
+function formatAccountantPackageText(items: SmartCardItem[], connections: CanvasCardConnection[]) {
+  const packageItems = getAccountantPackageItems(items);
+  const totals = packageItems.reduce((current, item) => ({
+    sales: current.sales + (item.kind === 'sale' ? 1 : 0),
+    expenses: current.expenses + (item.kind === 'expense' ? 1 : 0),
+    payments: current.payments + (item.kind === 'payment' ? 1 : 0),
+    preInvoices: current.preInvoices + (item.kind === 'pre-invoice' || item.kind === 'invoice-draft' || item.hasPreInvoice ? 1 : 0),
+    amount: current.amount + (typeof item.amount === 'number' && Number.isFinite(item.amount) ? item.amount : 0),
+  }), { sales: 0, expenses: 0, payments: 0, preInvoices: 0, amount: 0 });
+
+  const lines = [
+    'Pacote local para contador',
+    'Separado neste navegador. Sem envio automático. Sem valor fiscal.',
+    'Revise antes de enviar ao contador.',
+    '',
+    `Total de cards separados: ${packageItems.length}`,
+    `Vendas internas separadas: ${totals.sales}`,
+    `Despesas separadas: ${totals.expenses}`,
+    `Recebimentos separados: ${totals.payments}`,
+    `Pré-notas internas separadas: ${totals.preInvoices}`,
+    `Total visual de valores: ${formatCurrencyBRL(totals.amount)}`,
+    '',
+    'Cards:',
+  ];
+
+  if (packageItems.length === 0) {
+    return [...lines, '- Nenhum card separado para contador ainda.'].join('\n');
+  }
+
+  return [
+    ...lines,
+    ...packageItems.map((item) => {
+      const amount = typeof item.amount === 'number' && Number.isFinite(item.amount)
+        ? ` | Valor: ${formatCurrencyBRL(item.amount)}`
+        : '';
+      const preInvoice = item.hasPreInvoice || item.kind === 'pre-invoice' || item.kind === 'invoice-draft'
+        ? 'Tem pré-nota visual'
+        : 'Sem pré-nota visual';
+      const tags = item.tags.length > 0 ? item.tags.join(', ') : 'Sem tags';
+      return `- ${item.title} | Tipo: ${PACKAGE_KIND_LABELS[item.kind]}${amount} | Status: ${PACKAGE_STATUS_LABELS[item.status]} | ${preInvoice} | ${getPackageConnectionLabel(item, connections)} | Tags: ${tags}`;
+    }),
+  ].join('\n');
+}
+
 export function YopoyCentralDashboard({ theme }: Props) {
   const quickRegistrationTitleId = useId();
   const initialCanvasState = useMemo(() => loadCanvasState(), []);
@@ -500,6 +580,18 @@ export function YopoyCentralDashboard({ theme }: Props) {
 
   const visibleItemIds = useMemo(() => new Set(visibleItems.map((item) => item.id)), [visibleItems]);
   const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
+  const accountantPackageItems = useMemo(() => getAccountantPackageItems(items), [items]);
+  const accountantPackageSummaryText = useMemo(
+    () => formatAccountantPackageText(items, connections),
+    [connections, items],
+  );
+  const accountantPackageTotals = useMemo(() => accountantPackageItems.reduce((current, item) => ({
+    sales: current.sales + (item.kind === 'sale' ? 1 : 0),
+    expenses: current.expenses + (item.kind === 'expense' ? 1 : 0),
+    payments: current.payments + (item.kind === 'payment' ? 1 : 0),
+    preInvoices: current.preInvoices + (item.kind === 'pre-invoice' || item.kind === 'invoice-draft' || item.hasPreInvoice ? 1 : 0),
+    amount: current.amount + (typeof item.amount === 'number' && Number.isFinite(item.amount) ? item.amount : 0),
+  }), { sales: 0, expenses: 0, payments: 0, preInvoices: 0, amount: 0 }), [accountantPackageItems]);
 
   useEffect(() => {
     const firstVisibleItem = visibleItems[0];
@@ -668,6 +760,28 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setConnections(defaultState.connections);
     setActiveFilter(defaultState.activeFilter);
     setFeedback('Demonstração restaurada. Os dados locais da Mesa foram limpos.');
+  };
+
+  const copyAccountantPackageSummary = async () => {
+    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
+      setFeedback('Não foi possível copiar automaticamente. O resumo está visível para seleção manual.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(accountantPackageSummaryText);
+      setFeedback('Resumo local copiado. Revise antes de enviar ao contador.');
+    } catch {
+      setFeedback('Não foi possível copiar automaticamente. O resumo está visível para seleção manual.');
+    }
+  };
+
+  const clearAccountantPackage = () => {
+    setItems((currentItems) => currentItems.map((item) => {
+      if (item.kind === 'accountant-package') return item;
+      return item.sentToAccountant ? { ...item, sentToAccountant: false } : item;
+    }));
+    setFeedback('Pacote local limpo. Os cards continuam na Mesa.');
   };
 
   return (
@@ -955,6 +1069,109 @@ export function YopoyCentralDashboard({ theme }: Props) {
       }`}>
         {feedback}
       </div>
+
+      <section
+        aria-label="Pacote local para contador"
+        className={`rounded-2xl border p-3 sm:p-4 ${dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'}`}
+      >
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+              dark ? 'bg-violet-950 text-violet-300' : 'bg-violet-100 text-violet-700'
+            }`}>
+              <PackageCheck className="h-3.5 w-3.5" /> Separado neste navegador
+            </span>
+            <h2 className={`mt-2 text-base font-black ${dark ? 'text-slate-100' : 'text-slate-900'}`}>Pacote local para contador</h2>
+            <p className={`mt-1 text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Sem envio automático. Sem valor fiscal. Revise antes de enviar ao contador. Organização interna local: não substitui contador, não é documento fiscal, não emite nota, não valida tributo e não sincroniza fora do navegador.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:min-w-[360px]">
+            <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
+              <span className={dark ? 'text-slate-400' : 'text-slate-500'}>Cards</span>
+              <strong className="block text-lg">{accountantPackageItems.length}</strong>
+            </div>
+            <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
+              <span className={dark ? 'text-slate-400' : 'text-slate-500'}>Vendas</span>
+              <strong className="block text-lg">{accountantPackageTotals.sales}</strong>
+            </div>
+            <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
+              <span className={dark ? 'text-slate-400' : 'text-slate-500'}>Visual</span>
+              <strong className="block text-sm">{formatCurrencyBRL(accountantPackageTotals.amount)}</strong>
+            </div>
+          </div>
+        </div>
+
+        {accountantPackageItems.length === 0 ? (
+          <div className={`mt-3 rounded-xl border border-dashed p-4 text-sm ${dark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'}`}>
+            <p className="font-bold">Nenhum card separado para contador ainda.</p>
+            <p className="mt-1 text-xs">Use a ação ‘Separar contador’ em um card da Mesa.</p>
+          </div>
+        ) : (
+          <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              {accountantPackageItems.map((item) => (
+                <article
+                  key={item.id}
+                  data-testid={`accountant-package-item-${item.id}`}
+                  className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}
+                >
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <h3 className={`break-words text-sm font-extrabold ${dark ? 'text-slate-100' : 'text-slate-900'}`}>{item.title}</h3>
+                      <p className={`mt-1 text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                        {PACKAGE_KIND_LABELS[item.kind]} · {PACKAGE_STATUS_LABELS[item.status]}
+                      </p>
+                    </div>
+                    {typeof item.amount === 'number' && Number.isFinite(item.amount) && (
+                      <strong className={`text-sm ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>{formatCurrencyBRL(item.amount)}</strong>
+                    )}
+                  </div>
+                  <p className={`mt-2 text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {(item.hasPreInvoice || item.kind === 'pre-invoice' || item.kind === 'invoice-draft') ? 'Tem pré-nota visual' : 'Sem pré-nota visual'} · {getPackageConnectionLabel(item, connections)}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {item.tags.map((tag) => (
+                      <span key={tag} className={`rounded-md px-2 py-1 text-[10px] ${dark ? 'bg-slate-800 text-slate-400' : 'bg-white text-slate-500'}`}>
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+            <label className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
+              Resumo local visível
+              <textarea
+                readOnly
+                value={accountantPackageSummaryText}
+                className={`mt-1 min-h-48 w-full resize-y rounded-xl border p-3 font-mono text-[11px] leading-relaxed ${
+                  dark ? 'border-slate-700 bg-slate-950 text-slate-200' : 'border-slate-200 bg-white text-slate-700'
+                }`}
+              />
+            </label>
+          </div>
+        )}
+
+        <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+          <button
+            type="button"
+            onClick={copyAccountantPackageSummary}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-black text-white transition-colors hover:bg-indigo-700"
+          >
+            <Clipboard className="h-3.5 w-3.5" /> Copiar resumo
+          </button>
+          <button
+            type="button"
+            onClick={clearAccountantPackage}
+            className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-xs font-bold ${
+              dark ? 'border-slate-700 text-slate-300 hover:border-violet-500' : 'border-slate-200 text-slate-600 hover:border-violet-300'
+            }`}
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Limpar pacote local
+          </button>
+        </div>
+      </section>
 
       <div
         ref={viewportRef}

@@ -1,11 +1,13 @@
 import {
+  useId,
   useEffect,
   useMemo,
   useRef,
   useState,
+  type FormEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { Link2, MousePointer2, RotateCcw, Sparkles, Trash2 } from 'lucide-react';
+import { Link2, MousePointer2, Plus, RotateCcw, Sparkles, Trash2, X } from 'lucide-react';
 import { MOCK_SMART_CARDS } from './mockData';
 import { SmartCard } from './SmartCard';
 import {
@@ -22,6 +24,7 @@ interface Props {
 }
 
 type CanvasFilter = 'all' | SmartCardStatus | 'archived';
+type QuickRegistrationType = 'sale' | 'expense' | 'payment' | 'capture' | 'pending' | 'pre-invoice';
 
 interface CanvasState {
   items: SmartCardItem[];
@@ -40,6 +43,15 @@ interface DragState {
   pointerId: number;
   offsetX: number;
   offsetY: number;
+}
+
+interface QuickRegistrationOption {
+  id: QuickRegistrationType;
+  label: string;
+  kind: SmartCardKind;
+  defaultDescription: string;
+  tags: string[];
+  note: string;
 }
 
 const CARD_WIDTH = 320;
@@ -70,6 +82,57 @@ const SMART_CARD_KINDS: ReadonlyArray<SmartCardKind> = [
   'accountant-package',
   'pending',
   'ai-alert',
+];
+
+const QUICK_REGISTRATION_OPTIONS: ReadonlyArray<QuickRegistrationOption> = [
+  {
+    id: 'sale',
+    label: 'Venda interna',
+    kind: 'sale',
+    defaultDescription: 'Venda registrada como controle interno para organizar depois.',
+    tags: ['Venda interna', 'Controle interno'],
+    note: 'Controle interno, sem emissão fiscal.',
+  },
+  {
+    id: 'expense',
+    label: 'Despesa',
+    kind: 'expense',
+    defaultDescription: 'Despesa registrada rapidamente para classificar depois.',
+    tags: ['Despesa', 'Organizar depois'],
+    note: 'Registre agora e categorize depois.',
+  },
+  {
+    id: 'payment',
+    label: 'Recebimento',
+    kind: 'payment',
+    defaultDescription: 'Recebimento registrado para conciliar quando possível.',
+    tags: ['Recebimento', 'Conciliar depois'],
+    note: 'Recebimento local aguardando vínculo.',
+  },
+  {
+    id: 'capture',
+    label: 'Captura / anotação',
+    kind: 'capture',
+    defaultDescription: 'Anotação capturada rapidamente para organizar depois.',
+    tags: ['Captura manual', 'Anotação'],
+    note: 'Use para lembrar agora e classificar depois.',
+  },
+  {
+    id: 'pending',
+    label: 'Pendência',
+    kind: 'pending',
+    defaultDescription: 'Pendência registrada para revisão manual.',
+    tags: ['Pendência', 'Revisar'],
+    note: 'Pendência local para resolver depois.',
+  },
+  {
+    id: 'pre-invoice',
+    label: 'Pré-nota interna',
+    kind: 'pre-invoice',
+    defaultDescription: 'Pré-nota interna para conferência. Sem valor fiscal.',
+    tags: ['Pré-nota interna', 'Sem valor fiscal'],
+    note: 'Pré-nota interna não tem valor fiscal.',
+  },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -256,12 +319,36 @@ function clearCanvasState() {
   }
 }
 
+function getQuickRegistrationOption(type: QuickRegistrationType) {
+  return QUICK_REGISTRATION_OPTIONS.find((option) => option.id === type) ?? QUICK_REGISTRATION_OPTIONS[0];
+}
+
+function createLocalCardId() {
+  return `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function parseQuickTags(value: string, fallback: string[]) {
+  const tags = value
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter((tag) => tag.length > 0);
+  return tags.length > 0 ? tags : fallback;
+}
+
 export function YopoyCentralDashboard({ theme }: Props) {
+  const quickRegistrationTitleId = useId();
   const initialCanvasState = useMemo(() => loadCanvasState(), []);
   const [items, setItems] = useState<SmartCardItem[]>(() => initialCanvasState.items);
   const [positions, setPositions] = useState<Record<string, CanvasCardPosition>>(() => initialCanvasState.positions);
   const [connections, setConnections] = useState<CanvasCardConnection[]>(() => initialCanvasState.connections);
   const [activeFilter, setActiveFilter] = useState<CanvasFilter>(() => initialCanvasState.activeFilter);
+  const [quickRegistrationOpen, setQuickRegistrationOpen] = useState(false);
+  const [quickRegistrationType, setQuickRegistrationType] = useState<QuickRegistrationType>('sale');
+  const [quickTitle, setQuickTitle] = useState('');
+  const [quickDescription, setQuickDescription] = useState('');
+  const [quickAmount, setQuickAmount] = useState('');
+  const [quickTags, setQuickTags] = useState('');
+  const [quickFormError, setQuickFormError] = useState('');
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
   const [connectionPointer, setConnectionPointer] = useState<CanvasCardPosition | null>(null);
   const [feedback, setFeedback] = useState('Mesa local pronta: arraste os cards e conecte os pontos laterais. As alterações ficam salvas neste navegador, sem sincronização externa.');
@@ -306,6 +393,71 @@ export function YopoyCentralDashboard({ theme }: Props) {
     const previousStatus = SMART_CARD_STATUS_FLOW[Math.max(currentIndex - 1, 0)];
     return { ...item, status: previousStatus };
   }, 'Card voltou uma etapa nesta demonstração.');
+
+  const closeQuickRegistration = () => {
+    setQuickRegistrationOpen(false);
+    setQuickFormError('');
+  };
+
+  const resetQuickRegistrationForm = () => {
+    setQuickTitle('');
+    setQuickDescription('');
+    setQuickAmount('');
+    setQuickTags('');
+    setQuickFormError('');
+  };
+
+  const createCardPosition = () => {
+    const viewport = viewportRef.current;
+    const localCardsCount = items.filter((item) => item.id.startsWith('local-')).length;
+    const baseX = viewport ? viewport.scrollLeft + 24 : 44;
+    const baseY = viewport ? viewport.scrollTop + 24 : 44;
+    return {
+      x: clamp(baseX + (localCardsCount % 3) * 28, 16, CANVAS_WIDTH - CARD_WIDTH - 16),
+      y: clamp(baseY + (localCardsCount % 3) * 36, 16, CANVAS_HEIGHT - 220),
+    };
+  };
+
+  const handleQuickRegistrationSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const title = quickTitle.trim();
+    const amountText = quickAmount.trim();
+    const amount = amountText ? Number(amountText.replace(',', '.')) : undefined;
+
+    if (!title) {
+      setQuickFormError('Informe um título para criar o card.');
+      return;
+    }
+
+    if (amount !== undefined && (!Number.isFinite(amount) || amount <= 0)) {
+      setQuickFormError('Use um valor positivo ou deixe o campo em branco.');
+      return;
+    }
+
+    const option = getQuickRegistrationOption(quickRegistrationType);
+    const item: SmartCardItem = {
+      id: createLocalCardId(),
+      kind: option.kind,
+      title,
+      description: quickDescription.trim() || option.defaultDescription,
+      amount,
+      timeLabel: 'agora',
+      status: 'new',
+      archived: false,
+      linked: false,
+      hasPreInvoice: option.id === 'pre-invoice',
+      sentToAccountant: false,
+      tags: parseQuickTags(quickTags, option.tags),
+    };
+
+    const position = createCardPosition();
+    setItems((current) => [item, ...current]);
+    setPositions((current) => ({ ...current, [item.id]: position }));
+    setActiveFilter('all');
+    resetQuickRegistrationForm();
+    setQuickRegistrationOpen(false);
+    setFeedback('Card criado e salvo neste navegador.');
+  };
 
   const visibleItems = useMemo(() => items.filter((item) => {
     if (activeFilter === 'all') return true;
@@ -515,6 +667,122 @@ export function YopoyCentralDashboard({ theme }: Props) {
               </button>
             )}
           </div>
+        </div>
+        <div className={`mt-3 rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className={`text-sm font-extrabold ${dark ? 'text-slate-100' : 'text-slate-900'}`}>Registre agora, organize depois.</p>
+              <p className={`mt-1 text-xs ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Este card fica salvo neste navegador.</p>
+            </div>
+            <button
+              type="button"
+              aria-expanded={quickRegistrationOpen}
+              aria-controls={quickRegistrationTitleId}
+              onClick={() => {
+                setQuickRegistrationOpen((current) => !current);
+                setQuickFormError('');
+              }}
+              className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-black text-white shadow-sm transition-colors hover:bg-indigo-700 sm:w-auto"
+            >
+              {quickRegistrationOpen ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
+              {quickRegistrationOpen ? 'Fechar' : 'Registro rápido'}
+            </button>
+          </div>
+
+          {quickRegistrationOpen && (
+            <form
+              aria-labelledby={quickRegistrationTitleId}
+              onSubmit={handleQuickRegistrationSubmit}
+              className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(160px,220px)_1fr_1fr_minmax(120px,160px)]"
+            >
+              <h2 id={quickRegistrationTitleId} className="sr-only">Registro rápido</h2>
+              <label className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
+                Tipo
+                <select
+                  value={quickRegistrationType}
+                  onChange={(event) => setQuickRegistrationType(event.target.value as QuickRegistrationType)}
+                  className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm ${
+                    dark ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
+                  }`}
+                >
+                  {QUICK_REGISTRATION_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
+                Título
+                <input
+                  value={quickTitle}
+                  onChange={(event) => setQuickTitle(event.target.value)}
+                  aria-required="true"
+                  className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm ${
+                    dark ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'
+                  }`}
+                  placeholder="Ex.: venda no balcão"
+                />
+              </label>
+              <label className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
+                Descrição
+                <input
+                  value={quickDescription}
+                  onChange={(event) => setQuickDescription(event.target.value)}
+                  className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm ${
+                    dark ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'
+                  }`}
+                  placeholder="Opcional"
+                />
+              </label>
+              <label className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
+                Valor
+                <input
+                  value={quickAmount}
+                  onChange={(event) => setQuickAmount(event.target.value)}
+                  inputMode="decimal"
+                  className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm ${
+                    dark ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'
+                  }`}
+                  placeholder="Opcional"
+                />
+              </label>
+              <label className={`lg:col-span-3 text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
+                Tags
+                <input
+                  value={quickTags}
+                  onChange={(event) => setQuickTags(event.target.value)}
+                  className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm ${
+                    dark ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'
+                  }`}
+                  placeholder="Opcional, separadas por vírgula"
+                />
+              </label>
+              <div className="flex flex-col gap-2 lg:justify-end">
+                <button
+                  type="submit"
+                  className="inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-black text-white transition-colors hover:bg-emerald-700"
+                >
+                  Criar card
+                </button>
+                <button
+                  type="button"
+                  onClick={closeQuickRegistration}
+                  className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-4 py-2 text-sm font-bold ${
+                    dark ? 'border-slate-700 text-slate-300' : 'border-slate-200 text-slate-600'
+                  }`}
+                >
+                  Cancelar
+                </button>
+              </div>
+              <p className={`lg:col-span-4 text-[11px] leading-relaxed ${dark ? 'text-amber-300' : 'text-amber-700'}`}>
+                {getQuickRegistrationOption(quickRegistrationType).note} Salvo apenas neste navegador.
+              </p>
+              {quickFormError && (
+                <p role="alert" className="lg:col-span-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+                  {quickFormError}
+                </p>
+              )}
+            </form>
+          )}
         </div>
         <p className={`mt-2 text-[11px] leading-relaxed sm:hidden ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
           No celular: arraste pelo corpo do card, use os pontos laterais para conectar e deslize pela área vazia para navegar no canvas.

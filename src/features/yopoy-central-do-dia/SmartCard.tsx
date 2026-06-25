@@ -242,7 +242,7 @@ export function SmartCard({
       )}
 
       <p className={`mt-3 text-[10px] font-semibold ${dark ? 'text-amber-300/80' : 'text-amber-700'}`}>
-        Exemplo fictício · ações locais, sem persistência ou operação externa
+        Exemplo fictício · ações locais, sem operação externa
       </p>
 
       <div data-no-card-drag className={`mt-4 rounded-xl border border-dashed p-2 ${dark ? 'border-slate-800' : 'border-slate-200'}`}>

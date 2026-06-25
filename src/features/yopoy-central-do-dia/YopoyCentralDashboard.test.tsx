@@ -26,6 +26,44 @@ function readStoredSnapshot(): StoredTaskCanvasSnapshot {
   return JSON.parse(stored ?? '') as StoredTaskCanvasSnapshot;
 }
 
+function openQuickRegistration() {
+  fireEvent.click(screen.getByRole('button', { name: /registro rápido/i }));
+}
+
+function fillQuickRegistration(values: {
+  type?: string;
+  title: string;
+  description?: string;
+  amount?: string;
+  tags?: string;
+}) {
+  if (values.type) {
+    fireEvent.change(screen.getByLabelText(/^tipo$/i), { target: { value: values.type } });
+  }
+  fireEvent.change(screen.getByLabelText(/^título$/i), { target: { value: values.title } });
+  if (values.description !== undefined) {
+    fireEvent.change(screen.getByLabelText(/^descrição$/i), { target: { value: values.description } });
+  }
+  if (values.amount !== undefined) {
+    fireEvent.change(screen.getByLabelText(/^valor$/i), { target: { value: values.amount } });
+  }
+  if (values.tags !== undefined) {
+    fireEvent.change(screen.getByLabelText(/^tags$/i), { target: { value: values.tags } });
+  }
+}
+
+function createQuickCard(values: {
+  type?: string;
+  title: string;
+  description?: string;
+  amount?: string;
+  tags?: string;
+}) {
+  openQuickRegistration();
+  fillQuickRegistration(values);
+  fireEvent.click(screen.getByRole('button', { name: /criar card/i }));
+}
+
 describe('YopoyCentralDashboard', () => {
   beforeEach(() => {
     Object.defineProperty(HTMLElement.prototype, 'setPointerCapture', { configurable: true, value: vi.fn() });
@@ -52,12 +90,110 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getAllByText(/salvas neste navegador/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/sem sincronização externa/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/pré-notas são visuais, sem valor fiscal/i)).toBeTruthy();
+    expect(screen.getByRole('button', { name: /registro rápido/i })).toBeTruthy();
+    expect(screen.getByText(/registre agora, organize depois/i)).toBeTruthy();
+    expect(screen.getByText(/este card fica salvo neste navegador/i)).toBeTruthy();
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
 
     fireEvent.click(within(getCaptureCard()).getByRole('button', { name: /avançar etapa/i }));
     expect(within(getCaptureCard()).getByText(/^pendente$/i)).toBeTruthy();
     expect(document.querySelector('[draggable="true"]')).toBeNull();
     expect(screen.getByText(/no celular: arraste pelo corpo do card/i)).toBeTruthy();
+  });
+
+  it('abre e fecha o formulário de registro rápido e exige título', () => {
+    render(<YopoyCentralDashboard theme="light" />);
+
+    openQuickRegistration();
+
+    expect(screen.getByLabelText(/^tipo$/i)).toBeTruthy();
+    expect(screen.getByLabelText(/^título$/i)).toBeTruthy();
+    expect(screen.getByText(/controle interno, sem emissão fiscal/i)).toBeTruthy();
+    expect(screen.getByText(/salvo apenas neste navegador/i)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /criar card/i }));
+    expect(screen.getByRole('alert').textContent).toMatch(/informe um título/i);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /cancelar/i }));
+    expect(screen.queryByLabelText(/^título$/i)).toBeNull();
+  });
+
+  it('cria venda interna local, salva no canvas e restaura em novo render sem chamar backend', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    vi.spyOn(Date, 'now').mockReturnValue(1771771771000);
+    vi.spyOn(Math, 'random').mockReturnValue(0.123456);
+    render(<YopoyCentralDashboard theme="light" />);
+    const viewport = screen.getByTestId('task-canvas-viewport');
+    Object.defineProperty(viewport, 'scrollLeft', { configurable: true, value: 320 });
+    Object.defineProperty(viewport, 'scrollTop', { configurable: true, value: 180 });
+
+    createQuickCard({
+      type: 'sale',
+      title: 'Venda interna balcão',
+      description: 'Controle interno da venda.',
+      amount: '185,50',
+      tags: 'Balcão, Sem nota',
+    });
+
+    expect(screen.getByText(/card criado e salvo neste navegador/i)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /venda interna balcão/i })).toBeTruthy();
+    expect(screen.getByTestId('canvas-node-local-1771771771000-4fzyo8')).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      const created = snapshot.items.find((item) => item.id === 'local-1771771771000-4fzyo8');
+      expect(created?.kind).toBe('sale');
+      expect(created?.status).toBe('new');
+      expect(created?.archived).toBe(false);
+      expect(created?.linked).toBe(false);
+      expect(created?.hasPreInvoice).toBe(false);
+      expect(created?.sentToAccountant).toBe(false);
+      expect(created?.amount).toBe(185.5);
+      expect(created?.tags).toEqual(['Balcão', 'Sem nota']);
+      expect(snapshot.positions['local-1771771771000-4fzyo8']).toEqual({ x: 344, y: 204 });
+      expect(JSON.stringify(snapshot)).not.toMatch(/sefaz|xml|danfe|protocolo|nf-e|nfc-e|nfs-e/i);
+    });
+
+    cleanup();
+    render(<YopoyCentralDashboard theme="light" />);
+    expect(screen.getByRole('heading', { name: /venda interna balcão/i })).toBeTruthy();
+  });
+
+  it('cria despesa, recebimento, captura, pendência e pré-nota interna com os tipos existentes', async () => {
+    render(<YopoyCentralDashboard theme="light" />);
+
+    createQuickCard({ type: 'expense', title: 'Despesa local com valor', amount: '72.40' });
+    createQuickCard({ type: 'payment', title: 'Recebimento local' });
+    createQuickCard({ type: 'capture', title: 'Captura anotação local' });
+    createQuickCard({ type: 'pending', title: 'Pendência local' });
+    openQuickRegistration();
+    fireEvent.change(screen.getByLabelText(/^tipo$/i), { target: { value: 'pre-invoice' } });
+    expect(screen.getByText(/pré-nota interna não tem valor fiscal/i)).toBeTruthy();
+    fillQuickRegistration({ title: 'Pré-nota interna local' });
+    fireEvent.click(screen.getByRole('button', { name: /criar card/i }));
+
+    expect(screen.getByRole('heading', { name: /despesa local com valor/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /recebimento local/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /captura anotação local/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /pendência local/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /pré-nota interna local/i })).toBeTruthy();
+    expect(screen.getAllByText(/pré-nota visual/i).length).toBeGreaterThan(0);
+
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      expect(snapshot.items.find((item) => item.title === 'Despesa local com valor')?.kind).toBe('expense');
+      expect(snapshot.items.find((item) => item.title === 'Despesa local com valor')?.amount).toBe(72.4);
+      expect(snapshot.items.find((item) => item.title === 'Recebimento local')?.kind).toBe('payment');
+      expect(snapshot.items.find((item) => item.title === 'Captura anotação local')?.kind).toBe('capture');
+      expect(snapshot.items.find((item) => item.title === 'Pendência local')?.kind).toBe('pending');
+      const preInvoice = snapshot.items.find((item) => item.title === 'Pré-nota interna local');
+      expect(preInvoice?.kind).toBe('pre-invoice');
+      expect(preInvoice?.hasPreInvoice).toBe(true);
+      expect(preInvoice?.tags).toContain('Sem valor fiscal');
+    });
   });
 
   it('move um card com Pointer Events e salva sua posição no localStorage', async () => {
@@ -259,12 +395,15 @@ describe('YopoyCentralDashboard', () => {
   it('restaura demonstração, limpa só a chave da Mesa e volta aos mocks', async () => {
     window.localStorage.setItem('yopoy:outra-chave', 'preservar');
     render(<YopoyCentralDashboard theme="light" />);
+    createQuickCard({ type: 'capture', title: 'Card local para remover' });
     fireEvent.click(within(getCaptureCard()).getByRole('button', { name: /avançar etapa/i }));
     await waitFor(() => expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull());
+    expect(screen.getByRole('heading', { name: /card local para remover/i })).toBeTruthy();
 
     fireEvent.click(screen.getByRole('button', { name: /restaurar demonstração/i }));
 
     expect(screen.getByText(/demonstração restaurada\. os dados locais da mesa foram limpos/i)).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /card local para remover/i })).toBeNull();
     expect(within(getCaptureCard()).getByText(/^novo$/i)).toBeTruthy();
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
     expect(window.localStorage.getItem('yopoy:outra-chave')).toBe('preservar');

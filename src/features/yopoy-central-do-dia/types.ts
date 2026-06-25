@@ -24,6 +24,9 @@ export interface CanvasCardConnection {
   fromId: string;
   toId: string;
   label?: string;
+  status?: 'visual' | 'reconciled';
+  reconciledAt?: string;
+  note?: string;
 }
 
 export interface SmartCardItem {

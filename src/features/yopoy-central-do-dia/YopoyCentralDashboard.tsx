@@ -60,6 +60,10 @@ const CANVAS_WIDTH = 1640;
 const CANVAS_HEIGHT = 1900;
 const TASK_CANVAS_STORAGE_KEY = 'yopoy:task-canvas:v1';
 const TASK_CANVAS_STORAGE_VERSION = 1;
+const CONNECTION_STATUS_LABELS = {
+  visual: 'visual',
+  reconciled: 'conciliado',
+} as const;
 
 const FILTERS: ReadonlyArray<{ id: CanvasFilter; label: string }> = [
   { id: 'all', label: 'Todos' },
@@ -151,6 +155,10 @@ function isCanvasFilter(value: unknown): value is CanvasFilter {
   return value === 'all' || value === 'archived' || isSmartCardStatus(value);
 }
 
+function isCanvasConnectionStatus(value: unknown): value is NonNullable<CanvasCardConnection['status']> {
+  return value === 'visual' || value === 'reconciled';
+}
+
 function cloneMockItems() {
   return MOCK_SMART_CARDS.map((item) => ({ ...item, tags: [...item.tags] }));
 }
@@ -233,12 +241,35 @@ function normalizeConnection(value: unknown, itemIds: Set<string>): CanvasCardCo
   if (!isRecord(value) || typeof value.fromId !== 'string' || typeof value.toId !== 'string') return null;
   if (value.fromId === value.toId || !itemIds.has(value.fromId) || !itemIds.has(value.toId)) return null;
   const id = typeof value.id === 'string' && value.id.trim().length > 0 ? value.id : `${value.fromId}->${value.toId}`;
+  const status = isCanvasConnectionStatus(value.status) ? value.status : 'visual';
+  const reconciledAt = status === 'reconciled' && typeof value.reconciledAt === 'string' && value.reconciledAt.trim().length > 0
+    ? value.reconciledAt
+    : undefined;
+  const note = typeof value.note === 'string' && value.note.trim().length > 0 ? value.note.trim().slice(0, 120) : undefined;
   return {
     id,
     fromId: value.fromId,
     toId: value.toId,
     label: typeof value.label === 'string' ? value.label : undefined,
+    status,
+    reconciledAt,
+    note,
   };
+}
+
+function getReconciledCardIds(connections: CanvasCardConnection[]) {
+  const reconciledIds = new Set<string>();
+  connections.forEach((connection) => {
+    if (connection.status !== 'reconciled') return;
+    reconciledIds.add(connection.fromId);
+    reconciledIds.add(connection.toId);
+  });
+  return reconciledIds;
+}
+
+function syncLinkedCards(items: SmartCardItem[], connections: CanvasCardConnection[]) {
+  const reconciledIds = getReconciledCardIds(connections);
+  return items.map((item) => ({ ...item, linked: reconciledIds.has(item.id) }));
 }
 
 function normalizeCanvasState(value: unknown): CanvasState | null {
@@ -269,9 +300,11 @@ function normalizeCanvasState(value: unknown): CanvasState | null {
       .map((connection) => normalizeConnection(connection, itemIds))
       .filter((connection): connection is CanvasCardConnection => connection !== null)
     : [];
+  const reconciledIds = getReconciledCardIds(connections);
+  const itemsWithReconciledLinks = items.map((item) => reconciledIds.has(item.id) ? { ...item, linked: true } : item);
 
   return {
-    items,
+    items: itemsWithReconciledLinks,
     positions,
     connections,
     activeFilter: isCanvasFilter(value.activeFilter) ? value.activeFilter : 'all',
@@ -466,6 +499,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
   }), [activeFilter, items]);
 
   const visibleItemIds = useMemo(() => new Set(visibleItems.map((item) => item.id)), [visibleItems]);
+  const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
 
   useEffect(() => {
     const firstVisibleItem = visibleItems[0];
@@ -557,9 +591,54 @@ export function YopoyCentralDashboard({ theme }: Props) {
         return current;
       }
       setFeedback('Conexão visual criada e salva neste navegador.');
-      return [...current, { id: `${fromId}->${targetId}`, fromId, toId: targetId }];
+      return [...current, { id: `${fromId}->${targetId}`, fromId, toId: targetId, status: 'visual' }];
     });
     cancelConnection();
+  };
+
+  const markConnectionReconciled = (connectionId: string) => {
+    setConnections((currentConnections) => {
+      const updatedConnections = currentConnections.map((connection) => connection.id === connectionId
+        ? { ...connection, status: 'reconciled' as const, reconciledAt: new Date().toISOString() }
+        : connection);
+      setItems((currentItems) => syncLinkedCards(currentItems, updatedConnections));
+      setFeedback('Vínculo conciliado visualmente e salvo neste navegador.');
+      return updatedConnections;
+    });
+  };
+
+  const undoConnectionReconciliation = (connectionId: string) => {
+    setConnections((currentConnections) => {
+      const updatedConnections = currentConnections.map((connection) => {
+        if (connection.id !== connectionId) return connection;
+        return {
+          id: connection.id,
+          fromId: connection.fromId,
+          toId: connection.toId,
+          label: connection.label,
+          note: connection.note,
+          status: 'visual' as const,
+        };
+      });
+      setItems((currentItems) => syncLinkedCards(currentItems, updatedConnections));
+      setFeedback('Conciliação visual desfeita. Os vínculos dos cards foram recalculados neste navegador.');
+      return updatedConnections;
+    });
+  };
+
+  const removeConnection = (connectionId: string) => {
+    setConnections((currentConnections) => {
+      const updatedConnections = currentConnections.filter((connection) => connection.id !== connectionId);
+      setItems((currentItems) => syncLinkedCards(currentItems, updatedConnections));
+      setFeedback('Vínculo removido e marcações visuais recalculadas neste navegador.');
+      return updatedConnections;
+    });
+  };
+
+  const clearConnections = () => {
+    setConnections([]);
+    setItems((currentItems) => syncLinkedCards(currentItems, []));
+    setFeedback('Todas as conexões visuais foram removidas e os vínculos dos cards foram recalculados neste navegador.');
   };
 
   const finishConnectionAtPointer = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -655,10 +734,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
             {connections.length > 0 && (
               <button
                 type="button"
-                onClick={() => {
-                  setConnections([]);
-                  setFeedback('Todas as conexões visuais foram removidas e a Mesa local foi atualizada.');
-                }}
+                onClick={clearConnections}
                 className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold ${
                   dark ? 'border-slate-700 text-slate-300 hover:border-red-500' : 'border-slate-200 text-slate-600 hover:border-red-300'
                 }`}
@@ -668,6 +744,91 @@ export function YopoyCentralDashboard({ theme }: Props) {
             )}
           </div>
         </div>
+        {connections.length > 0 && (
+          <section
+            aria-label="Vínculos visuais"
+            className={`mt-3 rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}
+          >
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className={`text-sm font-extrabold ${dark ? 'text-slate-100' : 'text-slate-900'}`}>Vínculos visuais</h2>
+                <p className={`mt-1 text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Conciliação visual local. Não altera financeiro real, não envia dados e fica salvo somente neste navegador.
+                </p>
+              </div>
+              <span className={`rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                dark ? 'bg-emerald-950 text-emerald-300' : 'bg-emerald-100 text-emerald-700'
+              }`}>
+                Salvo neste navegador
+              </span>
+            </div>
+            <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-2">
+              {connections.map((connection) => {
+                const from = itemsById.get(connection.fromId);
+                const to = itemsById.get(connection.toId);
+                const status = connection.status === 'reconciled' ? 'reconciled' : 'visual';
+                return (
+                  <article
+                    key={connection.id}
+                    data-testid={`connection-summary-${connection.id}`}
+                    className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'}`}
+                  >
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0">
+                        <p className={`break-words text-xs font-extrabold ${dark ? 'text-slate-100' : 'text-slate-900'}`}>
+                          {from?.title ?? connection.fromId} -&gt; {to?.title ?? connection.toId}
+                        </p>
+                        <p className={`mt-1 text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Status: <strong>{CONNECTION_STATUS_LABELS[status]}</strong>
+                          {connection.reconciledAt && (
+                            <span> · {new Date(connection.reconciledAt).toLocaleString('pt-BR')}</span>
+                          )}
+                        </p>
+                      </div>
+                      <span className={`w-fit rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-wide ${
+                        status === 'reconciled'
+                          ? dark ? 'bg-emerald-950 text-emerald-300' : 'bg-emerald-100 text-emerald-700'
+                          : dark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {CONNECTION_STATUS_LABELS[status]}
+                      </span>
+                    </div>
+                    <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+                      {status === 'reconciled' ? (
+                        <button
+                          type="button"
+                          onClick={() => undoConnectionReconciliation(connection.id)}
+                          className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold ${
+                            dark ? 'border-slate-700 text-slate-300 hover:border-amber-400' : 'border-slate-200 text-slate-600 hover:border-amber-300'
+                          }`}
+                        >
+                          Desfazer conciliação
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => markConnectionReconciled(connection.id)}
+                          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-emerald-700"
+                        >
+                          Marcar conciliado
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => removeConnection(connection.id)}
+                        className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold ${
+                          dark ? 'border-slate-700 text-slate-300 hover:border-red-500' : 'border-slate-200 text-slate-600 hover:border-red-300'
+                        }`}
+                      >
+                        Remover vínculo
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        )}
         <div className={`mt-3 rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -842,9 +1003,10 @@ export function YopoyCentralDashboard({ theme }: Props) {
                   data-connection-id={connection.id}
                   d={`M ${startX} ${startY} C ${startX + curve} ${startY}, ${endX - curve} ${endY}, ${endX} ${endY}`}
                   fill="none"
-                  stroke={dark ? '#818cf8' : '#4f46e5'}
-                  strokeWidth="3"
+                  stroke={connection.status === 'reconciled' ? '#059669' : dark ? '#818cf8' : '#4f46e5'}
+                  strokeWidth={connection.status === 'reconciled' ? '4' : '3'}
                   strokeLinecap="round"
+                  strokeDasharray={connection.status === 'reconciled' ? undefined : '10 8'}
                 />
               );
             })}

@@ -20,6 +20,10 @@ function getCaptureCard() {
   return screen.getByRole('heading', { name: /foto de comprovante/i }).closest('article') as HTMLElement;
 }
 
+function getPaymentCard() {
+  return screen.getByRole('heading', { name: /pix recebido/i }).closest('article') as HTMLElement;
+}
+
 function readStoredSnapshot(): StoredTaskCanvasSnapshot {
   const stored = window.localStorage.getItem(STORAGE_KEY);
   expect(stored).not.toBeNull();
@@ -62,6 +66,14 @@ function createQuickCard(values: {
   openQuickRegistration();
   fillQuickRegistration(values);
   fireEvent.click(screen.getByRole('button', { name: /criar card/i }));
+}
+
+function connectCaptureToPayment() {
+  const source = screen.getByRole('button', { name: /iniciar conexão de foto de comprovante/i });
+  const target = screen.getByRole('button', { name: /conectar em pix recebido/i });
+  fireEvent.pointerDown(source, { pointerId: 9, button: 0, clientX: 1144, clientY: 112 });
+  fireEvent.pointerMove(screen.getByTestId('task-canvas'), { pointerId: 9, clientX: 430, clientY: 700 });
+  fireEvent.pointerUp(target, { pointerId: 9, clientX: 434, clientY: 682 });
 }
 
 describe('YopoyCentralDashboard', () => {
@@ -244,7 +256,7 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getByText(/1 conexões/i)).toBeTruthy();
     await waitFor(() => {
       expect(readStoredSnapshot().connections).toEqual([
-        { id: 'mock-capture-01->mock-payment-01', fromId: 'mock-capture-01', toId: 'mock-payment-01' },
+        { id: 'mock-capture-01->mock-payment-01', fromId: 'mock-capture-01', toId: 'mock-payment-01', status: 'visual' },
       ]);
     });
 
@@ -263,8 +275,168 @@ describe('YopoyCentralDashboard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /limpar conexões/i }));
     expect(document.querySelector('[data-connection-id="mock-capture-01->mock-payment-01"]')).toBeNull();
-    expect(screen.getByText(/todas as conexões visuais foram removidas e a mesa local foi atualizada/i)).toBeTruthy();
+    expect(screen.getByText(/todas as conexões visuais foram removidas e os vínculos dos cards foram recalculados/i)).toBeTruthy();
     await waitFor(() => expect(readStoredSnapshot().connections).toHaveLength(0));
+  });
+
+  it('lista vínculo visual, marca como conciliado, persiste e restaura o estado conciliado', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    render(<YopoyCentralDashboard theme="light" />);
+
+    connectCaptureToPayment();
+
+    const summary = screen.getByTestId('connection-summary-mock-capture-01->mock-payment-01');
+    expect(screen.getByRole('heading', { name: /vínculos visuais/i })).toBeTruthy();
+    expect(within(summary).getByText(/foto de comprovante/i)).toBeTruthy();
+    expect(within(summary).getByText(/pix recebido/i)).toBeTruthy();
+    expect(within(summary).getAllByText(/^visual$/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/conciliação visual local/i)).toBeTruthy();
+    expect(screen.getByText(/não altera financeiro real/i)).toBeTruthy();
+    expect(screen.getByText(/não envia dados/i)).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    fireEvent.click(within(summary).getByRole('button', { name: /marcar conciliado/i }));
+
+    expect(screen.getByText(/vínculo conciliado visualmente e salvo neste navegador/i)).toBeTruthy();
+    expect(within(getCaptureCard()).getByText(/vínculo visual/i)).toBeTruthy();
+    expect(within(getPaymentCard()).getByText(/vínculo visual/i)).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      const connection = snapshot.connections[0];
+      expect(connection.status).toBe('reconciled');
+      expect(typeof connection.reconciledAt).toBe('string');
+      expect(Number.isNaN(Date.parse(connection.reconciledAt ?? ''))).toBe(false);
+      expect(snapshot.items.find((item) => item.id === 'mock-capture-01')?.linked).toBe(true);
+      expect(snapshot.items.find((item) => item.id === 'mock-payment-01')?.linked).toBe(true);
+      expect(JSON.stringify(snapshot)).not.toMatch(/sefaz|xml|danfe|protocolo|nf-e|nfc-e|nfs-e/i);
+    });
+
+    cleanup();
+    render(<YopoyCentralDashboard theme="light" />);
+
+    const restoredSummary = screen.getByTestId('connection-summary-mock-capture-01->mock-payment-01');
+    expect(within(restoredSummary).getAllByText(/^conciliado$/i).length).toBeGreaterThan(0);
+    expect(within(getCaptureCard()).getByText(/vínculo visual/i)).toBeTruthy();
+    expect(within(getPaymentCard()).getByText(/vínculo visual/i)).toBeTruthy();
+  });
+
+  it('mantém registro rápido, conexão e conciliação funcionando juntos sem chamar fetch', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    vi.spyOn(Date, 'now').mockReturnValue(1771771772000);
+    vi.spyOn(Math, 'random').mockReturnValue(0.234567);
+    render(<YopoyCentralDashboard theme="light" />);
+
+    createQuickCard({ type: 'sale', title: 'Venda interna para conciliar', amount: '48,90' });
+
+    const source = screen.getByRole('button', { name: /iniciar conexão de venda interna para conciliar/i });
+    const target = screen.getByRole('button', { name: /conectar em pix recebido/i });
+    fireEvent.pointerDown(source, { pointerId: 14, button: 0, clientX: 120, clientY: 120 });
+    fireEvent.pointerUp(target, { pointerId: 14, clientX: 434, clientY: 682 });
+    fireEvent.click(screen.getByRole('button', { name: /marcar conciliado/i }));
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      const created = snapshot.items.find((item) => item.id === 'local-1771771772000-8fzyhi');
+      const connection = snapshot.connections.find((item) => item.id === 'local-1771771772000-8fzyhi->mock-payment-01');
+      expect(created?.linked).toBe(true);
+      expect(connection?.status).toBe('reconciled');
+      expect(typeof connection?.reconciledAt).toBe('string');
+    });
+  });
+
+  it('desfaz conciliação e recalcula linked dos cards envolvidos', async () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: 1,
+      items: [
+        { id: 'mock-capture-01', linked: true },
+        { id: 'mock-payment-01', linked: true },
+      ],
+      positions: {},
+      connections: [
+        {
+          id: 'mock-capture-01->mock-payment-01',
+          fromId: 'mock-capture-01',
+          toId: 'mock-payment-01',
+          status: 'reconciled',
+          reconciledAt: '2026-06-25T12:00:00.000Z',
+        },
+      ],
+      activeFilter: 'all',
+      updatedAt: '2026-06-25T12:00:00.000Z',
+    }));
+    render(<YopoyCentralDashboard theme="light" />);
+
+    fireEvent.click(screen.getByRole('button', { name: /desfazer conciliação/i }));
+
+    expect(screen.getByText(/conciliação visual desfeita/i)).toBeTruthy();
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      expect(snapshot.connections[0]).toEqual({
+        id: 'mock-capture-01->mock-payment-01',
+        fromId: 'mock-capture-01',
+        toId: 'mock-payment-01',
+        status: 'visual',
+      });
+      expect(snapshot.items.find((item) => item.id === 'mock-capture-01')?.linked).toBe(false);
+      expect(snapshot.items.find((item) => item.id === 'mock-payment-01')?.linked).toBe(false);
+    });
+  });
+
+  it('remove e limpa vínculos conciliados recalculando linked sem deixar marca órfã', async () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: 1,
+      items: [
+        { id: 'mock-capture-01', linked: true },
+        { id: 'mock-sale-01', linked: true },
+        { id: 'mock-payment-01', linked: true },
+      ],
+      positions: {},
+      connections: [
+        {
+          id: 'mock-capture-01->mock-payment-01',
+          fromId: 'mock-capture-01',
+          toId: 'mock-payment-01',
+          status: 'reconciled',
+          reconciledAt: '2026-06-25T12:00:00.000Z',
+        },
+        {
+          id: 'mock-sale-01->mock-payment-01',
+          fromId: 'mock-sale-01',
+          toId: 'mock-payment-01',
+          status: 'reconciled',
+          reconciledAt: '2026-06-25T12:05:00.000Z',
+        },
+      ],
+      activeFilter: 'all',
+      updatedAt: '2026-06-25T12:00:00.000Z',
+    }));
+    render(<YopoyCentralDashboard theme="light" />);
+
+    fireEvent.click(within(screen.getByTestId('connection-summary-mock-capture-01->mock-payment-01')).getByRole('button', { name: /remover vínculo/i }));
+
+    expect(screen.getByText(/vínculo removido e marcações visuais recalculadas/i)).toBeTruthy();
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      expect(snapshot.connections.map((connection) => connection.id)).toEqual(['mock-sale-01->mock-payment-01']);
+      expect(snapshot.items.find((item) => item.id === 'mock-capture-01')?.linked).toBe(false);
+      expect(snapshot.items.find((item) => item.id === 'mock-sale-01')?.linked).toBe(true);
+      expect(snapshot.items.find((item) => item.id === 'mock-payment-01')?.linked).toBe(true);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /limpar conexões/i }));
+
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      expect(snapshot.connections).toHaveLength(0);
+      expect(snapshot.items.find((item) => item.id === 'mock-capture-01')?.linked).toBe(false);
+      expect(snapshot.items.find((item) => item.id === 'mock-sale-01')?.linked).toBe(false);
+      expect(snapshot.items.find((item) => item.id === 'mock-payment-01')?.linked).toBe(false);
+    });
   });
 
   it('conclui conexão por coordenadas quando o toque fica capturado na origem', () => {
@@ -390,6 +562,31 @@ describe('YopoyCentralDashboard', () => {
     const node = screen.getByTestId('canvas-node-mock-capture-01');
     expect(node.style.left).toBe('999px');
     expect(node.style.top).toBe('888px');
+  });
+
+  it('trata snapshot antigo sem status de conexão como vínculo visual', () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: 1,
+      items: [
+        { id: 'mock-capture-01', linked: false },
+        { id: 'mock-payment-01', linked: false },
+      ],
+      positions: {},
+      connections: [
+        { id: 'mock-capture-01->mock-payment-01', fromId: 'mock-capture-01', toId: 'mock-payment-01' },
+      ],
+      activeFilter: 'all',
+      updatedAt: '2026-06-25T12:00:00.000Z',
+    }));
+
+    render(<YopoyCentralDashboard theme="light" />);
+
+    const summary = screen.getByTestId('connection-summary-mock-capture-01->mock-payment-01');
+    expect(document.querySelector('[data-connection-id="mock-capture-01->mock-payment-01"]')).toBeTruthy();
+    expect(within(summary).getAllByText(/^visual$/i).length).toBeGreaterThan(0);
+    expect(within(summary).getByRole('button', { name: /marcar conciliado/i })).toBeTruthy();
+    expect(within(getCaptureCard()).queryByText(/vínculo visual/i)).toBeNull();
+    expect(within(getPaymentCard()).queryByText(/vínculo visual/i)).toBeNull();
   });
 
   it('restaura demonstração, limpa só a chave da Mesa e volta aos mocks', async () => {

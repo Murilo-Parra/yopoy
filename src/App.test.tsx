@@ -62,7 +62,7 @@ describe('navegação principal do App', () => {
 
     await waitFor(() => expect(screen.getByRole('heading', { name: /dashboard de teste/i })).toBeTruthy());
     expect(screen.queryByRole('heading', { name: /mesa operacional de teste/i })).toBeNull();
-    expect(screen.getAllByRole('button', { name: /mesa de tarefas/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /mesa visual/i }).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: /abrir mesa pelo dashboard/i }));
     expect(screen.getByRole('heading', { name: /mesa operacional de teste/i })).toBeTruthy();
@@ -76,14 +76,15 @@ describe('navegação principal do App', () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getByRole('heading', { name: /dashboard de teste/i })).toBeTruthy());
-    expect(screen.getAllByRole('button', { name: /mesa de tarefas/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /módulo contábil|contas\/equipe/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /logística/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /mesa visual/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /organização local/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /estoque em rascunho|rascunhos/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /hierarquia/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /orientação ia|^ia$/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /configurações|configs/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /orientação local|^ia$/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /ajustes locais|ajustes/i }).length).toBeGreaterThan(0);
+    expect(document.body.textContent).not.toMatch(/Caixa:|caixa real|fiscal real/i);
 
-    fireEvent.click(screen.getByRole('button', { name: /módulo contábil/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /organização local/i })[0]);
     expect(screen.getByRole('heading', { name: /financeiro liberado/i })).toBeTruthy();
     expect(screen.queryByText(/acesso negado/i)).toBeNull();
   });
@@ -92,7 +93,7 @@ describe('navegação principal do App', () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getByRole('heading', { name: /dashboard de teste/i })).toBeTruthy());
-    const internalAreaButtons = screen.getAllByRole('button', { name: /pré-nota \/ contador/i });
+    const internalAreaButtons = screen.getAllByRole('button', { name: /pré-nota visual/i });
     expect(internalAreaButtons.length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /emitir nota|emitir nf-e|nfs-e|nfce|nfc-e/i })).toBeNull();
 
@@ -110,9 +111,9 @@ describe('navegação principal do App', () => {
     render(<App />);
 
     await waitFor(() => expect(screen.getByRole('heading', { name: /dashboard de teste/i })).toBeTruthy());
-    expect(screen.getAllByRole('button', { name: /mesa de tarefas/i }).length).toBeGreaterThan(0);
-    expect(screen.queryByRole('button', { name: /módulo contábil/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /^logística/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /^configurações$/i })).toBeNull();
+    expect(screen.getAllByRole('button', { name: /mesa visual/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /organização local/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /estoque em rascunho|rascunhos/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /ajustes locais|ajustes/i })).toBeNull();
   });
 });

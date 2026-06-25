@@ -145,11 +145,12 @@ describe('YopoyBusinessDashboard', () => {
     expect(screen.queryByText(/emissão de nota real/i)).toBeNull();
   });
 
-  it('oferece atalho explícito para a Mesa de Tarefas', () => {
+  it('oferece atalho explícito para a Mesa Visual', () => {
     const onOpenTaskBoard = vi.fn();
     render(<YopoyBusinessDashboard theme="dark" onOpenTaskBoard={onOpenTaskBoard} />);
 
-    fireEvent.click(screen.getByRole('button', { name: /abrir mesa de tarefas/i }));
+    expect(screen.getByText(/roteiro da demo/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /abrir mesa visual/i }));
     expect(onOpenTaskBoard).toHaveBeenCalledTimes(1);
   });
 });

@@ -100,13 +100,16 @@ export function YopoyBusinessDashboard({ theme, onOpenTaskBoard }: YopoyBusiness
             <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
               Visão demonstrativa da Mesa para acompanhar registros locais, vínculos e pendências sem tratar como financeiro real.
             </p>
+            <p className={`mt-2 max-w-2xl text-xs leading-relaxed ${dark ? 'text-indigo-200' : 'text-indigo-700'}`}>
+              Roteiro da demo: registre uma venda, conecte um recebimento, concilie visualmente e separe para o contador.
+            </p>
           </div>
           <button
             type="button"
             onClick={onOpenTaskBoard}
             className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-extrabold text-white transition-colors hover:bg-indigo-700 md:w-auto"
           >
-            <ClipboardList className="h-4 w-4" /> Abrir Mesa de Tarefas
+            <ClipboardList className="h-4 w-4" /> Abrir Mesa Visual
           </button>
         </div>
       </header>

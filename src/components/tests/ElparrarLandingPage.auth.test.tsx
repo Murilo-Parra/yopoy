@@ -28,6 +28,16 @@ describe('cadastro e login mínimos', () => {
     vi.clearAllMocks();
   });
 
+  it('apresenta a landing como Mesa Visual local, sem promessa de ERP completo', () => {
+    renderLanding();
+
+    expect(screen.getAllByText(/mesa visual mobile-first/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: /mesa visual para organizar o dia da empresa/i })).toBeTruthy();
+    expect(screen.getByText(/sem sincronização externa/i)).toBeTruthy();
+    expect(screen.getByText(/sem emissão fiscal real/i)).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/ERP v4\.8|Gestão completa|gerenciador multiplataforma/i);
+  });
+
   it('renderiza somente os cinco campos mínimos no cadastro', async () => {
     renderLanding();
     fireEvent.click(screen.getByRole('button', { name: /^cadastrar$/i }));

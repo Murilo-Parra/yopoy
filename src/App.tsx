@@ -314,7 +314,7 @@ export default function App() {
     setUpgradeMessage('Iniciando comunicação segura com gateway de pagamentos Yopoy Pay...');
     
     setTimeout(() => {
-      setUpgradeMessage('Validando sua forma de pagamento e provendo fundos autorizados...');
+      setUpgradeMessage('Simulando conferência local da forma de pagamento...');
     }, 1000);
 
     setTimeout(() => {
@@ -540,7 +540,7 @@ export default function App() {
 
   const REFERENCE_DATE = new Date('2026-05-31');
 
-  // Cálculo Dinâmico do Caixa baseado em Receitas e Despesas faturadas
+  // Cálculo demonstrativo do resumo local baseado em entradas e saídas simuladas.
   const totalRevenues = transactions
     .filter(isTransactionRevenue)
     .reduce((sum, t) => sum + t.amount, 0);
@@ -709,7 +709,7 @@ export default function App() {
                     className={getSidebarBtnClass('tasks')}
                   >
                     <ClipboardList className="w-4 h-4 text-indigo-500" />
-                    Mesa de Tarefas
+                    Mesa Visual
                   </button>
                 )}
 
@@ -720,7 +720,7 @@ export default function App() {
                     className={getSidebarBtnClass('finance')}
                   >
                     <DollarSign className="w-4 h-4 text-emerald-550" />
-                    Módulo Contábil
+                    Organização local
                   </button>
                 )}
 
@@ -731,7 +731,7 @@ export default function App() {
                     className={getSidebarBtnClass('logistics')}
                   >
                     <Scan className="w-4 h-4 text-emerald-550" />
-                    Logística & Estoque
+                    Estoque em rascunho
                   </button>
                 )}
 
@@ -742,7 +742,7 @@ export default function App() {
                     className={getSidebarBtnClass('invoice')}
                   >
                     <FileText className="w-4 h-4 text-indigo-500" />
-                    Pré-nota / Contador
+                    Pré-nota visual
                   </button>
                 )}
 
@@ -764,7 +764,7 @@ export default function App() {
                     className={getSidebarBtnClass('advisor')}
                   >
                     <Sparkles className="w-4 h-4 text-emerald-400 animate-pulse" />
-                    Orientação IA
+                    Orientação local
                   </button>
                 )}
 
@@ -775,7 +775,7 @@ export default function App() {
                     className={getSidebarBtnClass('settings')}
                   >
                     <Settings className="w-4 h-4 text-indigo-400" />
-                    Configurações
+                    Ajustes locais
                   </button>
                 )}
 
@@ -960,7 +960,7 @@ export default function App() {
                 <div className={`px-3.5 py-1.5 rounded-xl border flex items-center gap-1.5 transition-all ${
                   theme === 'dark' ? 'bg-[#111114]/60 border-[#222228] text-white' : 'bg-slate-100 border-slate-200 text-slate-800'
                 }`}>
-                  <span className="text-gray-400 font-medium">Caixa:</span>
+                  <span className="text-gray-400 font-medium">Resumo local:</span>
                   <span className={`font-mono font-bold ${theme === 'dark' ? 'text-[#f8fafc]' : 'text-slate-900'}`}>
                     R$ {currentCash.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </span>
@@ -974,7 +974,7 @@ export default function App() {
                 ) : (
                   <div className="bg-emerald-950/20 border border-emerald-950/30 px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 text-emerald-400">
                     <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                    <span className="font-semibold">Estoque OK</span>
+                    <span className="font-semibold">Rotina OK</span>
                   </div>
                 )}
               </div>
@@ -1003,7 +1003,7 @@ export default function App() {
                     activeTab === 'tasks' ? 'bg-indigo-600 text-white' : 'text-[#94a3b8]'
                   }`}
                 >
-                  Mesa de Tarefas
+                  Mesa Visual
                 </button>
               )}
               {isTabAllowed('finance') && (
@@ -1013,7 +1013,7 @@ export default function App() {
                     activeTab === 'finance' ? 'bg-indigo-600 text-white' : 'text-[#94a3b8]'
                   }`}
                 >
-                  Contas/Equipe
+                  Organização local
                 </button>
               )}
               {isTabAllowed('logistics') && (
@@ -1023,7 +1023,7 @@ export default function App() {
                     activeTab === 'logistics' ? 'bg-indigo-600 text-white' : 'text-[#94a3b8]'
                   }`}
                 >
-                  Logística
+                  Rascunhos
                 </button>
               )}
               {isTabAllowed('invoice') && (
@@ -1033,7 +1033,7 @@ export default function App() {
                     activeTab === 'invoice' ? 'bg-indigo-600 text-white' : 'text-[#94a3b8]'
                   }`}
                 >
-                  Pré-nota / Contador
+                  Pré-nota visual
                 </button>
               )}
               {isTabAllowed('hierarchy') && (
@@ -1063,7 +1063,7 @@ export default function App() {
                     activeTab === 'settings' ? 'bg-indigo-600 text-white' : 'text-indigo-400'
                   }`}
                 >
-                  Configs
+                  Ajustes
                 </button>
               )}
             </div>
@@ -1108,14 +1108,14 @@ export default function App() {
               </div>
             )}
 
-            {/* TAB 2: AUXILIAR DE CONTABILIDADE E CAIXA */}
+            {/* TAB 2: ORGANIZAÇÃO LOCAL */}
             {activeTab === 'finance' && (
               <ModuleAccess allowLocalOwner={hasLocalMvpOwnerAccess} permission={MODULE_PERMISSIONS.finance.view}>
                 <div id="finance-tab-view" className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Módulo de Organização Contábil & Caixa</h2>
-                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Gerenciamento interno de entradas, saídas, contas a pagar e organização da equipe.</p>
+                      <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Organização contábil local</h2>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Rascunho interno para entradas, saídas e equipe. Não é financeiro real.</p>
                     </div>
                     <button
                       onClick={() => setIsExpanded(!isExpanded)}
@@ -1144,14 +1144,14 @@ export default function App() {
               </ModuleAccess>
             )}
 
-            {/* TAB 3: CONTROLE DE LOGÍSTICA DE MERCADORIAS */}
+            {/* TAB 3: RASCUNHOS DE ESTOQUE */}
             {activeTab === 'logistics' && (
               <ModuleAccess allowLocalOwner={hasLocalMvpOwnerAccess} permission={MODULE_PERMISSIONS.logistics.view}>
                 <div id="logistics-tab-view" className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Logística de Cadastro & Endereçamento Físico</h2>
-                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Simule escaneamentos de produtos, localize endereços de prateleiras físicas no armazém e emita alertas automáticos.</p>
+                      <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Estoque futuro / rascunho</h2>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Área demonstrativa para organizar itens físicos sem tratar como logística completa.</p>
                     </div>
                     <button
                       onClick={() => setIsExpanded(!isExpanded)}
@@ -1214,13 +1214,13 @@ export default function App() {
               </ModuleAccess>
             )}
 
-            {/* TAB 4: MÓDULO DE ORIENTAÇÃO E CONSULTORIA FISCAL IA (CHAT) */}
+            {/* TAB 4: ORIENTAÇÃO LOCAL */}
             {activeTab === 'advisor' && (
               <div id="advisor-tab-view" className="space-y-4 w-full">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
-                    <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Assistente de Finanças & Gestão de Estoque IA</h2>
-                    <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Pergunte ao Gemini 3.5 Flash sobre fluxo de caixa, DRE faturadas, estratégias tributárias de PMEs brasileiras, ou catalogação lógica.</p>
+                    <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Orientação local de organização</h2>
+                    <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Use como apoio demonstrativo para classificar registros, pendências e rotinas internas.</p>
                   </div>
                   <button
                     onClick={() => setIsExpanded(!isExpanded)}
@@ -1553,7 +1553,7 @@ export default function App() {
                     <div>
                       <p className="text-[9px] font-mono font-bold tracking-wider uppercase text-gray-400">Micro Negócio</p>
                       <h4 className="font-extrabold text-[#94a3b8] dark:text-zinc-200 mt-0.5 text-base leading-tight">Plano Básico</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug mt-1.5" style={{ minHeight: '40px' }}>Ideal para MEIs e autônomos iniciando o controle de vendas.</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug mt-1.5" style={{ minHeight: '40px' }}>Ideal para MEIs e autônomos começarem pela Mesa Visual local.</p>
                       <div className="flex items-baseline gap-1 mt-3 py-1.5 border-y border-gray-100/10 mb-4">
                         <span className="text-lg font-extrabold">R$ 49,90</span>
                         <span className="text-[10px] text-gray-400">/ mês</span>
@@ -1565,7 +1565,7 @@ export default function App() {
                         </li>
                         <li className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300">
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Estoque Básico (Sem Lotes)</span>
+                          <span>Organização local da rotina</span>
                         </li>
                         <li className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300">
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -1614,7 +1614,7 @@ export default function App() {
                     <div>
                       <p className="text-[9px] font-mono font-bold tracking-wider uppercase text-gray-400">Pequenas Distribuidoras</p>
                       <h4 className="font-extrabold text-[#94a3b8] dark:text-zinc-200 mt-0.5 text-base leading-tight">Plano Médio</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug mt-1.5" style={{ minHeight: '40px' }}>Estrutura de relatórios avançados e módulo contábil completo.</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug mt-1.5" style={{ minHeight: '40px' }}>Organização visual para comércios locais e pequenas distribuidoras.</p>
                       <div className="flex items-baseline gap-1 mt-3 py-1.5 border-y border-gray-100/10 mb-4">
                         <span className="text-lg font-extrabold">R$ 129,90</span>
                         <span className="text-[10px] text-gray-400">/ mês</span>
@@ -1622,11 +1622,11 @@ export default function App() {
                       <ul className="space-y-2 text-[11px] mb-6">
                         <li className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300">
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Livro Caixa Geral Avançado</span>
+                          <span>Resumo local da Mesa</span>
                         </li>
                         <li className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300">
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Simulador Tributário MEI/SN</span>
+                          <span>Controle interno demonstrativo</span>
                         </li>
                         <li className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300">
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
@@ -1675,7 +1675,7 @@ export default function App() {
                     <div>
                       <p className="text-[9px] font-mono font-bold tracking-wider uppercase text-gray-400">Total Integrado com IA</p>
                       <h4 className="font-extrabold text-[#94a3b8] dark:text-zinc-200 mt-0.5 text-base leading-tight">Plano Premium</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug mt-1.5" style={{ minHeight: '40px' }}>Totalidade de automações, orientação em IA e auditorias por lotes.</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-snug mt-1.5" style={{ minHeight: '40px' }}>Demonstração mobile-first para registrar, organizar e preparar dados.</p>
                       <div className="flex items-baseline gap-1 mt-3 py-1.5 border-y border-gray-100/10 mb-4">
                         <span className="text-lg font-extrabold">R$ 299,90</span>
                         <span className="text-[10px] text-gray-400">/ mês</span>
@@ -1683,11 +1683,11 @@ export default function App() {
                       <ul className="space-y-2 text-[11px] mb-6">
                         <li className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300">
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>ChatGPT Advisor (Gemini)</span>
+                          <span>Orientação local de organização</span>
                         </li>
                         <li className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300">
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Auditores de Lotes & Estoque</span>
+                          <span>Pacote manual para contador</span>
                         </li>
                         <li className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300">
                           <Check className="w-3.5 h-3.5 text-emerald-400" />

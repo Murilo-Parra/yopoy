@@ -796,9 +796,12 @@ export function YopoyCentralDashboard({ theme }: Props) {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white">
               <Sparkles className="h-3.5 w-3.5" /> Canvas local
             </span>
-            <h1 className="mt-4 text-2xl font-black tracking-tight sm:text-3xl">Mesa de Tarefas</h1>
+            <h1 className="mt-4 text-2xl font-black tracking-tight sm:text-3xl">Mesa Visual</h1>
             <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
               Organize livremente: arraste os cards pela área e ligue o ponto direito de um card ao ponto esquerdo de outro.
+            </p>
+            <p className={`mt-2 max-w-2xl text-xs leading-relaxed ${dark ? 'text-indigo-200' : 'text-indigo-700'}`}>
+              Comece pela Mesa: registre uma venda, conecte um recebimento, concilie visualmente e separe para o contador.
             </p>
           </div>
           <div className={`rounded-2xl border p-3 text-xs leading-relaxed md:max-w-sm ${

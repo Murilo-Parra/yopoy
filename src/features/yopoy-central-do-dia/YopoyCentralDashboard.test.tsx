@@ -120,7 +120,8 @@ describe('YopoyCentralDashboard', () => {
   it('renderiza um canvas livre com mocks quando não há snapshot e mantém botões como fallback', () => {
     render(<YopoyCentralDashboard theme="light" />);
 
-    expect(screen.getByRole('heading', { name: /mesa de tarefas/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /mesa visual/i })).toBeTruthy();
+    expect(screen.getByText(/comece pela mesa/i)).toBeTruthy();
     expect(screen.getByTestId('task-canvas')).toBeTruthy();
     expect(within(getCaptureCard()).getByText(/^novo$/i)).toBeTruthy();
     expect(within(getCaptureCard()).getByText(/ações alternativas/i)).toBeTruthy();

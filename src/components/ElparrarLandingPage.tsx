@@ -87,14 +87,14 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
       name: 'PLANO BÁSICO',
       price: 'R$ 49,90',
       period: '/mês',
-      description: 'Ideal para MEIs e autônomos iniciando o controle de vendas.',
+      description: 'Ideal para MEIs e autônomos começarem pela Mesa Visual local.',
       tag: 'Iniciante',
       popular: false,
       color: 'bg-slate-500/10 text-slate-500 border-slate-500/20 dark:bg-slate-400/10 dark:text-slate-450',
       btnColor: 'bg-slate-100 hover:bg-slate-200 text-slate-800 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-100',
       features: [
         { icon: DollarSign, text: 'Pré-nota interna sem valor fiscal' },
-        { icon: Layers, text: 'Estoque Básico (Sem Lotes)' },
+        { icon: Layers, text: 'Organização local da rotina' },
         { icon: User, text: '1 Usuário Administrador' },
       ]
     },
@@ -103,14 +103,14 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
       name: 'PLANO MÉDIO',
       price: 'R$ 129,90',
       period: '/mês',
-      description: 'Estrutura completa para comércios locais e pequenas distribuidoras.',
+      description: 'Mais organização visual para comércios locais e pequenas distribuidoras.',
       tag: 'Crescimento',
       popular: false,
       color: 'bg-indigo-500/10 text-indigo-650 border-indigo-500/20 dark:bg-indigo-400/10 dark:text-indigo-400',
       btnColor: 'bg-indigo-50/10 hover:bg-indigo-50/15 text-indigo-650 dark:text-indigo-400 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-900',
       features: [
-        { icon: Landmark, text: 'Gestão Financeira Completa' },
-        { icon: TrendingUp, text: 'Relatórios Operacionais' },
+        { icon: Landmark, text: 'Controle interno local' },
+        { icon: TrendingUp, text: 'Resumo local da Mesa' },
         { icon: Users, text: 'Até 5 Usuários Integrados' },
       ]
     },
@@ -119,15 +119,15 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
       name: 'PLANO PREMIUM',
       price: 'R$ 299,90',
       period: '/mês',
-      description: 'Plataforma ERP Inteligente integrada com IA e auditoria de lotes.',
+      description: 'Demonstração mobile-first para registrar, organizar e preparar dados.',
       tag: 'Mais Popular',
       popular: true,
       color: 'bg-rose-500/10 text-rose-500 border-rose-500/20 dark:bg-red-500/10 dark:text-orange-400',
       btnColor: 'bg-rose-600 hover:bg-rose-700 dark:bg-red-650 dark:hover:bg-red-750 text-white shadow-lg shadow-rose-900/10 dark:shadow-red-900/30',
       features: [
-        { icon: Workflow, text: 'CRM Vendas & Automação' },
-        { icon: Layers, text: 'Estoque Inteligente com Lotes' },
-        { icon: Sparkles, text: 'ChatGPT do Negócio (Advisor IA)' },
+        { icon: Workflow, text: 'Mesa Visual mobile-first' },
+        { icon: Layers, text: 'Pacote manual para contador' },
+        { icon: Sparkles, text: 'Orientação local de organização' },
         { icon: Users, text: 'Múltiplos Usuários Ilimitados' },
         { icon: Headphones, text: 'Suporte Prioritário 24/7' },
       ]
@@ -386,19 +386,19 @@ export default function ElparrarLandingPage({ theme, toggleTheme, onSelectPlan, 
                   theme === 'dark' ? 'bg-red-955/45 text-red-100 border border-red-900/40' : 'bg-indigo-50/90 text-indigo-705 border border-indigo-150'
                 }`}>
                   <Sparkles className="w-3 h-3 text-orange-400" />
-                  GERENCIADOR MULTIPLATAFORMA ERP v4.8
+                  MESA VISUAL MOBILE-FIRST
                 </span>
 
                 <h1 className={`text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-tight ${
                   theme === 'dark' ? 'text-white' : 'text-slate-900'
                 }`}>
-                  Gestão completa para sua empresa crescer.
+                  Mesa visual para organizar o dia da empresa.
                 </h1>
 
                 <p className={`text-sm sm:text-base md:text-lg max-w-2xl mx-auto font-medium ${
                   theme === 'dark' ? 'text-gray-400' : 'text-slate-600'
                 }`}>
-                  Registre primeiro, organize depois, concilie quando possível e prepare pré-notas internas com pacote para contador. No MVP, tudo é interno e sem valor fiscal.
+                  Registre primeiro, organize depois, concilie quando possível e prepare pré-notas internas com pacote manual para contador. No MVP, tudo é local, demonstrativo, sem sincronização externa e sem emissão fiscal real.
                 </p>
               </div>
 

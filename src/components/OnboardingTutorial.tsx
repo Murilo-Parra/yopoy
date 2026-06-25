@@ -41,126 +41,126 @@ export default function OnboardingTutorial({ isOpen, onClose, theme }: Onboardin
 
   const steps: TutorialStep[] = [
     {
-      title: 'Bem-vindo ao Auxiliar Biz',
-      badge: 'Visão Geral',
+      title: 'Bem-vindo ao Yopoy',
+      badge: 'Registrar primeiro',
       badgeColor: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-      description: 'Uma consola avançada e totalmente integrada que unifica a saúde contábil, financeira e logística do seu negócio sob um único local de trabalho de alta densidade.',
+      description: 'Comece registrando o que aconteceu no negócio. Você pode organizar e conferir cada informação depois, sem preencher um cadastro extenso agora.',
       icon: <Building className="w-10 h-10 text-emerald-400" />,
       colorClass: 'from-emerald-600 to-teal-400',
       highlights: [
         { 
-          title: 'Caixa & Estoque Unificados', 
-          desc: 'Veja o saldo real integrado com as notas emitidas e as baixas de salários.', 
+          title: 'Registro rápido',
+          desc: 'Anote uma venda, despesa, recebimento ou captura sem interromper a rotina.',
           icon: <LayoutDashboard className="w-4 h-4 text-emerald-500" /> 
         },
         { 
-          title: 'Design Responsivo e Clean', 
-          desc: 'Layout polido com alto contraste visual e suporte integrado a Modo Claro e Escuro.', 
+          title: 'Informação interna',
+          desc: 'Os registros do MVP servem ao controle da empresa e não são documentos fiscais.',
           icon: <ShieldCheck className="w-4 h-4 text-emerald-500" /> 
         },
         { 
-          title: 'Zero Latência Local', 
-          desc: 'Funcionamento instantâneo operando com persistência total em sua memória local.', 
+          title: 'Cadastro mínimo',
+          desc: 'Entre com os dados essenciais e avance gradualmente conforme a operação exigir.',
           icon: <Clock className="w-4 h-4 text-emerald-500" /> 
         }
       ]
     },
     {
-      title: 'Módulo Contábil & Fluxo de Caixa',
-      badge: 'Contabilidade Ativa',
+      title: 'Organize na Mesa Visual',
+      badge: 'Organizar depois',
       badgeColor: 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20',
-      description: 'Tenha o controle estratégico imediato de faturamento corrente, caixa livre projetado, receitas extraordinárias e pagamentos programados.',
+      description: 'Use a Mesa de Tarefas para revisar capturas, mover cards entre etapas e relacionar informações do dia.',
       icon: <DollarSign className="w-10 h-10 text-emerald-500" />,
       colorClass: 'from-indigo-600 to-purple-500',
       highlights: [
         { 
-          title: 'Relatório DRE Detalhado', 
-          desc: 'Acompanhamento automático das receitas e margens de despesas mensais em gráficos reais.', 
+          title: 'Cards movíveis',
+          desc: 'Posicione os registros no canvas de acordo com a rotina da empresa.',
           icon: <TrendingUp className="w-4 h-4 text-indigo-500" /> 
         },
         { 
-          title: 'Faturamento de Salários', 
-          desc: 'Registre ou altere colaboradores ativos e fature salários diretamente no livro financeiro.', 
+          title: 'Etapas visuais',
+          desc: 'Marque itens como novos, pendentes, em revisão, prontos ou resolvidos.',
           icon: <Users className="w-4 h-4 text-indigo-500" /> 
         },
         { 
-          title: 'Guarda das Movimentações', 
-          desc: 'Adicione transações manuais categorizadas para suprimentos, impostos, tecnologia ou outras contas.', 
+          title: 'Ações alternativas',
+          desc: 'Use os botões dos cards quando arrastar não for conveniente.',
           icon: <DollarSign className="w-4 h-4 text-indigo-505" /> 
         }
       ]
     },
     {
-      title: 'Logística de Lotes & Alertas de Estoque',
-      badge: 'Prevenção de Perdas',
+      title: 'Concilie quando for possível',
+      badge: 'Conferência manual',
       badgeColor: 'bg-amber-500/10 text-amber-505 border-amber-500/20',
-      description: 'Monitore o estoque físico de alimentos por lotes, datas de fabricação / vencimento e evite perda de mercadorias no almoxarifado.',
+      description: 'Relacione vendas e recebimentos quando houver informação suficiente. Pendências podem continuar visíveis até a conferência.',
       icon: <Scan className="w-10 h-10 text-amber-500" />,
       colorClass: 'from-amber-500 to-amber-600',
       highlights: [
         { 
-          title: 'Endereçamento de Prateleiras', 
-          desc: 'Simule o endereço físico exato de cada lote dentro de corredores organizados.', 
+          title: 'Vendas internas',
+          desc: 'Acompanhe a operação comercial sem depender de emissão fiscal.',
           icon: <Package className="w-4 h-4 text-amber-550" /> 
         },
         { 
-          title: 'Alarmes de Validade Crítica', 
-          desc: 'Indicadores automatizados para lotes vencidos ou que expiram em até 7 dias.', 
+          title: 'Recebimentos vinculados',
+          desc: 'Associe pagamentos aos registros correspondentes quando puder confirmar o vínculo.',
           icon: <Clock className="w-4 h-4 text-amber-550" /> 
         },
         { 
-          title: 'Dar Baixas Rápidas', 
-          desc: 'Registre novas mercadorias ou dê baixa total rápida com atualizações instantâneas de quantidade.', 
+          title: 'Pendências preservadas',
+          desc: 'Mantenha itens incompletos na Mesa até conseguir organizá-los com segurança.',
           icon: <Scan className="w-4 h-4 text-amber-550" /> 
         }
       ]
     },
     {
-      title: 'Emissão de Notas Fiscais (SEFAZ)',
-      badge: 'Faturamento Fiscal',
+      title: 'Prepare para o contador',
+      badge: 'Sem valor fiscal',
       badgeColor: 'bg-indigo-555 bg-indigo-500/10 text-indigo-450 border-indigo-500/20',
-      description: 'Um painel de faturamento completo para rascunhos, emissão de NF-e e NFS-e totalmente compatível com o ambiente do SEFAZ / Sebrae.',
+      description: 'Separe registros e prepare uma pré-nota interna para conferência. Nada é transmitido, autorizado ou emitido pelo MVP.',
       icon: <FileText className="w-10 h-10 text-indigo-400" />,
       colorClass: 'from-indigo-600 to-blue-500',
       highlights: [
         { 
-          title: 'Formatação de DANFE Real', 
-          desc: 'Gere rascunhos de faturamento e visualize a representação gráfica real da nota emitida.', 
+          title: 'Pré-nota interna',
+          desc: 'Monte um resumo visual não emitido e sem valor fiscal.',
           icon: <FileText className="w-4 h-4 text-indigo-500" /> 
         },
         { 
-          title: 'Certificado Digital A1', 
-          desc: 'Controle de validade e transmissão criptografada com certificado corporativo ativo.', 
+          title: 'Pacote para contador',
+          desc: 'Agrupe os dados organizados para revisão ou compartilhamento futuro.',
           icon: <ShieldCheck className="w-4 h-4 text-indigo-500" /> 
         },
         { 
-          title: 'Canais de Eventos de Log', 
-          desc: 'Logs fiscais em tempo real monitorando chave de acesso de 44 dígitos geradas e status da SEFAZ.', 
+          title: 'Limite claro do MVP',
+          desc: 'A emissão fiscal real não está disponível nesta versão.',
           icon: <LayoutDashboard className="w-4 h-4 text-indigo-500" /> 
         }
       ]
     },
     {
-      title: 'Gestão Inteligente & Orientação IA',
-      badge: 'Mentoria Avançada',
+      title: 'Acompanhe o negócio',
+      badge: 'Painel demonstrativo',
       badgeColor: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-      description: 'Tenha assessoria contínua para sua PME e organize as responsabilidades de sua equipe interna de forma clara.',
+      description: 'Volte ao Painel de Controle para enxergar vendas, caixa e pendências sem misturar essa visão com a Mesa operacional.',
       icon: <Sparkles className="w-10 h-10 text-emerald-400 animate-pulse" />,
       colorClass: 'from-emerald-600 to-indigo-650',
       highlights: [
         { 
-          title: 'Consultoria Integrada com IA', 
-          desc: 'Converse com o Gemini 3.5 Flash para obter diagnósticos, cálculos de impostos DRE e margens de vendas.', 
+          title: 'Visão do dia',
+          desc: 'Acompanhe um resumo demonstrativo dos movimentos e itens que pedem atenção.',
           icon: <Sparkles className="w-4 h-4 text-emerald-500" /> 
         },
         { 
-          title: 'Grade de Hierarquia (QSA)', 
-          desc: 'Quadro de Sócios e Organograma de equipe transparente detalhando cada função.', 
+          title: 'Dashboard separado',
+          desc: 'Consulte indicadores sem perder a organização construída na Mesa Visual.',
           icon: <Users className="w-4 h-4 text-indigo-500" /> 
         },
         { 
-          title: 'Gestão de Quadros de Tarefas', 
-          desc: 'Atribua deveres de logística ou fiscal diretamente aos colaboradores e acompanhe a execução.', 
+          title: 'Fluxo gradual',
+          desc: 'Registre, organize, concilie e prepare informações no ritmo da empresa.',
           icon: <LayoutDashboard className="w-4 h-4 text-indigo-500" /> 
         }
       ]

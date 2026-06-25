@@ -11,14 +11,12 @@ import {
   LayoutDashboard, 
   Users, 
   Scan, 
-  ShoppingCart,
   MapPin, 
   Calendar, 
   Sparkles, 
   ChevronRight, 
   HelpCircle,
   AlertTriangle,
-  FileSpreadsheet,
   FileText,
   Settings,
   LogOut,
@@ -49,13 +47,11 @@ import LogisticsTool from './components/LogisticsTool';
 import ChatAssistant from './components/ChatAssistant';
 import HierarchyTool from './components/HierarchyTool';
 import InvoiceTool from './components/InvoiceTool';
-import NfseTool from './components/NfseTool';
 import MonthlyFinanceChart from './components/MonthlyFinanceChart';
 import SettingsTool from './components/SettingsTool';
 import OnboardingTutorial from './components/OnboardingTutorial';
 import ElparrarLandingPage from './components/ElparrarLandingPage';
 import MasterAdminTool from './components/MasterAdminTool';
-import NfcePosTool from './components/NfcePosTool';
 import YopoyLogo from './components/YopoyLogo';
 import { useAuth } from './frontend/auth/AuthContext';
 import ProtectedModule from './frontend/auth/ProtectedModule';
@@ -85,7 +81,7 @@ export default function App() {
 
   // Controle de Abas Principais da Barra Lateral
   // 'dashboard' é a home de visão geral; 'tasks' mantém a Mesa operacional separada.
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'finance' | 'logistics' | 'advisor' | 'hierarchy' | 'invoice' | 'nfse_module' | 'settings' | 'master_admin' | 'nfce_pos'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'tasks' | 'finance' | 'logistics' | 'advisor' | 'hierarchy' | 'invoice' | 'settings' | 'master_admin'>('dashboard');
   const [isExpanded, setIsExpanded] = useState<boolean>(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [expandedCard, setExpandedCard] = useState<'cash' | 'alerts' | 'team' | 'activity' | 'critical_product' | null>(null);
@@ -355,10 +351,10 @@ export default function App() {
 
     // Restrições de plano para usuários que não administram o workspace.
     if (selectedPlan === 'micro') {
-      const allowed = ['dashboard', 'finance', 'invoice', 'settings', 'nfce_pos'];
+      const allowed = ['dashboard', 'finance', 'invoice', 'settings'];
       if (!allowed.includes(permissionTab)) return false;
     } else if (selectedPlan === 'pequena') {
-      const allowed = ['dashboard', 'finance', 'invoice', 'hierarchy', 'settings', 'nfce_pos', 'logistics'];
+      const allowed = ['dashboard', 'finance', 'invoice', 'hierarchy', 'settings', 'logistics'];
       if (!allowed.includes(permissionTab)) return false;
     }
 
@@ -368,7 +364,7 @@ export default function App() {
   // Garante que o usuário não permaneça em uma aba não permitida
   useEffect(() => {
     if (!isTabAllowed(activeTab)) {
-      const fallbackList = ['dashboard', 'tasks', 'finance', 'logistics', 'invoice', 'hierarchy', 'advisor', 'settings', 'nfce_pos', 'master_admin'];
+      const fallbackList = ['dashboard', 'tasks', 'finance', 'logistics', 'invoice', 'hierarchy', 'advisor', 'settings', 'master_admin'];
       const firstAllowed = fallbackList.find(t => isTabAllowed(t)) || 'dashboard';
       setActiveTab(firstAllowed as typeof activeTab);
     }
@@ -627,9 +623,9 @@ export default function App() {
           transition={{ duration: 0.2 }}
           className={`min-h-screen transition-colors duration-200 ${theme === 'dark' ? 'bg-[#0a0a0c] text-[#e2e8f0]' : 'bg-[#f4f7fa] text-slate-800'} font-sans flex flex-col overflow-x-hidden w-full`}
         >
-          <div className="bg-red-600/90 text-white text-center py-1.5 text-xs font-bold w-full uppercase tracking-wider z-50 flex items-center justify-center gap-2">
+          <div className="z-50 flex w-full items-center justify-center gap-2 bg-indigo-700/95 px-3 py-1.5 text-center text-xs font-bold uppercase tracking-wider text-white">
             <AlertTriangle className="w-4 h-4" />
-            FLUXO LEGADO VISUAL. AÇÕES FISCAIS REAIS ESTÃO BLOQUEADAS E NÃO CONECTADAS AO BACKEND V2.
+            MVP DE CONTROLE INTERNO. PRÉ-NOTAS NÃO TÊM VALOR FISCAL E NÃO SÃO EMITIDAS.
           </div>
           
           {/* Layout de Sidebar de Grade de 2 Colunas */}
@@ -746,29 +742,7 @@ export default function App() {
                     className={getSidebarBtnClass('invoice')}
                   >
                     <FileText className="w-4 h-4 text-indigo-500" />
-                    Emitir Nota (Sebrae)
-                  </button>
-                )}
-
-                {isTabAllowed('nfse_module') && (
-                  <button
-                    id="sidebar-nav-nfse"
-                    onClick={() => handleTabChange('nfse_module')}
-                    className={getSidebarBtnClass('nfse_module')}
-                  >
-                    <FileSpreadsheet className="w-4 h-4 text-emerald-500" />
-                    NFS-e (Serviços)
-                  </button>
-                )}
-
-                {isTabAllowed('nfce_pos') && (
-                  <button
-                    id="sidebar-nav-nfce-pos"
-                    onClick={() => handleTabChange('nfce_pos')}
-                    className={getSidebarBtnClass('nfce_pos')}
-                  >
-                    <ShoppingCart className="w-4 h-4 text-[#eab308]" />
-                    Terminal NFC-e (PDV)
+                    Pré-nota / Contador
                   </button>
                 )}
 
@@ -1059,27 +1033,7 @@ export default function App() {
                     activeTab === 'invoice' ? 'bg-indigo-600 text-white' : 'text-[#94a3b8]'
                   }`}
                 >
-                  Emitir NF-e (Mercadoria)
-                </button>
-              )}
-              {isTabAllowed('nfse_module') && (
-                <button
-                  onClick={() => handleTabChange('nfse_module')}
-                  className={`py-2 px-3 text-[11px] font-bold rounded-lg transition-colors whitespace-nowrap ${
-                    activeTab === 'nfse_module' ? 'bg-emerald-600 text-white' : 'text-emerald-400'
-                  }`}
-                >
-                  NFS-e (Serviços)
-                </button>
-              )}
-              {isTabAllowed('nfce_pos') && (
-                <button
-                  onClick={() => handleTabChange('nfce_pos')}
-                  className={`py-2 px-3 text-[11px] font-bold rounded-lg transition-colors whitespace-nowrap ${
-                    activeTab === 'nfce_pos' ? 'bg-indigo-600 text-white font-extrabold' : 'text-amber-400'
-                  }`}
-                >
-                  NFC-e (PDV)
+                  Pré-nota / Contador
                 </button>
               )}
               {isTabAllowed('hierarchy') && (
@@ -1161,7 +1115,7 @@ export default function App() {
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                       <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Módulo de Organização Contábil & Caixa</h2>
-                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Gerenciamento de contas a pagar, faturamento de notas fiscais, controle de equipe e faturamento de salários.</p>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Gerenciamento interno de entradas, saídas, contas a pagar e organização da equipe.</p>
                     </div>
                     <button
                       onClick={() => setIsExpanded(!isExpanded)}
@@ -1227,14 +1181,14 @@ export default function App() {
               </ModuleAccess>
             )}
 
-            {/* TAB EXTRA: EMISSÃO DE NOTAS FISCAIS (SEBRAE INTEGRADO) */}
+            {/* Área interna de pré-notas e preparação para o contador. */}
             {activeTab === 'invoice' && (
               <ModuleAccess allowLocalOwner={hasLocalMvpOwnerAccess} permission={MODULE_PERMISSIONS.fiscal.view}>
                 <div id="invoice-tab-view" className="space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                      <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Emissão de Notas Fiscais (NF-e)</h2>
-                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Emita e controle guias fiscais para mercadorias (NF-e), formate o DANFE para produtos e direcione suas emissões oficiais.</p>
+                      <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Pré-nota interna e preparação para contador</h2>
+                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Organize rascunhos e dados de vendas para conferência. Tudo permanece interno, não emitido e sem valor fiscal.</p>
                     </div>
                     <button
                       onClick={() => setIsExpanded(!isExpanded)}
@@ -1256,21 +1210,6 @@ export default function App() {
                     theme={theme}
                     selectedPlan={selectedPlan}
                   />
-                </div>
-              </ModuleAccess>
-            )}
-
-            {/* TAB NOVA: MÓDULO DE SERVIÇOS MUNICIPAL NFS-E */}
-            {activeTab === 'nfse_module' && (
-              <ModuleAccess allowLocalOwner={hasLocalMvpOwnerAccess} permission={MODULE_PERMISSIONS.fiscal.view}>
-                <div id="nfse-tab-view" className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                      <h2 className={`text-xl font-extrabold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'} mb-1`}>Emissão de Notas Fiscais de Serviço (NFS-e)</h2>
-                      <p className={`text-xs ${theme === 'dark' ? 'text-[#94a3b8]' : 'text-slate-500'}`}>Módulo profissional de faturamento de serviços municipais, suportando integração com diversos provedores de tecnologia.</p>
-                    </div>
-                  </div>
-                  <NfseTool theme={theme} />
                 </div>
               </ModuleAccess>
             )}
@@ -1325,39 +1264,6 @@ export default function App() {
                     onToggleExpand={() => setIsExpanded(!isExpanded)}
                     selectedPlan={selectedPlan}
                     currentUser={currentUser}
-                  />
-                </div>
-              </ModuleAccess>
-            )}
-
-            {activeTab === 'nfce_pos' && (
-              <ModuleAccess allowLocalOwner={hasLocalMvpOwnerAccess} permission={MODULE_PERMISSIONS.fiscal.view}>
-                <div id="nfce-pos-tab-view" className="space-y-4 w-full">
-                  <NfcePosTool 
-                    theme={theme}
-                    currentUser={currentUser}
-                    corporateName={corporateName || 'Yopoy Ltda'}
-                    cnpj={cnpj || '00.000.000/0001-99'}
-                    onNfceIssued={(doc) => {
-                      const amt = parseFloat(doc.total_value);
-                      const newTransaction: Transaction = {
-                        id: `t_nfce_${Date.now()}`,
-                        establishmentName: `Venda Consumidor NFC-e Nº ${doc.number}`,
-                        amount: amt,
-                        date: new Date().toISOString().substring(0, 10),
-                        category: 'Outros',
-                        status: 'Confirmado',
-                        notes: `NFC-e autorizada e emitida de forma integrada pelo PDV. Chave: ${doc.access_key}`,
-                        type: 'Receita'
-                      };
-                      const updatedTxList = [newTransaction, ...transactions];
-                      setTransactions(updatedTxList);
-                      localStorage.setItem('biz_simulated_transactions', JSON.stringify(updatedTxList));
-                      
-                      const nextCash = cashBalance + amt;
-                      setCashBalance(nextCash);
-                      localStorage.setItem('biz_simulated_cash_balance', String(nextCash));
-                    }}
                   />
                 </div>
               </ModuleAccess>
@@ -1655,7 +1561,7 @@ export default function App() {
                       <ul className="space-y-2 text-[11px] mb-6">
                         <li className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300">
                           <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span>Emissão Notas Simplificadas</span>
+                          <span>Pré-notas internas sem valor fiscal</span>
                         </li>
                         <li className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300">
                           <Check className="w-3.5 h-3.5 text-emerald-400" />

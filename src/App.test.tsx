@@ -88,6 +88,20 @@ describe('navegação principal do App', () => {
     expect(screen.queryByText(/acesso negado/i)).toBeNull();
   });
 
+  it('apresenta somente a área interna de pré-nota no menu principal', async () => {
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: /dashboard de teste/i })).toBeTruthy());
+    const internalAreaButtons = screen.getAllByRole('button', { name: /pré-nota \/ contador/i });
+    expect(internalAreaButtons.length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /emitir nota|emitir nf-e|nfs-e|nfce|nfc-e/i })).toBeNull();
+
+    fireEvent.click(internalAreaButtons[0]);
+    expect(screen.getByRole('heading', { name: /pré-nota interna e preparação para contador/i })).toBeTruthy();
+    expect(screen.getByText(/não emitido e sem valor fiscal/i)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /^pré-nota interna$/i })).toBeTruthy();
+  });
+
   it('mantém allowedTabs obrigatório para subusuário mesmo com papel owner inconsistente', async () => {
     authMock.user.role = 'owner';
     authMock.user.isSubUser = true;

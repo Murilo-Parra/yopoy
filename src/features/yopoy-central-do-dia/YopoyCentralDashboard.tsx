@@ -5,13 +5,14 @@ import {
   useState,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { Link2, MousePointer2, Sparkles, Trash2 } from 'lucide-react';
+import { Link2, MousePointer2, RotateCcw, Sparkles, Trash2 } from 'lucide-react';
 import { MOCK_SMART_CARDS } from './mockData';
 import { SmartCard } from './SmartCard';
 import {
   SMART_CARD_STATUS_FLOW,
   type CanvasCardConnection,
   type CanvasCardPosition,
+  type SmartCardKind,
   type SmartCardItem,
   type SmartCardStatus,
 } from './types';
@@ -21,6 +22,18 @@ interface Props {
 }
 
 type CanvasFilter = 'all' | SmartCardStatus | 'archived';
+
+interface CanvasState {
+  items: SmartCardItem[];
+  positions: Record<string, CanvasCardPosition>;
+  connections: CanvasCardConnection[];
+  activeFilter: CanvasFilter;
+}
+
+interface PersistedCanvasSnapshot extends CanvasState {
+  version: 1;
+  updatedAt: string;
+}
 
 interface DragState {
   cardId: string;
@@ -33,6 +46,8 @@ const CARD_WIDTH = 320;
 const CONNECTOR_Y = 68;
 const CANVAS_WIDTH = 1640;
 const CANVAS_HEIGHT = 1900;
+const TASK_CANVAS_STORAGE_KEY = 'yopoy:task-canvas:v1';
+const TASK_CANVAS_STORAGE_VERSION = 1;
 
 const FILTERS: ReadonlyArray<{ id: CanvasFilter; label: string }> = [
   { id: 'all', label: 'Todos' },
@@ -43,6 +58,39 @@ const FILTERS: ReadonlyArray<{ id: CanvasFilter; label: string }> = [
   { id: 'resolved', label: 'Resolvidos' },
   { id: 'archived', label: 'Arquivados' },
 ];
+
+const SMART_CARD_KINDS: ReadonlyArray<SmartCardKind> = [
+  'capture',
+  'sale',
+  'payment',
+  'expense',
+  'stock',
+  'invoice-draft',
+  'pre-invoice',
+  'accountant-package',
+  'pending',
+  'ai-alert',
+];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isSmartCardKind(value: unknown): value is SmartCardKind {
+  return typeof value === 'string' && SMART_CARD_KINDS.includes(value as SmartCardKind);
+}
+
+function isSmartCardStatus(value: unknown): value is SmartCardStatus {
+  return typeof value === 'string' && SMART_CARD_STATUS_FLOW.includes(value as SmartCardStatus);
+}
+
+function isCanvasFilter(value: unknown): value is CanvasFilter {
+  return value === 'all' || value === 'archived' || isSmartCardStatus(value);
+}
+
+function cloneMockItems() {
+  return MOCK_SMART_CARDS.map((item) => ({ ...item, tags: [...item.tags] }));
+}
 
 function createInitialPositions(items: SmartCardItem[]): Record<string, CanvasCardPosition> {
   return Object.fromEntries(items.map((item, index) => [
@@ -58,23 +106,189 @@ function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(Math.max(value, minimum), maximum);
 }
 
+function createDefaultCanvasState(): CanvasState {
+  const items = cloneMockItems();
+  return {
+    items,
+    positions: createInitialPositions(items),
+    connections: [],
+    activeFilter: 'all',
+  };
+}
+
+function readString(value: unknown, fallback: string) {
+  return typeof value === 'string' && value.trim().length > 0 ? value : fallback;
+}
+
+function readOptionalNumber(value: unknown, fallback: number | undefined) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function readBoolean(value: unknown, fallback: boolean) {
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function readTags(value: unknown, fallback: string[]) {
+  if (!Array.isArray(value)) return [...fallback];
+  const tags = value.filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0);
+  return tags.length > 0 ? tags : [...fallback];
+}
+
+function normalizeItem(value: unknown, fallback?: SmartCardItem): SmartCardItem | null {
+  if (!isRecord(value)) return fallback ? { ...fallback, tags: [...fallback.tags] } : null;
+
+  const id = readString(value.id, fallback?.id ?? '');
+  if (!id) return null;
+
+  return {
+    id,
+    kind: isSmartCardKind(value.kind) ? value.kind : fallback?.kind ?? 'pending',
+    title: readString(value.title, fallback?.title ?? 'Card de demonstração'),
+    description: readString(value.description, fallback?.description ?? 'Registro local de demonstração.'),
+    amount: readOptionalNumber(value.amount, fallback?.amount),
+    timeLabel: readString(value.timeLabel, fallback?.timeLabel ?? 'agora'),
+    status: isSmartCardStatus(value.status) ? value.status : fallback?.status ?? 'pending',
+    archived: readBoolean(value.archived, fallback?.archived ?? false),
+    linked: readBoolean(value.linked, fallback?.linked ?? false),
+    hasPreInvoice: readBoolean(value.hasPreInvoice, fallback?.hasPreInvoice ?? false),
+    sentToAccountant: readBoolean(value.sentToAccountant, fallback?.sentToAccountant ?? false),
+    tags: readTags(value.tags, fallback?.tags ?? ['Demonstração']),
+  };
+}
+
+function normalizePosition(value: unknown, fallback: CanvasCardPosition): CanvasCardPosition {
+  if (!isRecord(value)) return fallback;
+  const x = typeof value.x === 'number' && Number.isFinite(value.x) ? value.x : fallback.x;
+  const y = typeof value.y === 'number' && Number.isFinite(value.y) ? value.y : fallback.y;
+  return {
+    x: clamp(x, 16, CANVAS_WIDTH - CARD_WIDTH - 16),
+    y: clamp(y, 16, CANVAS_HEIGHT - 220),
+  };
+}
+
+function normalizeConnection(value: unknown, itemIds: Set<string>): CanvasCardConnection | null {
+  if (!isRecord(value) || typeof value.fromId !== 'string' || typeof value.toId !== 'string') return null;
+  if (value.fromId === value.toId || !itemIds.has(value.fromId) || !itemIds.has(value.toId)) return null;
+  const id = typeof value.id === 'string' && value.id.trim().length > 0 ? value.id : `${value.fromId}->${value.toId}`;
+  return {
+    id,
+    fromId: value.fromId,
+    toId: value.toId,
+    label: typeof value.label === 'string' ? value.label : undefined,
+  };
+}
+
+function normalizeCanvasState(value: unknown): CanvasState | null {
+  if (!isRecord(value) || value.version !== TASK_CANVAS_STORAGE_VERSION || !Array.isArray(value.items)) return null;
+
+  const defaultState = createDefaultCanvasState();
+  const fallbackById = new Map(defaultState.items.map((item) => [item.id, item]));
+  const savedItemsById = new Map<string, SmartCardItem>();
+
+  value.items.forEach((rawItem) => {
+    const rawId = isRecord(rawItem) && typeof rawItem.id === 'string' ? rawItem.id : '';
+    const item = normalizeItem(rawItem, fallbackById.get(rawId));
+    if (item) savedItemsById.set(item.id, item);
+  });
+
+  const items = [
+    ...savedItemsById.values(),
+    ...defaultState.items.filter((item) => !savedItemsById.has(item.id)),
+  ];
+  const itemIds = new Set(items.map((item) => item.id));
+  const rawPositions = isRecord(value.positions) ? value.positions : {};
+  const positions = Object.fromEntries(items.map((item) => [
+    item.id,
+    normalizePosition(rawPositions[item.id], defaultState.positions[item.id] ?? { x: 44, y: 44 }),
+  ]));
+  const connections = Array.isArray(value.connections)
+    ? value.connections
+      .map((connection) => normalizeConnection(connection, itemIds))
+      .filter((connection): connection is CanvasCardConnection => connection !== null)
+    : [];
+
+  return {
+    items,
+    positions,
+    connections,
+    activeFilter: isCanvasFilter(value.activeFilter) ? value.activeFilter : 'all',
+  };
+}
+
+function loadCanvasState(): CanvasState {
+  if (typeof window === 'undefined') return createDefaultCanvasState();
+
+  try {
+    const stored = window.localStorage.getItem(TASK_CANVAS_STORAGE_KEY);
+    if (!stored) return createDefaultCanvasState();
+    return normalizeCanvasState(JSON.parse(stored)) ?? createDefaultCanvasState();
+  } catch {
+    return createDefaultCanvasState();
+  }
+}
+
+function saveCanvasState(state: CanvasState) {
+  if (typeof window === 'undefined') return;
+
+  const snapshot: PersistedCanvasSnapshot = {
+    version: TASK_CANVAS_STORAGE_VERSION,
+    items: state.items,
+    positions: state.positions,
+    connections: state.connections,
+    activeFilter: state.activeFilter,
+    updatedAt: new Date().toISOString(),
+  };
+
+  try {
+    window.localStorage.setItem(TASK_CANVAS_STORAGE_KEY, JSON.stringify(snapshot));
+  } catch {
+    // A Mesa continua funcional mesmo quando o navegador bloqueia storage.
+  }
+}
+
+function clearCanvasState() {
+  if (typeof window === 'undefined') return;
+
+  try {
+    window.localStorage.removeItem(TASK_CANVAS_STORAGE_KEY);
+  } catch {
+    // Sem storage disponível, basta restaurar o estado em memória.
+  }
+}
+
 export function YopoyCentralDashboard({ theme }: Props) {
-  const [items, setItems] = useState<SmartCardItem[]>(() => MOCK_SMART_CARDS.map((item) => ({ ...item, tags: [...item.tags] })));
-  const [positions, setPositions] = useState<Record<string, CanvasCardPosition>>(() => createInitialPositions(MOCK_SMART_CARDS));
-  const [connections, setConnections] = useState<CanvasCardConnection[]>([]);
-  const [activeFilter, setActiveFilter] = useState<CanvasFilter>('all');
+  const initialCanvasState = useMemo(() => loadCanvasState(), []);
+  const [items, setItems] = useState<SmartCardItem[]>(() => initialCanvasState.items);
+  const [positions, setPositions] = useState<Record<string, CanvasCardPosition>>(() => initialCanvasState.positions);
+  const [connections, setConnections] = useState<CanvasCardConnection[]>(() => initialCanvasState.connections);
+  const [activeFilter, setActiveFilter] = useState<CanvasFilter>(() => initialCanvasState.activeFilter);
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
   const [connectionPointer, setConnectionPointer] = useState<CanvasCardPosition | null>(null);
-  const [feedback, setFeedback] = useState('Mesa local pronta: arraste os cards e conecte os pontos laterais. As alterações serão perdidas ao sair ou recarregar.');
+  const [feedback, setFeedback] = useState('Mesa local pronta: arraste os cards e conecte os pontos laterais. As alterações ficam salvas neste navegador, sem sincronização externa.');
   const canvasRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
   const connectionSourceRef = useRef<string | null>(null);
+  const hasHydratedRef = useRef(false);
+  const skipNextSaveRef = useRef(false);
   const dark = theme === 'dark';
 
   useEffect(() => () => {
     document.body.style.userSelect = '';
   }, []);
+
+  useEffect(() => {
+    if (!hasHydratedRef.current) {
+      hasHydratedRef.current = true;
+      return;
+    }
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+
+    saveCanvasState({ items, positions, connections, activeFilter });
+  }, [activeFilter, connections, items, positions]);
 
   const updateItem = (id: string, change: (item: SmartCardItem) => SmartCardItem, message: string) => {
     setItems((current) => current.map((item) => item.id === id ? change(item) : item));
@@ -160,7 +374,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     }
     dragRef.current = null;
     document.body.style.userSelect = '';
-    setFeedback('Posição do card atualizada somente nesta Mesa local.');
+    setFeedback('Posição do card salva neste navegador.');
   };
 
   const beginConnection = (event: ReactPointerEvent<HTMLButtonElement>, cardId: string) => {
@@ -190,7 +404,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
         setFeedback('Essa conexão já existe na Mesa.');
         return current;
       }
-      setFeedback('Conexão visual criada localmente entre os cards.');
+      setFeedback('Conexão visual criada e salva neste navegador.');
       return [...current, { id: `${fromId}->${targetId}`, fromId, toId: targetId }];
     });
     cancelConnection();
@@ -214,6 +428,17 @@ export function YopoyCentralDashboard({ theme }: Props) {
 
   const sourcePosition = connectionSourceId ? positions[connectionSourceId] : undefined;
 
+  const restoreDemonstration = () => {
+    const defaultState = createDefaultCanvasState();
+    clearCanvasState();
+    skipNextSaveRef.current = true;
+    setItems(defaultState.items);
+    setPositions(defaultState.positions);
+    setConnections(defaultState.connections);
+    setActiveFilter(defaultState.activeFilter);
+    setFeedback('Demonstração restaurada. Os dados locais da Mesa foram limpos.');
+  };
+
   return (
     <div className={`mx-auto w-full max-w-[1800px] space-y-5 ${dark ? 'text-white' : 'text-slate-900'}`}>
       <header className={`overflow-hidden rounded-3xl border p-4 sm:p-7 ${
@@ -234,8 +459,8 @@ export function YopoyCentralDashboard({ theme }: Props) {
           <div className={`rounded-2xl border p-3 text-xs leading-relaxed md:max-w-sm ${
             dark ? 'border-amber-700/40 bg-amber-950/30 text-amber-200' : 'border-amber-200 bg-amber-50 text-amber-800'
           }`}>
-            <strong className="block">Demonstração sem persistência</strong>
-            Posições, conexões e ações existem apenas nesta tela. Nenhum dado é enviado e nenhum documento fiscal é emitido.
+            <strong className="block">Demonstração salva localmente</strong>
+            Posições, conexões e ações ficam salvas neste navegador, sem sincronização externa. Pré-notas são visuais, sem valor fiscal.
           </div>
         </div>
       </header>
@@ -266,12 +491,21 @@ export function YopoyCentralDashboard({ theme }: Props) {
             <span className={`inline-flex items-center gap-1.5 text-xs ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
               <Link2 className="h-3.5 w-3.5" /> {connections.length} conexões
             </span>
+            <button
+              type="button"
+              onClick={restoreDemonstration}
+              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold ${
+                dark ? 'border-slate-700 text-slate-300 hover:border-indigo-500' : 'border-slate-200 text-slate-600 hover:border-indigo-300'
+              }`}
+            >
+              <RotateCcw className="h-3 w-3" /> Restaurar demonstração
+            </button>
             {connections.length > 0 && (
               <button
                 type="button"
                 onClick={() => {
                   setConnections([]);
-                  setFeedback('Todas as conexões visuais foram removidas.');
+                  setFeedback('Todas as conexões visuais foram removidas e a Mesa local foi atualizada.');
                 }}
                 className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold ${
                   dark ? 'border-slate-700 text-slate-300 hover:border-red-500' : 'border-slate-200 text-slate-600 hover:border-red-300'
@@ -385,7 +619,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
                   onArchiveToggle={(id) => updateItem(id, (current) => ({ ...current, archived: !current.archived }), item.archived ? 'Item desarquivado nesta demonstração.' : 'Item arquivado nesta demonstração.')}
                   onLink={(id) => updateItem(id, (current) => ({ ...current, linked: true, status: 'review' }), 'Vínculo de fallback registrado apenas neste card.')}
                   onSendToAccountant={(id) => updateItem(id, (current) => ({ ...current, sentToAccountant: true }), 'Card separado localmente para o contador. Nenhum dado foi enviado.')}
-                  onCreatePreInvoice={(id) => updateItem(id, (current) => ({ ...current, hasPreInvoice: true, status: 'review' }), 'Preparação visual adicionada. Nenhum documento fiscal foi criado ou emitido.')}
+                  onCreatePreInvoice={(id) => updateItem(id, (current) => ({ ...current, hasPreInvoice: true, status: 'review' }), 'Pré-nota visual adicionada sem valor fiscal. Nenhum documento fiscal foi criado ou emitido.')}
                 />
               </div>
             );

@@ -1,19 +1,12 @@
 import { useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
-  ArrowLeft,
-  ArrowRight,
-  Archive,
-  ArchiveRestore,
   Boxes,
   Camera,
-  Check,
   CreditCard,
   FileClock,
   FileText,
-  FolderCheck,
   ListChecks,
   Link2,
-  PackageOpen,
   PackageCheck,
   Receipt,
   ShoppingBag,
@@ -25,13 +18,8 @@ import { SmartCardItem, SmartCardKind } from './types';
 interface SmartCardProps {
   item: SmartCardItem;
   theme: 'light' | 'dark';
-  onMoveNext: (id: string) => void;
-  onMovePrevious: (id: string) => void;
-  onMarkResolved: (id: string) => void;
-  onArchiveToggle: (id: string) => void;
-  onLink: (id: string) => void;
-  onSendToAccountant: (id: string) => void;
-  onCreatePreInvoice: (id: string) => void;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
   onDragPointerDown?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
   onDragPointerMove?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
   onDragPointerUp?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
@@ -81,13 +69,8 @@ function KindIcon({ kind }: { kind: SmartCardKind }) {
 export function SmartCard({
   item,
   theme,
-  onMoveNext,
-  onMovePrevious,
-  onMarkResolved,
-  onArchiveToggle,
-  onLink,
-  onSendToAccountant,
-  onCreatePreInvoice,
+  isSelected = false,
+  onSelect,
   onDragPointerDown,
   onDragPointerMove,
   onDragPointerUp,
@@ -98,27 +81,38 @@ export function SmartCard({
 }: SmartCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const dark = theme === 'dark';
-  const canLink = (item.kind === 'payment' || item.kind === 'sale') && !item.linked;
-  const canCreatePreInvoice = (item.kind === 'sale' || item.kind === 'invoice-draft') && !item.hasPreInvoice;
-  const canSendToAccountant = ['sale', 'expense', 'invoice-draft', 'pre-invoice', 'accountant-package'].includes(item.kind)
-    && !item.sentToAccountant;
-  const canMovePrevious = item.status !== 'new' && item.status !== 'resolved';
-  const canMoveNext = item.status !== 'resolved';
   const actionClass = `inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-center text-xs font-bold transition-colors sm:min-h-9 sm:w-auto sm:rounded-lg sm:px-2.5 sm:py-1.5 sm:text-[11px] ${
     dark
       ? 'border-slate-700 bg-slate-900 text-slate-200 hover:border-indigo-500 hover:text-white'
       : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300 hover:text-indigo-700'
   }`;
+  const selectCard = (event: ReactPointerEvent<HTMLElement>) => {
+    if ((event.target as HTMLElement).closest('[data-no-card-drag]')) return;
+    onSelect?.(item.id);
+  };
 
   return (
     <article
       data-card-id={item.id}
-      onPointerDown={(event) => onDragPointerDown?.(event, item.id)}
+      tabIndex={0}
+      aria-label={`Card ${item.title}`}
+      aria-current={isSelected ? 'true' : undefined}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
+        event.preventDefault();
+        onSelect?.(item.id);
+      }}
+      onPointerDown={(event) => {
+        selectCard(event);
+        onDragPointerDown?.(event, item.id);
+      }}
       onPointerMove={(event) => onDragPointerMove?.(event, item.id)}
       onPointerUp={(event) => onDragPointerUp?.(event, item.id)}
       onPointerCancel={(event) => onDragPointerUp?.(event, item.id)}
-      className={`relative h-full select-none rounded-2xl border p-4 shadow-lg transition-shadow ${
-      dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'
+      className={`relative h-full select-none rounded-2xl border p-4 shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+      isSelected
+        ? dark ? 'border-indigo-400 bg-[#151522] ring-2 ring-indigo-500/60' : 'border-indigo-500 bg-indigo-50/70 ring-2 ring-indigo-200'
+        : dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'
     } ${item.archived ? 'opacity-70' : ''} ${onDragPointerDown ? 'cursor-grab active:cursor-grabbing' : ''}`}
     >
       {onConnectionEnd && (
@@ -176,6 +170,11 @@ export function SmartCard({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0">
           <div className="mb-2 flex flex-wrap items-center gap-1.5">
+            {isSelected && (
+              <span className="rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+                Selecionado
+              </span>
+            )}
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-wide ${
               item.kind === 'ai-alert'
                 ? 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300'
@@ -191,6 +190,9 @@ export function SmartCard({
           <h3 className={`text-sm font-extrabold leading-snug ${dark ? 'text-slate-100' : 'text-slate-900'}`}>
             {item.title}
           </h3>
+          <p className={`mt-1 text-[11px] font-semibold ${dark ? 'text-slate-500' : 'text-slate-500'}`}>
+            Ficha operacional · {item.timeLabel}
+          </p>
         </div>
         {item.amount !== undefined && (
           <strong className={`shrink-0 text-base sm:text-sm ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>
@@ -212,6 +214,7 @@ export function SmartCard({
         {item.linked && <span className="rounded-md bg-sky-100 px-2 py-1 text-[10px] text-sky-700 dark:bg-sky-950 dark:text-sky-300">Vínculo visual</span>}
         {item.hasPreInvoice && <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Pré-nota visual</span>}
         {item.sentToAccountant && <span className="rounded-md bg-violet-100 px-2 py-1 text-[10px] text-violet-700 dark:bg-violet-950 dark:text-violet-300">Separado para contador</span>}
+        {item.linked && <span className="rounded-md bg-emerald-100 px-2 py-1 text-[10px] text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">Conciliável</span>}
         <span className={`basis-full pt-1 text-[10px] sm:ml-auto sm:basis-auto sm:pt-0 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{item.timeLabel}</span>
       </div>
 
@@ -237,55 +240,13 @@ export function SmartCard({
             <div><dt className="font-bold">Etapa atual</dt><dd>{item.archived ? 'Arquivado' : STATUS_LABELS[item.status]}</dd></div>
             <div><dt className="font-bold">Origem</dt><dd>{KIND_LABELS[item.kind]}</dd></div>
           </dl>
-          <p className="mt-2">Arraste o card livremente pela mesa ou use estas ações como alternativa.</p>
+          <p className="mt-2">Arraste o card livremente pela mesa. As ações operacionais ficam no painel do card selecionado.</p>
         </div>
       )}
 
       <p className={`mt-3 text-[10px] font-semibold ${dark ? 'text-amber-300/80' : 'text-amber-700'}`}>
         Exemplo fictício · ações locais, sem operação externa
       </p>
-
-      <div data-no-card-drag className={`mt-4 rounded-xl border border-dashed p-2 ${dark ? 'border-slate-800' : 'border-slate-200'}`}>
-        <p className={`mb-2 text-[9px] font-black uppercase tracking-wider ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
-          Ações alternativas
-        </p>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
-        {!item.archived && canMovePrevious && (
-          <button type="button" className={actionClass} onClick={() => onMovePrevious(item.id)}>
-            <ArrowLeft className="h-3.5 w-3.5" /> Voltar etapa
-          </button>
-        )}
-        {!item.archived && canMoveNext && (
-          <button type="button" className={actionClass} onClick={() => onMoveNext(item.id)}>
-            <ArrowRight className="h-3.5 w-3.5" /> Avançar etapa
-          </button>
-        )}
-        {!item.archived && item.status !== 'resolved' && (
-          <button type="button" className={actionClass} onClick={() => onMarkResolved(item.id)}>
-            <Check className="h-3.5 w-3.5" /> Resolver / Pronto
-          </button>
-        )}
-        {!item.archived && canLink && (
-          <button type="button" className={actionClass} onClick={() => onLink(item.id)}>
-            <Link2 className="h-3.5 w-3.5" /> Simular vínculo
-          </button>
-        )}
-        {!item.archived && canCreatePreInvoice && (
-          <button type="button" className={actionClass} onClick={() => onCreatePreInvoice(item.id)}>
-            <FolderCheck className="h-3.5 w-3.5" /> Preparar pré-nota visual
-          </button>
-        )}
-        {!item.archived && canSendToAccountant && (
-          <button type="button" className={actionClass} onClick={() => onSendToAccountant(item.id)}>
-            <PackageOpen className="h-3.5 w-3.5" /> Separar contador
-          </button>
-        )}
-        <button type="button" className={actionClass} onClick={() => onArchiveToggle(item.id)}>
-          {item.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
-          {item.archived ? 'Desarquivar' : 'Arquivar'}
-        </button>
-        </div>
-      </div>
     </article>
   );
 }

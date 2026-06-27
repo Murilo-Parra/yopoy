@@ -17,11 +17,16 @@ interface StoredTaskCanvasSnapshot {
 }
 
 function getCaptureCard() {
-  return screen.getByRole('heading', { name: /foto de comprovante/i }).closest('article') as HTMLElement;
+  return within(screen.getByTestId('canvas-node-mock-capture-01')).getByRole('heading', { name: /foto de comprovante/i }).closest('article') as HTMLElement;
 }
 
 function getPaymentCard() {
-  return screen.getByRole('heading', { name: /pix recebido/i }).closest('article') as HTMLElement;
+  return within(screen.getByTestId('canvas-node-mock-payment-01')).getByRole('heading', { name: /comprovante pix/i }).closest('article') as HTMLElement;
+}
+
+function selectCard(card: HTMLElement) {
+  fireEvent.pointerDown(card, { pointerId: 91, button: 0, clientX: 100, clientY: 100 });
+  fireEvent.pointerUp(card, { pointerId: 91, clientX: 100, clientY: 100 });
 }
 
 function readStoredSnapshot(): StoredTaskCanvasSnapshot {
@@ -70,7 +75,7 @@ function createQuickCard(values: {
 
 function connectCaptureToPayment() {
   const source = screen.getByRole('button', { name: /iniciar conexão de foto de comprovante/i });
-  const target = screen.getByRole('button', { name: /conectar em pix recebido/i });
+  const target = screen.getByRole('button', { name: /conectar em comprovante pix/i });
   fireEvent.pointerDown(source, { pointerId: 9, button: 0, clientX: 1144, clientY: 112 });
   fireEvent.pointerMove(screen.getByTestId('task-canvas'), { pointerId: 9, clientX: 430, clientY: 700 });
   fireEvent.pointerUp(target, { pointerId: 9, clientX: 434, clientY: 682 });
@@ -117,14 +122,16 @@ describe('YopoyCentralDashboard', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renderiza um canvas livre com mocks quando não há snapshot e mantém botões como fallback', () => {
+  it('renderiza um canvas livre com mocks e ações no painel contextual', () => {
     render(<YopoyCentralDashboard theme="light" />);
 
     expect(screen.getByRole('heading', { name: /mesa visual/i })).toBeTruthy();
     expect(screen.getByText(/comece pela mesa/i)).toBeTruthy();
     expect(screen.getByTestId('task-canvas')).toBeTruthy();
     expect(within(getCaptureCard()).getByText(/^novo$/i)).toBeTruthy();
-    expect(within(getCaptureCard()).getByText(/ações alternativas/i)).toBeTruthy();
+    expect(within(getCaptureCard()).getByText(/ficha operacional/i)).toBeTruthy();
+    expect(within(getCaptureCard()).queryByText(/ações alternativas/i)).toBeNull();
+    expect(screen.getByText(/nenhum card selecionado/i)).toBeTruthy();
     expect(screen.getByText(/demonstração salva localmente/i)).toBeTruthy();
     expect(screen.getAllByText(/salvas neste navegador/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/sem sincronização externa/i).length).toBeGreaterThan(0);
@@ -139,7 +146,11 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getAllByText(/revise antes de compartilhar manualmente com o contador/i).length).toBeGreaterThan(0);
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
 
-    fireEvent.click(within(getCaptureCard()).getByRole('button', { name: /avançar etapa/i }));
+    selectCard(getCaptureCard());
+    expect(within(getCaptureCard()).getByText(/selecionado/i)).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: /foto de comprovante pix/i }).length).toBeGreaterThan(0);
+    expect(screen.getByText(/ações do card selecionado/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /avançar para pendente/i }));
     expect(within(getCaptureCard()).getByText(/^pendente$/i)).toBeTruthy();
     expect(document.querySelector('[draggable="true"]')).toBeNull();
     expect(screen.getByText(/no celular: arraste pelo corpo do card/i)).toBeTruthy();
@@ -192,7 +203,7 @@ describe('YopoyCentralDashboard', () => {
     });
 
     expect(screen.getByText(/card criado e salvo neste navegador/i)).toBeTruthy();
-    expect(screen.getByRole('heading', { name: /venda interna balcão/i })).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: /venda interna balcão/i }).length).toBeGreaterThan(0);
     expect(screen.getByTestId('canvas-node-local-1771771771000-4fzyo8')).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalled();
 
@@ -221,11 +232,12 @@ describe('YopoyCentralDashboard', () => {
     vi.stubGlobal('fetch', fetchSpy);
     writeSnapshotWithAccountantPackageMockAsPending();
     render(<YopoyCentralDashboard theme="light" />);
-    const saleCard = screen.getByRole('heading', { name: /venda balcão #ex-104/i }).closest('article') as HTMLElement;
+    const saleCard = screen.getByRole('heading', { name: /comanda mesa 1/i }).closest('article') as HTMLElement;
 
-    fireEvent.click(within(saleCard).getByRole('button', { name: /separar contador/i }));
+    selectCard(saleCard);
+    fireEvent.click(screen.getByRole('button', { name: /separar para contador/i }));
 
-    expect(screen.getByText(/card separado localmente para o contador\. nenhum dado foi enviado/i)).toBeTruthy();
+    expect(screen.getByText(/card separado localmente para o contador\. nenhum dado saiu do navegador/i)).toBeTruthy();
     expect(screen.getByTestId('accountant-package-item-mock-sale-01')).toBeTruthy();
     expect(within(screen.getByTestId('accountant-package-item-mock-sale-01')).getByText(/venda interna · pendente/i)).toBeTruthy();
     const packageContentDetails = screen.getByText(/resumo local visível e cards separados/i).closest('details') as HTMLDetailsElement;
@@ -412,7 +424,7 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getByRole('heading', { name: /recebimento local/i })).toBeTruthy();
     expect(screen.getByRole('heading', { name: /captura anotação local/i })).toBeTruthy();
     expect(screen.getByRole('heading', { name: /pendência local/i })).toBeTruthy();
-    expect(screen.getByRole('heading', { name: /pré-nota interna local/i })).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: /pré-nota interna local/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/pré-nota visual/i).length).toBeGreaterThan(0);
 
     await waitFor(() => {
@@ -463,7 +475,7 @@ describe('YopoyCentralDashboard', () => {
   it('conecta dois cards pelos conectores, desenha uma linha SVG e salva a conexão', async () => {
     render(<YopoyCentralDashboard theme="dark" />);
     const source = screen.getByRole('button', { name: /iniciar conexão de foto de comprovante/i });
-    const target = screen.getByRole('button', { name: /conectar em pix recebido/i });
+    const target = screen.getByRole('button', { name: /conectar em comprovante pix/i });
     expect(source.className).toContain('h-11');
     expect(target.className).toContain('h-11');
 
@@ -500,6 +512,22 @@ describe('YopoyCentralDashboard', () => {
     await waitFor(() => expect(readStoredSnapshot().connections).toHaveLength(0));
   });
 
+  it('mostra título, tipo, valor, status e vínculos no painel contextual do card selecionado', () => {
+    render(<YopoyCentralDashboard theme="light" />);
+
+    connectCaptureToPayment();
+    selectCard(getCaptureCard());
+
+    const panel = screen.getByLabelText(/painel contextual do card/i);
+    expect(within(panel).getByRole('heading', { name: /foto de comprovante pix/i })).toBeTruthy();
+    expect(within(panel).getByText(/^captura$/i)).toBeTruthy();
+    expect(within(panel).getByText(/^novo$/i)).toBeTruthy();
+    expect(within(panel).getAllByText(/R\$\s*45,00/i).length).toBeGreaterThan(0);
+    expect(within(panel).getByText(/imagem registrada rapidamente/i)).toBeTruthy();
+    expect(within(panel).getByText(/vínculos relacionados/i)).toBeTruthy();
+    expect(within(panel).getByText(/comprovante pix.*visual/i)).toBeTruthy();
+  });
+
   it('lista vínculo visual, marca como conciliado, persiste e restaura o estado conciliado', async () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
@@ -516,7 +544,7 @@ describe('YopoyCentralDashboard', () => {
     expect(visualLinksDetails?.open).toBe(false);
     expect(screen.getByRole('heading', { name: /vínculos visuais/i })).toBeTruthy();
     expect(within(summary).getByText(/foto de comprovante/i)).toBeTruthy();
-    expect(within(summary).getByText(/pix recebido/i)).toBeTruthy();
+    expect(within(summary).getByText(/comprovante pix/i)).toBeTruthy();
     expect(within(summary).getAllByText(/^visual$/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/conciliação visual local/i)).toBeTruthy();
     expect(screen.getByText(/não altera financeiro real/i)).toBeTruthy();
@@ -560,7 +588,7 @@ describe('YopoyCentralDashboard', () => {
     createQuickCard({ type: 'sale', title: 'Venda interna para conciliar', amount: '48,90' });
 
     const source = screen.getByRole('button', { name: /iniciar conexão de venda interna para conciliar/i });
-    const target = screen.getByRole('button', { name: /conectar em pix recebido/i });
+    const target = screen.getByRole('button', { name: /conectar em comprovante pix/i });
     fireEvent.pointerDown(source, { pointerId: 14, button: 0, clientX: 120, clientY: 120 });
     fireEvent.pointerUp(target, { pointerId: 14, clientX: 434, clientY: 682 });
     fireEvent.click(screen.getByRole('button', { name: /marcar conciliado/i }));
@@ -669,7 +697,7 @@ describe('YopoyCentralDashboard', () => {
   it('conclui conexão por coordenadas quando o toque fica capturado na origem', () => {
     render(<YopoyCentralDashboard theme="light" />);
     const source = screen.getByRole('button', { name: /iniciar conexão de foto de comprovante/i });
-    const target = screen.getByRole('button', { name: /conectar em pix recebido/i });
+    const target = screen.getByRole('button', { name: /conectar em comprovante pix/i });
     Object.defineProperty(document, 'elementFromPoint', { configurable: true, value: vi.fn(() => target) });
 
     fireEvent.pointerDown(source, { pointerId: 12, button: 0, clientX: 1144, clientY: 112 });
@@ -694,27 +722,34 @@ describe('YopoyCentralDashboard', () => {
 
   it('salva estado do card e filtro ativo no localStorage', async () => {
     render(<YopoyCentralDashboard theme="light" />);
-    fireEvent.click(within(getCaptureCard()).getByRole('button', { name: /avançar etapa/i }));
+    selectCard(getCaptureCard());
+    fireEvent.click(screen.getByRole('button', { name: /avançar para pendente/i }));
 
     await waitFor(() => {
       const savedCard = readStoredSnapshot().items.find((item) => item.id === 'mock-capture-01');
       expect(savedCard?.status).toBe('pending');
     });
 
-    fireEvent.click(within(getCaptureCard()).getByRole('button', { name: /resolver \/ pronto/i }));
+    fireEvent.click(screen.getByRole('button', { name: /resolver \/ pronto/i }));
     await waitFor(() => {
       const savedCard = readStoredSnapshot().items.find((item) => item.id === 'mock-capture-01');
       expect(savedCard?.status).toBe('resolved');
     });
 
-    fireEvent.click(within(getCaptureCard()).getByRole('button', { name: /^arquivar$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^arquivar$/i }));
     await waitFor(() => {
-      const savedCard = readStoredSnapshot().items.find((item) => item.id === 'mock-capture-01');
+      const snapshot = readStoredSnapshot();
+      const savedCard = snapshot.items.find((item) => item.id === 'mock-capture-01');
       expect(savedCard?.archived).toBe(true);
+      expect(JSON.stringify(snapshot)).not.toMatch(/selectedCardId/i);
     });
 
     fireEvent.click(screen.getByRole('button', { name: /arquivados/i }));
     await waitFor(() => expect(readStoredSnapshot().activeFilter).toBe('archived'));
+
+    cleanup();
+    render(<YopoyCentralDashboard theme="light" />);
+    expect(screen.getByText(/nenhum card selecionado/i)).toBeTruthy();
   });
 
   it('restaura snapshot salvo ao renderizar novamente', () => {
@@ -820,9 +855,10 @@ describe('YopoyCentralDashboard', () => {
     window.localStorage.setItem('yopoy:outra-chave', 'preservar');
     render(<YopoyCentralDashboard theme="light" />);
     createQuickCard({ type: 'capture', title: 'Card local para remover' });
-    fireEvent.click(within(getCaptureCard()).getByRole('button', { name: /avançar etapa/i }));
+    selectCard(getCaptureCard());
+    fireEvent.click(screen.getByRole('button', { name: /avançar para pendente/i }));
     await waitFor(() => expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull());
-    expect(screen.getByRole('heading', { name: /card local para remover/i })).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: /card local para remover/i }).length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: /restaurar demonstração/i }));
 
@@ -837,9 +873,10 @@ describe('YopoyCentralDashboard', () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
     render(<YopoyCentralDashboard theme="light" />);
-    const saleCard = screen.getByRole('heading', { name: /venda balcão #ex-104/i }).closest('article') as HTMLElement;
+    const saleCard = screen.getByRole('heading', { name: /comanda mesa 1/i }).closest('article') as HTMLElement;
 
-    fireEvent.click(within(saleCard).getByRole('button', { name: /preparar pré-nota/i }));
+    selectCard(saleCard);
+    fireEvent.click(screen.getByRole('button', { name: /preparar pré-nota/i }));
 
     expect(screen.getByText(/pré-nota visual adicionada sem valor fiscal/i)).toBeTruthy();
     expect(fetchSpy).not.toHaveBeenCalled();

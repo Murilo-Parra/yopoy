@@ -14,22 +14,18 @@ const ITEM: SmartCardItem = {
   timeLabel: 'agora',
   status: 'review',
   archived: false,
-  linked: false,
-  hasPreInvoice: false,
-  tags: ['Teste'],
+  linked: true,
+  hasPreInvoice: true,
+  sentToAccountant: true,
+  tags: ['Teste', 'Balcão'],
 };
 
-function renderCard() {
+function renderCard(overrides: Partial<React.ComponentProps<typeof SmartCard>> = {}) {
   const handlers = {
-    onMoveNext: vi.fn(),
-    onMovePrevious: vi.fn(),
-    onMarkResolved: vi.fn(),
-    onArchiveToggle: vi.fn(),
-    onLink: vi.fn(),
-    onSendToAccountant: vi.fn(),
-    onCreatePreInvoice: vi.fn(),
+    onSelect: vi.fn(),
+    onDragPointerDown: vi.fn(),
   };
-  render(<SmartCard item={ITEM} theme="light" {...handlers} />);
+  render(<SmartCard item={ITEM} theme="light" {...handlers} {...overrides} />);
   return handlers;
 }
 
@@ -40,28 +36,48 @@ describe('SmartCard', () => {
     renderCard();
     const openButton = screen.getByRole('button', { name: /abrir detalhes/i });
     fireEvent.click(openButton);
-    expect(screen.getByText(/arraste o card livremente/i)).toBeTruthy();
+    expect(screen.getByText(/ações operacionais ficam no painel/i)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /fechar detalhes/i }));
-    expect(screen.queryByText(/arraste o card livremente/i)).toBeNull();
+    expect(screen.queryByText(/ações operacionais ficam no painel/i)).toBeNull();
   });
 
-  it('expõe ações completas sem drag and drop', () => {
+  it('mostra informações úteis de relance e mantém ações fora do card', () => {
+    renderCard({ isSelected: true });
+
+    expect(screen.getAllByText(/venda/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole('heading', { name: /venda de teste/i })).toBeTruthy();
+    expect(screen.getByText(/venda local aguardando organização/i)).toBeTruthy();
+    expect(screen.getByText(/R\$\s*120,00/i)).toBeTruthy();
+    expect(screen.getByText(/em revisão/i)).toBeTruthy();
+    expect(screen.getAllByText(/teste/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/balcão/i)).toBeTruthy();
+    expect(screen.getByText(/pré-nota visual/i)).toBeTruthy();
+    expect(screen.getByText(/separado para contador/i)).toBeTruthy();
+    expect(screen.getByText(/vínculo visual/i)).toBeTruthy();
+    expect(screen.getByText(/selecionado/i)).toBeTruthy();
+    expect(screen.queryByText(/ações alternativas/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /preparar pré-nota/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /separar contador/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^arquivar$/i })).toBeNull();
+  });
+
+  it('seleciona pelo corpo do card sem remover o fallback de drag', () => {
+    const handlers = renderCard();
+    const card = screen.getByLabelText(/card venda de teste/i);
+
+    fireEvent.pointerDown(card, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
+
+    expect(handlers.onSelect).toHaveBeenCalledWith(ITEM.id);
+    expect(handlers.onDragPointerDown).toHaveBeenCalledWith(expect.any(Object), ITEM.id);
+    expect(document.querySelector('[draggable="true"]')).toBeNull();
+  });
+
+  it('não seleciona pelo botão de detalhes e mantém o evento marcado para o guard de drag', () => {
     const handlers = renderCard();
 
-    fireEvent.click(screen.getByRole('button', { name: /avançar etapa/i }));
-    fireEvent.click(screen.getByRole('button', { name: /voltar etapa/i }));
-    fireEvent.click(screen.getByRole('button', { name: /resolver \/ pronto/i }));
-    fireEvent.click(screen.getByRole('button', { name: /^arquivar$/i }));
-    fireEvent.click(screen.getByRole('button', { name: /separar contador/i }));
-    fireEvent.click(screen.getByRole('button', { name: /preparar pré-nota/i }));
+    fireEvent.pointerDown(screen.getByRole('button', { name: /abrir detalhes/i }), { pointerId: 2, button: 0 });
 
-    expect(handlers.onMoveNext).toHaveBeenCalledWith(ITEM.id);
-    expect(handlers.onMovePrevious).toHaveBeenCalledWith(ITEM.id);
-    expect(handlers.onMarkResolved).toHaveBeenCalledWith(ITEM.id);
-    expect(handlers.onArchiveToggle).toHaveBeenCalledWith(ITEM.id);
-    expect(handlers.onSendToAccountant).toHaveBeenCalledWith(ITEM.id);
-    expect(handlers.onCreatePreInvoice).toHaveBeenCalledWith(ITEM.id);
-    expect(document.querySelector('[draggable="true"]')).toBeNull();
-    expect(screen.getByText(/ações alternativas/i)).toBeTruthy();
+    expect(handlers.onSelect).not.toHaveBeenCalled();
+    expect(handlers.onDragPointerDown).toHaveBeenCalledWith(expect.any(Object), ITEM.id);
   });
 });

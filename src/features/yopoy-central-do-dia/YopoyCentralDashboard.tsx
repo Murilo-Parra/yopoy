@@ -7,7 +7,23 @@ import {
   type FormEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
-import { Clipboard, Link2, MousePointer2, PackageCheck, Plus, RotateCcw, Sparkles, Trash2, X } from 'lucide-react';
+import {
+  Archive,
+  ArchiveRestore,
+  ArrowRight,
+  Check,
+  Clipboard,
+  FolderCheck,
+  Link2,
+  MousePointer2,
+  PackageCheck,
+  PackageOpen,
+  Plus,
+  RotateCcw,
+  Sparkles,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { MOCK_SMART_CARDS } from './mockData';
 import { SmartCard } from './SmartCard';
 import {
@@ -79,6 +95,27 @@ const PACKAGE_KIND_LABELS: Record<SmartCardKind, string> = {
 };
 
 const PACKAGE_STATUS_LABELS: Record<SmartCardStatus, string> = {
+  new: 'Novo',
+  pending: 'Pendente',
+  review: 'Em revisão',
+  ready: 'Pronto',
+  resolved: 'Resolvido',
+};
+
+const CARD_KIND_LABELS: Record<SmartCardKind, string> = {
+  capture: 'Captura',
+  sale: 'Venda',
+  payment: 'Pagamento',
+  expense: 'Despesa',
+  stock: 'Produto / estoque',
+  'invoice-draft': 'Rascunho sem valor fiscal',
+  'pre-invoice': 'Pré-nota visual',
+  'accountant-package': 'Pacote do contador',
+  pending: 'Pendência',
+  'ai-alert': 'Alerta de IA',
+};
+
+const CARD_STATUS_LABELS: Record<SmartCardStatus, string> = {
   new: 'Novo',
   pending: 'Pendente',
   review: 'Em revisão',
@@ -448,6 +485,15 @@ function formatAccountantPackageText(items: SmartCardItem[], connections: Canvas
   ].join('\n');
 }
 
+function getNextStatus(status: SmartCardStatus) {
+  const currentIndex = SMART_CARD_STATUS_FLOW.indexOf(status);
+  return SMART_CARD_STATUS_FLOW[Math.min(currentIndex + 1, SMART_CARD_STATUS_FLOW.length - 1)];
+}
+
+function getCardConnections(cardId: string, connections: CanvasCardConnection[]) {
+  return connections.filter((connection) => connection.fromId === cardId || connection.toId === cardId);
+}
+
 export function YopoyCentralDashboard({ theme }: Props) {
   const quickRegistrationTitleId = useId();
   const initialCanvasState = useMemo(() => loadCanvasState(), []);
@@ -464,6 +510,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const [quickFormError, setQuickFormError] = useState('');
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
   const [connectionPointer, setConnectionPointer] = useState<CanvasCardPosition | null>(null);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('Mesa local pronta: arraste os cards e conecte os pontos laterais. As alterações ficam salvas neste navegador, sem sincronização externa.');
   const canvasRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -496,9 +543,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
   };
 
   const moveNext = (id: string) => updateItem(id, (item) => {
-    const currentIndex = SMART_CARD_STATUS_FLOW.indexOf(item.status);
-    const nextStatus = SMART_CARD_STATUS_FLOW[Math.min(currentIndex + 1, SMART_CARD_STATUS_FLOW.length - 1)];
-    return { ...item, status: nextStatus };
+    return { ...item, status: getNextStatus(item.status) };
   }, 'Card avançou uma etapa nesta demonstração.');
 
   const movePrevious = (id: string) => updateItem(id, (item) => {
@@ -567,6 +612,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setItems((current) => [item, ...current]);
     setPositions((current) => ({ ...current, [item.id]: position }));
     setActiveFilter('all');
+    setSelectedCardId(item.id);
     resetQuickRegistrationForm();
     setQuickRegistrationOpen(false);
     setFeedback('Card criado e salvo neste navegador.');
@@ -580,6 +626,11 @@ export function YopoyCentralDashboard({ theme }: Props) {
 
   const visibleItemIds = useMemo(() => new Set(visibleItems.map((item) => item.id)), [visibleItems]);
   const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
+  const selectedCard = selectedCardId ? itemsById.get(selectedCardId) ?? null : null;
+  const selectedCardConnections = useMemo(
+    () => selectedCardId ? getCardConnections(selectedCardId, connections) : [],
+    [connections, selectedCardId],
+  );
   const accountantPackageItems = useMemo(() => getAccountantPackageItems(items), [items]);
   const accountantPackageSummaryText = useMemo(
     () => formatAccountantPackageText(items, connections),
@@ -759,6 +810,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setPositions(defaultState.positions);
     setConnections(defaultState.connections);
     setActiveFilter(defaultState.activeFilter);
+    setSelectedCardId(null);
     setFeedback('Demonstração restaurada. Os dados locais da Mesa foram limpos.');
   };
 
@@ -1075,6 +1127,191 @@ export function YopoyCentralDashboard({ theme }: Props) {
         </p>
       </section>
 
+      <section
+        aria-label="Painel contextual do card"
+        className={`rounded-2xl border p-3 sm:p-4 ${dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'}`}
+      >
+        {selectedCard ? (
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,460px)]">
+            <div className="min-w-0">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                    dark ? 'bg-indigo-950 text-indigo-300' : 'bg-indigo-100 text-indigo-700'
+                  }`}>
+                    {CARD_KIND_LABELS[selectedCard.kind]}
+                  </span>
+                  <h2 className={`mt-2 break-words text-lg font-black ${dark ? 'text-slate-100' : 'text-slate-900'}`}>
+                    {selectedCard.title}
+                  </h2>
+                  <p className={`mt-1 text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    {selectedCard.description}
+                  </p>
+                </div>
+                {typeof selectedCard.amount === 'number' && Number.isFinite(selectedCard.amount) && (
+                  <strong className={`text-base ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                    {formatCurrencyBRL(selectedCard.amount)}
+                  </strong>
+                )}
+              </div>
+
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
+                  <dt className={dark ? 'text-slate-400' : 'text-slate-500'}>Status</dt>
+                  <dd className="mt-1 font-extrabold">{selectedCard.archived ? 'Arquivado' : CARD_STATUS_LABELS[selectedCard.status]}</dd>
+                </div>
+                <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
+                  <dt className={dark ? 'text-slate-400' : 'text-slate-500'}>Pré-nota</dt>
+                  <dd className="mt-1 font-extrabold">{selectedCard.hasPreInvoice ? 'Preparada' : 'Não preparada'}</dd>
+                </div>
+                <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
+                  <dt className={dark ? 'text-slate-400' : 'text-slate-500'}>Contador</dt>
+                  <dd className="mt-1 font-extrabold">{selectedCard.sentToAccountant ? 'Separado' : 'Não separado'}</dd>
+                </div>
+                <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
+                  <dt className={dark ? 'text-slate-400' : 'text-slate-500'}>Vínculos</dt>
+                  <dd className="mt-1 font-extrabold">{selectedCardConnections.length}</dd>
+                </div>
+              </dl>
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {selectedCard.tags.map((tag) => (
+                  <span key={tag} className={`rounded-md px-2 py-1 text-[10px] ${dark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
+                    {tag}
+                  </span>
+                ))}
+                {selectedCard.hasPreInvoice && (
+                  <>
+                    <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Pré-nota visual preparada</span>
+                    <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Sem valor fiscal</span>
+                  </>
+                )}
+                {selectedCard.sentToAccountant && (
+                  <span className="rounded-md bg-violet-100 px-2 py-1 text-[10px] text-violet-700 dark:bg-violet-950 dark:text-violet-300">Separado para contador</span>
+                )}
+                {selectedCard.linked && (
+                  <span className="rounded-md bg-sky-100 px-2 py-1 text-[10px] text-sky-700 dark:bg-sky-950 dark:text-sky-300">Vínculo visual</span>
+                )}
+              </div>
+
+              <div className={`mt-3 rounded-xl border p-3 text-xs ${dark ? 'border-slate-800 bg-slate-950/50 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+                <p className="font-extrabold">Vínculos relacionados</p>
+                {selectedCardConnections.length === 0 ? (
+                  <p className="mt-1">Nenhum vínculo visual ligado a este card.</p>
+                ) : (
+                  <ul className="mt-2 space-y-1">
+                    {selectedCardConnections.map((connection) => {
+                      const otherId = connection.fromId === selectedCard.id ? connection.toId : connection.fromId;
+                      const other = itemsById.get(otherId);
+                      const status = connection.status === 'reconciled' ? 'conciliado' : 'visual';
+                      return (
+                        <li key={connection.id}>
+                          {other?.title ?? otherId} · {status}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div data-no-card-drag className={`rounded-xl border border-dashed p-3 ${dark ? 'border-slate-800 bg-slate-950/40' : 'border-slate-200 bg-slate-50'}`}>
+              <p className={`text-[10px] font-black uppercase tracking-wider ${dark ? 'text-slate-500' : 'text-slate-400'}`}>
+                Ações do card selecionado
+              </p>
+              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                {!selectedCard.archived && selectedCard.status !== 'resolved' && (
+                  <button
+                    type="button"
+                    onClick={() => moveNext(selectedCard.id)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-indigo-700"
+                  >
+                    <ArrowRight className="h-3.5 w-3.5" /> Avançar para {CARD_STATUS_LABELS[getNextStatus(selectedCard.status)]}
+                  </button>
+                )}
+                {!selectedCard.archived && selectedCard.status !== 'resolved' && (
+                  <button
+                    type="button"
+                    onClick={() => updateItem(selectedCard.id, (current) => ({ ...current, status: 'resolved' }), 'Card marcado como resolvido nesta demonstração.')}
+                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                      dark ? 'border-slate-700 text-slate-300 hover:border-emerald-500' : 'border-slate-200 text-slate-600 hover:border-emerald-300'
+                    }`}
+                  >
+                    <Check className="h-3.5 w-3.5" /> Resolver / Pronto
+                  </button>
+                )}
+                {!selectedCard.archived && (selectedCard.kind === 'sale' || selectedCard.kind === 'invoice-draft') && !selectedCard.hasPreInvoice && (
+                  <button
+                    type="button"
+                    onClick={() => updateItem(selectedCard.id, (current) => ({ ...current, hasPreInvoice: true, status: 'review' }), 'Pré-nota visual adicionada sem valor fiscal. Nenhum documento fiscal foi criado ou emitido.')}
+                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                      dark ? 'border-slate-700 text-slate-300 hover:border-amber-400' : 'border-slate-200 text-slate-600 hover:border-amber-300'
+                    }`}
+                  >
+                    <FolderCheck className="h-3.5 w-3.5" /> Preparar pré-nota visual
+                  </button>
+                )}
+                {!selectedCard.archived && ['sale', 'expense', 'invoice-draft', 'pre-invoice', 'accountant-package'].includes(selectedCard.kind) && !selectedCard.sentToAccountant && (
+                  <button
+                    type="button"
+                    onClick={() => updateItem(selectedCard.id, (current) => ({ ...current, sentToAccountant: true }), 'Card separado localmente para o contador. Nenhum dado saiu do navegador.')}
+                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                      dark ? 'border-slate-700 text-slate-300 hover:border-violet-500' : 'border-slate-200 text-slate-600 hover:border-violet-300'
+                    }`}
+                  >
+                    <PackageOpen className="h-3.5 w-3.5" /> Separar para contador
+                  </button>
+                )}
+                {!selectedCard.archived && (selectedCard.kind === 'payment' || selectedCard.kind === 'sale') && !selectedCard.linked && (
+                  <button
+                    type="button"
+                    onClick={() => updateItem(selectedCard.id, (current) => ({ ...current, linked: true, status: 'review' }), 'Vínculo de fallback registrado apenas neste card.')}
+                    className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                      dark ? 'border-slate-700 text-slate-300 hover:border-sky-500' : 'border-slate-200 text-slate-600 hover:border-sky-300'
+                    }`}
+                  >
+                    <Link2 className="h-3.5 w-3.5" /> Simular vínculo visual
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => updateItem(selectedCard.id, (current) => ({ ...current, archived: !current.archived }), selectedCard.archived ? 'Item desarquivado nesta demonstração.' : 'Item arquivado nesta demonstração.')}
+                  className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                    dark ? 'border-slate-700 text-slate-300 hover:border-red-500' : 'border-slate-200 text-slate-600 hover:border-red-300'
+                  }`}
+                >
+                  {selectedCard.archived ? <ArchiveRestore className="h-3.5 w-3.5" /> : <Archive className="h-3.5 w-3.5" />}
+                  {selectedCard.archived ? 'Desarquivar' : 'Arquivar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedCardId(null)}
+                  className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                    dark ? 'border-slate-700 text-slate-300 hover:border-indigo-500' : 'border-slate-200 text-slate-600 hover:border-indigo-300'
+                  }`}
+                >
+                  <X className="h-3.5 w-3.5" /> Limpar seleção
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className={`text-sm font-black ${dark ? 'text-slate-100' : 'text-slate-900'}`}>Nenhum card selecionado</h2>
+              <p className={`mt-1 text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                Toque em um card da Mesa para ver detalhes, vínculos e ações locais.
+              </p>
+            </div>
+            <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+              dark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-600'
+            }`}>
+              Seleção temporária
+            </span>
+          </div>
+        )}
+      </section>
+
       <div aria-live="polite" className={`rounded-xl border px-4 py-3 text-xs ${
         dark ? 'border-slate-800 bg-slate-900/60 text-slate-300' : 'border-slate-200 bg-white text-slate-600'
       }`}>
@@ -1276,6 +1513,8 @@ export function YopoyCentralDashboard({ theme }: Props) {
                 <SmartCard
                   item={item}
                   theme={theme}
+                  isSelected={selectedCardId === item.id}
+                  onSelect={setSelectedCardId}
                   onDragPointerDown={handleCardPointerDown}
                   onDragPointerMove={handleCardPointerMove}
                   onDragPointerUp={finishCardDrag}
@@ -1283,13 +1522,6 @@ export function YopoyCentralDashboard({ theme }: Props) {
                   onConnectionEnd={(_, targetId) => finishConnection(targetId)}
                   isConnecting={connectionSourceId === item.id}
                   canReceiveConnection={connectionSourceId !== null && connectionSourceId !== item.id}
-                  onMoveNext={moveNext}
-                  onMovePrevious={movePrevious}
-                  onMarkResolved={(id) => updateItem(id, (current) => ({ ...current, status: 'resolved' }), 'Card marcado como resolvido nesta demonstração.')}
-                  onArchiveToggle={(id) => updateItem(id, (current) => ({ ...current, archived: !current.archived }), item.archived ? 'Item desarquivado nesta demonstração.' : 'Item arquivado nesta demonstração.')}
-                  onLink={(id) => updateItem(id, (current) => ({ ...current, linked: true, status: 'review' }), 'Vínculo de fallback registrado apenas neste card.')}
-                  onSendToAccountant={(id) => updateItem(id, (current) => ({ ...current, sentToAccountant: true }), 'Card separado localmente para o contador. Nenhum dado foi enviado.')}
-                  onCreatePreInvoice={(id) => updateItem(id, (current) => ({ ...current, hasPreInvoice: true, status: 'review' }), 'Pré-nota visual adicionada sem valor fiscal. Nenhum documento fiscal foi criado ou emitido.')}
                 />
               </div>
             );

@@ -7,6 +7,7 @@ export type SmartCardKind =
   | 'invoice-draft'
   | 'pre-invoice'
   | 'accountant-package'
+  | 'folder'
   | 'pending'
   | 'ai-alert';
 
@@ -41,5 +42,6 @@ export interface SmartCardItem {
   linked: boolean;
   hasPreInvoice: boolean;
   sentToAccountant?: boolean;
+  parentFolderId?: string | null;
   tags: string[];
 }

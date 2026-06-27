@@ -5,6 +5,7 @@ import {
   CreditCard,
   FileClock,
   FileText,
+  Folder,
   ListChecks,
   Link2,
   PackageCheck,
@@ -19,6 +20,7 @@ interface SmartCardProps {
   item: SmartCardItem;
   theme: 'light' | 'dark';
   isSelected?: boolean;
+  folderItemsCount?: number;
   onSelect?: (id: string) => void;
   onDragPointerDown?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
   onDragPointerMove?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
@@ -38,6 +40,7 @@ const KIND_LABELS: Record<SmartCardKind, string> = {
   'invoice-draft': 'Rascunho sem valor fiscal',
   'pre-invoice': 'Pré-nota visual',
   'accountant-package': 'Pacote do contador',
+  folder: 'Pasta',
   pending: 'Pendência',
   'ai-alert': 'Alerta de IA',
 };
@@ -61,6 +64,7 @@ function KindIcon({ kind }: { kind: SmartCardKind }) {
     case 'invoice-draft': return <FileText className={iconClass} />;
     case 'pre-invoice': return <FileClock className={iconClass} />;
     case 'accountant-package': return <PackageCheck className={iconClass} />;
+    case 'folder': return <Folder className={iconClass} />;
     case 'pending': return <TriangleAlert className={iconClass} />;
     case 'ai-alert': return <Sparkles className={iconClass} />;
   }
@@ -70,6 +74,7 @@ export function SmartCard({
   item,
   theme,
   isSelected = false,
+  folderItemsCount,
   onSelect,
   onDragPointerDown,
   onDragPointerMove,
@@ -81,6 +86,7 @@ export function SmartCard({
 }: SmartCardProps) {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const dark = theme === 'dark';
+  const isFolder = item.kind === 'folder';
   const actionClass = `inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-center text-xs font-bold transition-colors sm:min-h-9 sm:w-auto sm:rounded-lg sm:px-2.5 sm:py-1.5 sm:text-[11px] ${
     dark
       ? 'border-slate-700 bg-slate-900 text-slate-200 hover:border-indigo-500 hover:text-white'
@@ -112,7 +118,9 @@ export function SmartCard({
       className={`relative h-full select-none rounded-2xl border p-4 shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
       isSelected
         ? dark ? 'border-indigo-400 bg-[#151522] ring-2 ring-indigo-500/60' : 'border-indigo-500 bg-indigo-50/70 ring-2 ring-indigo-200'
-        : dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'
+        : isFolder
+          ? dark ? 'border-amber-700/50 bg-amber-950/20' : 'border-amber-200 bg-amber-50/70'
+          : dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'
     } ${item.archived ? 'opacity-70' : ''} ${onDragPointerDown ? 'cursor-grab active:cursor-grabbing' : ''}`}
     >
       {onConnectionEnd && (
@@ -176,7 +184,9 @@ export function SmartCard({
               </span>
             )}
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-wide ${
-              item.kind === 'ai-alert'
+              item.kind === 'folder'
+                ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
+                : item.kind === 'ai-alert'
                 ? 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300'
                 : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
             }`}>
@@ -191,10 +201,10 @@ export function SmartCard({
             {item.title}
           </h3>
           <p className={`mt-1 text-[11px] font-semibold ${dark ? 'text-slate-500' : 'text-slate-500'}`}>
-            Ficha operacional · {item.timeLabel}
+            {isFolder ? 'Submesa local' : 'Ficha operacional'} · {item.timeLabel}
           </p>
         </div>
-        {item.amount !== undefined && (
+        {!isFolder && item.amount !== undefined && (
           <strong className={`shrink-0 text-base sm:text-sm ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>
             {item.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </strong>
@@ -202,7 +212,7 @@ export function SmartCard({
       </div>
 
       <p className={`mt-2 text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-600'}`}>
-        {item.description}
+        {isFolder ? `${folderItemsCount ?? 0} card(s) nesta pasta. Abrir pasta pelo painel contextual.` : item.description}
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -215,6 +225,7 @@ export function SmartCard({
         {item.hasPreInvoice && <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Pré-nota visual</span>}
         {item.sentToAccountant && <span className="rounded-md bg-violet-100 px-2 py-1 text-[10px] text-violet-700 dark:bg-violet-950 dark:text-violet-300">Separado para contador</span>}
         {item.linked && <span className="rounded-md bg-emerald-100 px-2 py-1 text-[10px] text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">Conciliável</span>}
+        {isFolder && <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Submesa local</span>}
         <span className={`basis-full pt-1 text-[10px] sm:ml-auto sm:basis-auto sm:pt-0 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{item.timeLabel}</span>
       </div>
 

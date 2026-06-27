@@ -73,6 +73,18 @@ function createQuickCard(values: {
   fireEvent.click(screen.getByRole('button', { name: /criar card/i }));
 }
 
+function createFolder(name: string) {
+  fireEvent.change(screen.getByLabelText(/^criar pasta$/i), { target: { value: name } });
+  fireEvent.click(screen.getByRole('button', { name: /^criar pasta$/i }));
+}
+
+function getFolderCard(name: RegExp) {
+  const folderHeading = screen.getAllByRole('heading', { name })
+    .find((heading) => heading.closest('article')?.dataset.cardId?.startsWith('folder-'));
+  expect(folderHeading).toBeTruthy();
+  return folderHeading?.closest('article') as HTMLElement;
+}
+
 function connectCaptureToPayment() {
   const source = screen.getByRole('button', { name: /iniciar conexão de foto de comprovante/i });
   const target = screen.getByRole('button', { name: /conectar em comprovante pix/i });
@@ -185,6 +197,114 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getByText('50%')).toBeTruthy();
     expect(screen.getByText(/visão ajustada ao conteúdo visível da mesa/i)).toBeTruthy();
     expect(scrollTo).toHaveBeenCalled();
+  });
+
+  it('cria pasta local, salva no snapshot e abre submesa vazia pelo painel', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1771771773000);
+    vi.spyOn(Math, 'random').mockReturnValue(0.345678);
+    render(<YopoyCentralDashboard theme="light" />);
+
+    expect(screen.getByLabelText(/^criar pasta$/i)).toBeTruthy();
+    expect(screen.getByText(/pastas são locais e servem para organizar cards/i)).toBeTruthy();
+
+    createFolder('Mesa 1');
+
+    expect(screen.getByText(/pasta criada localmente nesta mesa/i)).toBeTruthy();
+    const folderCard = getFolderCard(/^mesa 1$/i);
+    expect(within(folderCard).getAllByText(/submesa local/i).length).toBeGreaterThan(0);
+    expect(within(folderCard).getByText(/0 card\(s\) nesta pasta/i)).toBeTruthy();
+    expect(within(folderCard).queryByText(/R\$/i)).toBeNull();
+
+    await waitFor(() => {
+      const folder = readStoredSnapshot().items.find((item) => item.title === 'Mesa 1');
+      expect(folder?.id.startsWith('folder-1771771773000-')).toBe(true);
+      expect(folder?.kind).toBe('folder');
+      expect(folder?.parentFolderId).toBeNull();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /abrir pasta/i }));
+
+    expect(screen.getByRole('heading', { name: /submesa: mesa 1/i })).toBeTruthy();
+    expect(screen.getByText(/mesa principal \/ mesa 1/i)).toBeTruthy();
+    expect(screen.getByText(/esta pasta ainda está vazia/i)).toBeTruthy();
+    expect(screen.getByText(/volte para a mesa principal e mova cards para cá/i)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /voltar para mesa principal/i }));
+    expect(screen.getByRole('heading', { name: /^mesa visual$/i })).toBeTruthy();
+    expect(getFolderCard(/^mesa 1$/i)).toBeTruthy();
+  });
+
+  it('move card para pasta, organiza dentro da submesa e volta para a Mesa principal', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+    vi.spyOn(Date, 'now').mockReturnValue(1771771774000);
+    vi.spyOn(Math, 'random').mockReturnValue(0.456789);
+    render(<YopoyCentralDashboard theme="light" />);
+
+    createFolder('Caixa da noite');
+    expect(screen.getByRole('heading', { name: /comanda mesa 1/i })).toBeTruthy();
+    const saleCard = screen.getByRole('heading', { name: /comanda mesa 1/i }).closest('article') as HTMLElement;
+    selectCard(saleCard);
+
+    const panel = screen.getByLabelText(/painel contextual do card/i);
+    expect(within(panel).getAllByText(/mover para pasta/i).length).toBeGreaterThan(0);
+    fireEvent.click(within(panel).getByRole('button', { name: /^mover para pasta$/i }));
+
+    expect(screen.getByText(/card movido para a pasta local/i)).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /comanda mesa 1/i })).toBeNull();
+
+    selectCard(getFolderCard(/caixa da noite/i));
+    fireEvent.click(screen.getByRole('button', { name: /abrir pasta/i }));
+    expect(screen.getByRole('heading', { name: /submesa: caixa da noite/i })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /comanda mesa 1/i })).toBeTruthy();
+
+    const movedCard = screen.getByRole('heading', { name: /comanda mesa 1/i }).closest('article') as HTMLElement;
+    selectCard(movedCard);
+    expect(screen.getByText(/este card está em/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: /mover para mesa principal/i }));
+    expect(screen.getByText(/card voltou para a mesa principal/i)).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /comanda mesa 1/i })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /voltar para mesa principal/i }));
+    expect(screen.getByRole('heading', { name: /comanda mesa 1/i })).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      expect(snapshot.items.find((item) => item.id === 'mock-sale-01')?.parentFolderId).toBeNull();
+      expect(JSON.stringify(snapshot)).not.toMatch(/activeFolderId|selectedCardId|canvasZoom/i);
+    });
+  });
+
+  it('cria card dentro da pasta, persiste parentFolderId e mantém raiz separada', async () => {
+    vi.spyOn(Date, 'now')
+      .mockReturnValueOnce(1771771775000)
+      .mockReturnValueOnce(1771771776000);
+    vi.spyOn(Math, 'random')
+      .mockReturnValueOnce(0.567891)
+      .mockReturnValueOnce(0.678912);
+    render(<YopoyCentralDashboard theme="light" />);
+
+    createFolder('Pedidos iFood');
+    fireEvent.click(screen.getByRole('button', { name: /abrir pasta/i }));
+    createQuickCard({ type: 'payment', title: 'Recebimento dentro da pasta', amount: '31,90' });
+
+    expect(screen.getByText(/card criado dentro desta pasta local/i)).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: /recebimento dentro da pasta/i }).length).toBeGreaterThan(0);
+
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      const folder = snapshot.items.find((item) => item.kind === 'folder' && item.title === 'Pedidos iFood');
+      const created = snapshot.items.find((item) => item.title === 'Recebimento dentro da pasta');
+      expect(created?.parentFolderId).toBe(folder?.id);
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: /voltar para mesa principal/i }));
+    expect(screen.queryByRole('heading', { name: /recebimento dentro da pasta/i })).toBeNull();
+
+    selectCard(getFolderCard(/pedidos ifood/i));
+    fireEvent.click(screen.getByRole('button', { name: /abrir pasta/i }));
+    expect(screen.getByRole('heading', { name: /recebimento dentro da pasta/i })).toBeTruthy();
   });
 
   it('deriva tamanho expansível do canvas quando há card em posição distante', () => {
@@ -582,6 +702,28 @@ describe('YopoyCentralDashboard', () => {
     expect(within(panel).getByText(/imagem registrada rapidamente/i)).toBeTruthy();
     expect(within(panel).getByText(/vínculos relacionados/i)).toBeTruthy();
     expect(within(panel).getByText(/comprovante pix.*visual/i)).toBeTruthy();
+  });
+
+  it('remove conexão visual quando um card conectado é movido para outra pasta', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1771771777000);
+    vi.spyOn(Math, 'random').mockReturnValue(0.789123);
+    render(<YopoyCentralDashboard theme="light" />);
+
+    createFolder('Conferência');
+    connectCaptureToPayment();
+    expect(document.querySelector('[data-connection-id="mock-capture-01->mock-payment-01"]')).toBeTruthy();
+
+    selectCard(getCaptureCard());
+    fireEvent.click(screen.getByRole('button', { name: /^mover para pasta$/i }));
+
+    expect(document.querySelector('[data-connection-id="mock-capture-01->mock-payment-01"]')).toBeNull();
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      expect(snapshot.connections).toHaveLength(0);
+      expect(snapshot.items.find((item) => item.id === 'mock-capture-01')?.parentFolderId).toMatch(/^folder-/);
+      expect(snapshot.items.find((item) => item.id === 'mock-capture-01')?.linked).toBe(false);
+      expect(snapshot.items.find((item) => item.id === 'mock-payment-01')?.linked).toBe(false);
+    });
   });
 
   it('lista vínculo visual, marca como conciliado, persiste e restaura o estado conciliado', async () => {

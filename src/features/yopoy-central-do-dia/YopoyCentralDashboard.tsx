@@ -14,6 +14,7 @@ import {
   Check,
   Clipboard,
   FolderCheck,
+  Folder,
   Link2,
   MousePointer2,
   PackageCheck,
@@ -95,6 +96,7 @@ const PACKAGE_KIND_LABELS: Record<SmartCardKind, string> = {
   'invoice-draft': 'Rascunho sem valor fiscal',
   'pre-invoice': 'Pré-nota interna',
   'accountant-package': 'Pacote do contador',
+  folder: 'Pasta local',
   pending: 'Pendência',
   'ai-alert': 'Alerta de IA',
 };
@@ -116,6 +118,7 @@ const CARD_KIND_LABELS: Record<SmartCardKind, string> = {
   'invoice-draft': 'Rascunho sem valor fiscal',
   'pre-invoice': 'Pré-nota visual',
   'accountant-package': 'Pacote do contador',
+  folder: 'Pasta',
   pending: 'Pendência',
   'ai-alert': 'Alerta de IA',
 };
@@ -147,6 +150,7 @@ const SMART_CARD_KINDS: ReadonlyArray<SmartCardKind> = [
   'invoice-draft',
   'pre-invoice',
   'accountant-package',
+  'folder',
   'pending',
   'ai-alert',
 ];
@@ -268,6 +272,12 @@ function readTags(value: unknown, fallback: string[]) {
   return tags.length > 0 ? tags : [...fallback];
 }
 
+function readParentFolderId(value: unknown, fallback?: string | null) {
+  if (value === null) return null;
+  if (typeof value === 'string' && value.trim().length > 0) return value;
+  return fallback ?? null;
+}
+
 function normalizeItem(value: unknown, fallback?: SmartCardItem): SmartCardItem | null {
   if (!isRecord(value)) return fallback ? { ...fallback, tags: [...fallback.tags] } : null;
 
@@ -286,6 +296,7 @@ function normalizeItem(value: unknown, fallback?: SmartCardItem): SmartCardItem 
     linked: readBoolean(value.linked, fallback?.linked ?? false),
     hasPreInvoice: readBoolean(value.hasPreInvoice, fallback?.hasPreInvoice ?? false),
     sentToAccountant: readBoolean(value.sentToAccountant, fallback?.sentToAccountant ?? false),
+    parentFolderId: readParentFolderId(value.parentFolderId, fallback?.parentFolderId),
     tags: readTags(value.tags, fallback?.tags ?? ['Demonstração']),
   };
 }
@@ -335,6 +346,20 @@ function syncLinkedCards(items: SmartCardItem[], connections: CanvasCardConnecti
   return items.map((item) => ({ ...item, linked: reconciledIds.has(item.id) }));
 }
 
+function getItemScopeId(item: SmartCardItem) {
+  return item.parentFolderId ?? null;
+}
+
+function areItemsInSameScope(first?: SmartCardItem, second?: SmartCardItem) {
+  if (!first || !second) return false;
+  return getItemScopeId(first) === getItemScopeId(second);
+}
+
+function keepScopedConnections(items: SmartCardItem[], connections: CanvasCardConnection[]) {
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  return connections.filter((connection) => areItemsInSameScope(itemById.get(connection.fromId), itemById.get(connection.toId)));
+}
+
 function normalizeCanvasState(value: unknown): CanvasState | null {
   if (!isRecord(value) || value.version !== TASK_CANVAS_STORAGE_VERSION || !Array.isArray(value.items)) return null;
 
@@ -363,13 +388,14 @@ function normalizeCanvasState(value: unknown): CanvasState | null {
       .map((connection) => normalizeConnection(connection, itemIds))
       .filter((connection): connection is CanvasCardConnection => connection !== null)
     : [];
-  const reconciledIds = getReconciledCardIds(connections);
+  const scopedConnections = keepScopedConnections(items, connections);
+  const reconciledIds = getReconciledCardIds(scopedConnections);
   const itemsWithReconciledLinks = items.map((item) => reconciledIds.has(item.id) ? { ...item, linked: true } : item);
 
   return {
     items: itemsWithReconciledLinks,
     positions,
-    connections,
+    connections: scopedConnections,
     activeFilter: isCanvasFilter(value.activeFilter) ? value.activeFilter : 'all',
   };
 }
@@ -421,6 +447,10 @@ function getQuickRegistrationOption(type: QuickRegistrationType) {
 
 function createLocalCardId() {
   return `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createLocalFolderId() {
+  return `folder-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
 function parseQuickTags(value: string, fallback: string[]) {
@@ -515,6 +545,7 @@ function formatCanvasZoom(zoom: number) {
 
 export function YopoyCentralDashboard({ theme }: Props) {
   const quickRegistrationTitleId = useId();
+  const folderNameInputId = useId();
   const initialCanvasState = useMemo(() => loadCanvasState(), []);
   const [items, setItems] = useState<SmartCardItem[]>(() => initialCanvasState.items);
   const [positions, setPositions] = useState<Record<string, CanvasCardPosition>>(() => initialCanvasState.positions);
@@ -530,6 +561,10 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
   const [connectionPointer, setConnectionPointer] = useState<CanvasCardPosition | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  const [folderName, setFolderName] = useState('');
+  const [folderFormError, setFolderFormError] = useState('');
+  const [selectedMoveFolderId, setSelectedMoveFolderId] = useState('');
   const [canvasZoom, setCanvasZoom] = useState(1);
   const [feedback, setFeedback] = useState('Mesa local pronta: arraste os cards e conecte os pontos laterais. As alterações ficam salvas neste navegador, sem sincronização externa.');
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -556,6 +591,12 @@ export function YopoyCentralDashboard({ theme }: Props) {
 
     saveCanvasState({ items, positions, connections, activeFilter });
   }, [activeFilter, connections, items, positions]);
+
+  useEffect(() => {
+    if (!activeFolderId || items.some((item) => item.id === activeFolderId && item.kind === 'folder')) return;
+    setActiveFolderId(null);
+    setSelectedCardId(null);
+  }, [activeFolderId, items]);
 
   const updateItem = (id: string, change: (item: SmartCardItem) => SmartCardItem, message: string) => {
     setItems((current) => current.map((item) => item.id === id ? change(item) : item));
@@ -625,6 +666,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
       linked: false,
       hasPreInvoice: option.id === 'pre-invoice',
       sentToAccountant: false,
+      parentFolderId: activeFolderId,
       tags: parseQuickTags(quickTags, option.tags),
     };
 
@@ -635,17 +677,98 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setSelectedCardId(item.id);
     resetQuickRegistrationForm();
     setQuickRegistrationOpen(false);
-    setFeedback('Card criado e salvo neste navegador.');
+    setFeedback(activeFolderId ? 'Card criado dentro desta pasta local.' : 'Card criado e salvo neste navegador.');
   };
 
+  const handleCreateFolder = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const title = folderName.trim();
+    if (activeFolderId) {
+      setFolderFormError('Crie pastas pela Mesa principal neste bloco.');
+      return;
+    }
+    if (!title) {
+      setFolderFormError('Informe um nome para criar a pasta.');
+      return;
+    }
+
+    const item: SmartCardItem = {
+      id: createLocalFolderId(),
+      kind: 'folder',
+      title,
+      description: 'Pasta local da Mesa Visual.',
+      timeLabel: 'agora',
+      status: 'ready',
+      archived: false,
+      linked: false,
+      hasPreInvoice: false,
+      sentToAccountant: false,
+      parentFolderId: null,
+      tags: ['Pasta local'],
+    };
+    const position = createCardPosition();
+    setItems((current) => [item, ...current]);
+    setPositions((current) => ({ ...current, [item.id]: position }));
+    setFolderName('');
+    setFolderFormError('');
+    setActiveFilter('all');
+    setSelectedCardId(item.id);
+    setFeedback('Pasta criada localmente nesta Mesa.');
+  };
+
+  const enterFolder = (folderId: string) => {
+    const folder = itemsById.get(folderId);
+    if (!folder || folder.kind !== 'folder') return;
+    setActiveFolderId(folderId);
+    setSelectedCardId(null);
+    setCanvasZoom(1);
+    if (typeof viewportRef.current?.scrollTo === 'function') {
+      viewportRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+    }
+    setFeedback('Submesa local aberta. Você está organizando apenas os cards desta pasta.');
+  };
+
+  const leaveFolder = () => {
+    setActiveFolderId(null);
+    setSelectedCardId(null);
+    setCanvasZoom(1);
+    if (typeof viewportRef.current?.scrollTo === 'function') {
+      viewportRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+    }
+    setFeedback('Você voltou para a Mesa principal.');
+  };
+
+  const moveCardToScope = (cardId: string, parentFolderId: string | null) => {
+    setItems((currentItems) => {
+      const updatedItems = currentItems.map((item) => {
+        if (item.id !== cardId || item.kind === 'folder') return item;
+        return { ...item, parentFolderId };
+      });
+      setConnections((currentConnections) => {
+        const scopedConnections = keepScopedConnections(updatedItems, currentConnections);
+        if (scopedConnections.length === currentConnections.length) return currentConnections;
+        return scopedConnections;
+      });
+      return syncLinkedCards(updatedItems, keepScopedConnections(updatedItems, connections));
+    });
+    setSelectedCardId(null);
+    setFeedback(parentFolderId ? 'Card movido para a pasta local.' : 'Card voltou para a Mesa principal.');
+  };
+
+  const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
+  const rootFolders = useMemo(
+    () => items.filter((item) => item.kind === 'folder' && !item.parentFolderId && !item.archived),
+    [items],
+  );
+  const activeFolder = activeFolderId ? itemsById.get(activeFolderId) ?? null : null;
   const visibleItems = useMemo(() => items.filter((item) => {
+    const inActiveScope = activeFolderId ? item.parentFolderId === activeFolderId && item.kind !== 'folder' : !item.parentFolderId;
+    if (!inActiveScope) return false;
     if (activeFilter === 'all') return true;
     if (activeFilter === 'archived') return item.archived;
     return !item.archived && item.status === activeFilter;
-  }), [activeFilter, items]);
-
+  }), [activeFilter, activeFolderId, items]);
   const visibleItemIds = useMemo(() => new Set(visibleItems.map((item) => item.id)), [visibleItems]);
-  const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
   const selectedCard = selectedCardId ? itemsById.get(selectedCardId) ?? null : null;
   const selectedCardConnections = useMemo(
     () => selectedCardId ? getCardConnections(selectedCardId, connections) : [],
@@ -836,6 +959,8 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setConnections(defaultState.connections);
     setActiveFilter(defaultState.activeFilter);
     setSelectedCardId(null);
+    setActiveFolderId(null);
+    setSelectedMoveFolderId('');
     setCanvasZoom(1);
     setFeedback('Demonstração restaurada. Os dados locais da Mesa foram limpos.');
   };
@@ -922,9 +1047,14 @@ export function YopoyCentralDashboard({ theme }: Props) {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white">
               <Sparkles className="h-3.5 w-3.5" /> Canvas local
             </span>
-            <h1 className="mt-4 text-2xl font-black tracking-tight sm:text-3xl">Mesa Visual</h1>
+            <p className={`mt-4 text-xs font-bold ${dark ? 'text-indigo-200' : 'text-indigo-700'}`}>
+              Mesa principal{activeFolder ? ` / ${activeFolder.title}` : ''}
+            </p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
+              {activeFolder ? `Submesa: ${activeFolder.title}` : 'Mesa Visual'}
+            </h1>
             <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
-              Organize livremente: arraste os cards pela área e ligue o ponto direito de um card ao ponto esquerdo de outro.
+              {activeFolder ? 'Você está organizando apenas os cards desta pasta.' : 'Organize livremente: arraste os cards pela área e ligue o ponto direito de um card ao ponto esquerdo de outro.'}
             </p>
             <p className={`mt-2 max-w-2xl text-xs leading-relaxed ${dark ? 'text-indigo-200' : 'text-indigo-700'}`}>
               Comece pela Mesa: registre uma venda, conecte um recebimento, concilie visualmente e separe para o contador.
@@ -965,6 +1095,17 @@ export function YopoyCentralDashboard({ theme }: Props) {
             <span className={`inline-flex items-center gap-1.5 text-xs ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
               <Link2 className="h-3.5 w-3.5" /> {connections.length} conexões
             </span>
+            {activeFolder && (
+              <button
+                type="button"
+                onClick={leaveFolder}
+                className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold ${
+                  dark ? 'border-slate-700 text-slate-300 hover:border-amber-500' : 'border-slate-200 text-slate-600 hover:border-amber-300'
+                }`}
+              >
+                Voltar para Mesa principal
+              </button>
+            )}
             <button
               type="button"
               onClick={restoreDemonstration}
@@ -987,6 +1128,47 @@ export function YopoyCentralDashboard({ theme }: Props) {
             )}
           </div>
         </div>
+        <form
+          onSubmit={handleCreateFolder}
+          className={`mt-3 rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}
+        >
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(180px,1fr)_auto] lg:items-end">
+            <label htmlFor={folderNameInputId} className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
+              Criar pasta
+              <input
+                id={folderNameInputId}
+                value={folderName}
+                onChange={(event) => {
+                  setFolderName(event.target.value);
+                  setFolderFormError('');
+                }}
+                disabled={activeFolderId !== null}
+                className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm disabled:cursor-not-allowed disabled:opacity-60 ${
+                  dark ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'
+                }`}
+                placeholder="Ex: Mesa 1, Caixa da noite, Pedidos iFood, Contador"
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={activeFolderId !== null}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-xs font-black text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Folder className="h-3.5 w-3.5" /> Criar pasta
+            </button>
+          </div>
+          <p className={`mt-2 text-[11px] leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+            Pastas são locais e servem para organizar cards. Nenhum dado é enviado.
+          </p>
+          {activeFolderId && (
+            <p className={`mt-1 text-[11px] font-bold ${dark ? 'text-amber-300' : 'text-amber-700'}`}>Crie pastas pela Mesa principal neste bloco.</p>
+          )}
+          {folderFormError && (
+            <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
+              {folderFormError}
+            </p>
+          )}
+        </form>
         <div className={`mt-3 flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
           <div>
             <p className={`text-xs font-black uppercase tracking-wide ${dark ? 'text-slate-300' : 'text-slate-700'}`}>Zoom da Mesa</p>
@@ -1275,7 +1457,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
                     {selectedCard.description}
                   </p>
                 </div>
-                {typeof selectedCard.amount === 'number' && Number.isFinite(selectedCard.amount) && (
+                {selectedCard.kind !== 'folder' && typeof selectedCard.amount === 'number' && Number.isFinite(selectedCard.amount) && (
                   <strong className={`text-base ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>
                     {formatCurrencyBRL(selectedCard.amount)}
                   </strong>
@@ -1319,6 +1501,11 @@ export function YopoyCentralDashboard({ theme }: Props) {
                 {selectedCard.linked && (
                   <span className="rounded-md bg-sky-100 px-2 py-1 text-[10px] text-sky-700 dark:bg-sky-950 dark:text-sky-300">Vínculo visual</span>
                 )}
+                {selectedCard.kind === 'folder' && (
+                  <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                    {items.filter((item) => item.parentFolderId === selectedCard.id).length} card(s) nesta pasta
+                  </span>
+                )}
               </div>
 
               <div className={`mt-3 rounded-xl border p-3 text-xs ${dark ? 'border-slate-800 bg-slate-950/50 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
@@ -1347,7 +1534,16 @@ export function YopoyCentralDashboard({ theme }: Props) {
                 Ações do card selecionado
               </p>
               <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-1">
-                {!selectedCard.archived && selectedCard.status !== 'resolved' && (
+                {selectedCard.kind === 'folder' && (
+                  <button
+                    type="button"
+                    onClick={() => enterFolder(selectedCard.id)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-amber-600 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-amber-700"
+                  >
+                    <Folder className="h-3.5 w-3.5" /> Abrir pasta
+                  </button>
+                )}
+                {selectedCard.kind !== 'folder' && !selectedCard.archived && selectedCard.status !== 'resolved' && (
                   <button
                     type="button"
                     onClick={() => moveNext(selectedCard.id)}
@@ -1356,7 +1552,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
                     <ArrowRight className="h-3.5 w-3.5" /> Avançar para {CARD_STATUS_LABELS[getNextStatus(selectedCard.status)]}
                   </button>
                 )}
-                {!selectedCard.archived && selectedCard.status !== 'resolved' && (
+                {selectedCard.kind !== 'folder' && !selectedCard.archived && selectedCard.status !== 'resolved' && (
                   <button
                     type="button"
                     onClick={() => updateItem(selectedCard.id, (current) => ({ ...current, status: 'resolved' }), 'Card marcado como resolvido nesta demonstração.')}
@@ -1367,7 +1563,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
                     <Check className="h-3.5 w-3.5" /> Resolver / Pronto
                   </button>
                 )}
-                {!selectedCard.archived && (selectedCard.kind === 'sale' || selectedCard.kind === 'invoice-draft') && !selectedCard.hasPreInvoice && (
+                {selectedCard.kind !== 'folder' && !selectedCard.archived && (selectedCard.kind === 'sale' || selectedCard.kind === 'invoice-draft') && !selectedCard.hasPreInvoice && (
                   <button
                     type="button"
                     onClick={() => updateItem(selectedCard.id, (current) => ({ ...current, hasPreInvoice: true, status: 'review' }), 'Pré-nota visual adicionada sem valor fiscal. Nenhum documento fiscal foi criado ou emitido.')}
@@ -1378,7 +1574,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
                     <FolderCheck className="h-3.5 w-3.5" /> Preparar pré-nota visual
                   </button>
                 )}
-                {!selectedCard.archived && ['sale', 'expense', 'invoice-draft', 'pre-invoice', 'accountant-package'].includes(selectedCard.kind) && !selectedCard.sentToAccountant && (
+                {selectedCard.kind !== 'folder' && !selectedCard.archived && ['sale', 'expense', 'invoice-draft', 'pre-invoice', 'accountant-package'].includes(selectedCard.kind) && !selectedCard.sentToAccountant && (
                   <button
                     type="button"
                     onClick={() => updateItem(selectedCard.id, (current) => ({ ...current, sentToAccountant: true }), 'Card separado localmente para o contador. Nenhum dado saiu do navegador.')}
@@ -1389,7 +1585,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
                     <PackageOpen className="h-3.5 w-3.5" /> Separar para contador
                   </button>
                 )}
-                {!selectedCard.archived && (selectedCard.kind === 'payment' || selectedCard.kind === 'sale') && !selectedCard.linked && (
+                {selectedCard.kind !== 'folder' && !selectedCard.archived && (selectedCard.kind === 'payment' || selectedCard.kind === 'sale') && !selectedCard.linked && (
                   <button
                     type="button"
                     onClick={() => updateItem(selectedCard.id, (current) => ({ ...current, linked: true, status: 'review' }), 'Vínculo de fallback registrado apenas neste card.')}
@@ -1399,6 +1595,53 @@ export function YopoyCentralDashboard({ theme }: Props) {
                   >
                     <Link2 className="h-3.5 w-3.5" /> Simular vínculo visual
                   </button>
+                )}
+                {selectedCard.kind !== 'folder' && !selectedCard.archived && (
+                  <div className={`rounded-lg border p-3 sm:col-span-2 xl:col-span-1 ${dark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white'}`}>
+                    <p className={`text-[10px] font-black uppercase tracking-wide ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Mover para pasta</p>
+                    {selectedCard.parentFolderId ? (
+                      <>
+                        <p className={`mt-2 text-xs ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Este card está em: <strong>{itemsById.get(selectedCard.parentFolderId)?.title ?? 'Pasta local'}</strong>
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => moveCardToScope(selectedCard.id, null)}
+                          className={`mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold ${
+                            dark ? 'border-slate-700 text-slate-300 hover:border-amber-500' : 'border-slate-200 text-slate-600 hover:border-amber-300'
+                          }`}
+                        >
+                          Mover para Mesa principal
+                        </button>
+                      </>
+                    ) : rootFolders.length > 0 ? (
+                      <>
+                        <label className={`mt-2 block text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
+                          Pasta
+                          <select
+                            value={selectedMoveFolderId || rootFolders[0]?.id}
+                            onChange={(event) => setSelectedMoveFolderId(event.target.value)}
+                            className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm ${
+                              dark ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
+                            }`}
+                          >
+                            {rootFolders.map((folder) => (
+                              <option key={folder.id} value={folder.id}>{folder.title}</option>
+                            ))}
+                          </select>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => moveCardToScope(selectedCard.id, selectedMoveFolderId || rootFolders[0]?.id || null)}
+                          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-amber-600 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-amber-700"
+                        >
+                          Mover para pasta
+                        </button>
+                      </>
+                    ) : (
+                      <p className={`mt-2 text-xs ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Crie uma pasta na Mesa principal para mover este card.</p>
+                    )}
+                  </div>
                 )}
                 <button
                   type="button"
@@ -1567,6 +1810,14 @@ export function YopoyCentralDashboard({ theme }: Props) {
           dark ? 'border-slate-800 bg-[#0c0c11]' : 'border-slate-200 bg-slate-100'
         }`}
       >
+        {activeFolder && visibleItems.length === 0 && (
+          <div className={`sticky left-4 top-4 z-30 w-[min(360px,calc(100vw-3rem))] rounded-xl border p-4 text-sm shadow-lg ${
+            dark ? 'border-slate-800 bg-[#121218] text-slate-300' : 'border-slate-200 bg-white text-slate-600'
+          }`}>
+            <p className={`font-black ${dark ? 'text-slate-100' : 'text-slate-900'}`}>Esta pasta ainda está vazia.</p>
+            <p className="mt-1 text-xs">Volte para a Mesa principal e mova cards para cá pelo painel contextual.</p>
+          </div>
+        )}
         <div
           data-testid="task-canvas-scroll-surface"
           className="relative"
@@ -1650,15 +1901,16 @@ export function YopoyCentralDashboard({ theme }: Props) {
                   <SmartCard
                     item={item}
                     theme={theme}
+                    folderItemsCount={item.kind === 'folder' ? items.filter((child) => child.parentFolderId === item.id).length : undefined}
                     isSelected={selectedCardId === item.id}
                     onSelect={setSelectedCardId}
                     onDragPointerDown={handleCardPointerDown}
                     onDragPointerMove={handleCardPointerMove}
                     onDragPointerUp={finishCardDrag}
-                    onConnectionStart={beginConnection}
-                    onConnectionEnd={(_, targetId) => finishConnection(targetId)}
+                    onConnectionStart={item.kind === 'folder' ? undefined : beginConnection}
+                    onConnectionEnd={item.kind === 'folder' ? undefined : (_, targetId) => finishConnection(targetId)}
                     isConnecting={connectionSourceId === item.id}
-                    canReceiveConnection={connectionSourceId !== null && connectionSourceId !== item.id}
+                    canReceiveConnection={item.kind !== 'folder' && connectionSourceId !== null && connectionSourceId !== item.id}
                   />
                 </div>
               );

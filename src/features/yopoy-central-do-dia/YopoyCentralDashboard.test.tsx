@@ -156,6 +156,56 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getByText(/no celular: arraste pelo corpo do card/i)).toBeTruthy();
   });
 
+  it('mostra controles de zoom, aplica escala e ajusta a visão ao conteúdo', () => {
+    render(<YopoyCentralDashboard theme="light" />);
+    const viewport = screen.getByTestId('task-canvas-viewport');
+    const scrollTo = vi.fn();
+    Object.defineProperty(viewport, 'clientWidth', { configurable: true, value: 640 });
+    Object.defineProperty(viewport, 'clientHeight', { configurable: true, value: 420 });
+    Object.defineProperty(viewport, 'scrollTo', { configurable: true, value: scrollTo });
+    Object.defineProperty(window, 'requestAnimationFrame', { configurable: true, value: (callback: FrameRequestCallback) => {
+      callback(0);
+      return 1;
+    } });
+
+    expect(screen.getByText(/zoom da mesa/i)).toBeTruthy();
+    expect(screen.getByText('100%')).toBeTruthy();
+    expect(screen.getByTestId('task-canvas').style.transform).toBe('scale(1)');
+
+    fireEvent.click(screen.getByRole('button', { name: /diminuir zoom/i }));
+    expect(screen.getByText('75%')).toBeTruthy();
+    expect(screen.getByTestId('task-canvas').style.transform).toBe('scale(0.75)');
+
+    fireEvent.click(screen.getByRole('button', { name: /zoom 100%/i }));
+    fireEvent.click(screen.getByRole('button', { name: /aumentar zoom/i }));
+    expect(screen.getByText('125%')).toBeTruthy();
+    expect(screen.getByTestId('task-canvas').style.transform).toBe('scale(1.25)');
+
+    fireEvent.click(screen.getByRole('button', { name: /ajustar visão/i }));
+    expect(screen.getByText('50%')).toBeTruthy();
+    expect(screen.getByText(/visão ajustada ao conteúdo visível da mesa/i)).toBeTruthy();
+    expect(scrollTo).toHaveBeenCalled();
+  });
+
+  it('deriva tamanho expansível do canvas quando há card em posição distante', () => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: 1,
+      items: [{ id: 'mock-capture-01', status: 'ready' }],
+      positions: { 'mock-capture-01': { x: 2400, y: 2600 } },
+      connections: [],
+      activeFilter: 'ready',
+      updatedAt: '2026-06-25T12:00:00.000Z',
+    }));
+
+    render(<YopoyCentralDashboard theme="light" />);
+
+    expect(screen.getByTestId('task-canvas').style.width).toBe('3200px');
+    expect(screen.getByTestId('task-canvas').style.height).toBe('3340px');
+    expect(screen.getByTestId('task-canvas-scroll-surface').style.width).toBe('3200px');
+    expect(screen.getByTestId('task-canvas-scroll-surface').style.height).toBe('3340px');
+    expect(screen.getByTestId('canvas-node-mock-capture-01').style.left).toBe('2400px');
+  });
+
   it('mostra estado vazio quando não há cards separados para contador', () => {
     writeSnapshotWithAccountantPackageMockAsPending();
 
@@ -441,19 +491,23 @@ describe('YopoyCentralDashboard', () => {
     });
   });
 
-  it('move um card com Pointer Events e salva sua posição no localStorage', async () => {
+  it('move um card com Pointer Events e salva sua posição lógica mesmo com zoom', async () => {
     render(<YopoyCentralDashboard theme="light" />);
+    fireEvent.click(screen.getByRole('button', { name: /diminuir zoom/i }));
+    fireEvent.click(screen.getByRole('button', { name: /diminuir zoom/i }));
     const card = getCaptureCard();
     const node = screen.getByTestId('canvas-node-mock-capture-01');
     const initialLeft = node.style.left;
     const initialTop = node.style.top;
 
-    fireEvent.pointerDown(card, { pointerId: 7, button: 0, clientX: 850, clientY: 100 });
-    fireEvent.pointerMove(card, { pointerId: 7, clientX: 1030, clientY: 280 });
-    fireEvent.pointerUp(card, { pointerId: 7, clientX: 1030, clientY: 280 });
+    fireEvent.pointerDown(card, { pointerId: 7, button: 0, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(card, { pointerId: 7, clientX: 200, clientY: 200 });
+    fireEvent.pointerUp(card, { pointerId: 7, clientX: 200, clientY: 200 });
 
     expect(node.style.left).not.toBe(initialLeft);
     expect(node.style.top).not.toBe(initialTop);
+    expect(node.style.left).toBe('1024px');
+    expect(node.style.top).toBe('244px');
     expect(screen.getByText(/posição do card salva neste navegador/i)).toBeTruthy();
 
     await waitFor(() => {
@@ -472,8 +526,9 @@ describe('YopoyCentralDashboard', () => {
     expect(node.style.top).toBe(topAfterDrag);
   });
 
-  it('conecta dois cards pelos conectores, desenha uma linha SVG e salva a conexão', async () => {
+  it('conecta dois cards pelos conectores com zoom, desenha uma linha SVG e salva a conexão', async () => {
     render(<YopoyCentralDashboard theme="dark" />);
+    fireEvent.click(screen.getByRole('button', { name: /aumentar zoom/i }));
     const source = screen.getByRole('button', { name: /iniciar conexão de foto de comprovante/i });
     const target = screen.getByRole('button', { name: /conectar em comprovante pix/i });
     expect(source.className).toContain('h-11');
@@ -482,6 +537,7 @@ describe('YopoyCentralDashboard', () => {
     fireEvent.pointerDown(source, { pointerId: 9, button: 0, clientX: 1144, clientY: 112 });
     fireEvent.pointerMove(screen.getByTestId('task-canvas'), { pointerId: 9, clientX: 430, clientY: 700 });
     expect(screen.getByTestId('connection-preview')).toBeTruthy();
+    expect(screen.getByTestId('connection-preview').getAttribute('x2')).toBe('344');
     fireEvent.pointerUp(target, { pointerId: 9, clientX: 434, clientY: 682 });
 
     expect(document.querySelector('[data-connection-id="mock-capture-01->mock-payment-01"]')).toBeTruthy();
@@ -706,8 +762,9 @@ describe('YopoyCentralDashboard', () => {
     expect(document.querySelector('[data-connection-id="mock-capture-01->mock-payment-01"]')).toBeTruthy();
   });
 
-  it('leva o viewport ao primeiro card do filtro sem alterar sua posição', () => {
+  it('leva o viewport ao primeiro card do filtro com zoom sem alterar sua posição', () => {
     render(<YopoyCentralDashboard theme="light" />);
+    fireEvent.click(screen.getByRole('button', { name: /diminuir zoom/i }));
     const viewport = screen.getByTestId('task-canvas-viewport');
     const scrollTo = vi.fn();
     Object.defineProperty(viewport, 'scrollTo', { configurable: true, value: scrollTo });
@@ -717,11 +774,13 @@ describe('YopoyCentralDashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: /arquivados/i }));
 
     expect(scrollTo).toHaveBeenCalledTimes(1);
+    expect(scrollTo).toHaveBeenCalledWith(expect.objectContaining({ left: 898.5, top: 876 }));
     expect(`${node.style.left}:${node.style.top}`).toBe(initialPosition);
   });
 
   it('salva estado do card e filtro ativo no localStorage', async () => {
     render(<YopoyCentralDashboard theme="light" />);
+    fireEvent.click(screen.getByRole('button', { name: /aumentar zoom/i }));
     selectCard(getCaptureCard());
     fireEvent.click(screen.getByRole('button', { name: /avançar para pendente/i }));
 
@@ -742,6 +801,7 @@ describe('YopoyCentralDashboard', () => {
       const savedCard = snapshot.items.find((item) => item.id === 'mock-capture-01');
       expect(savedCard?.archived).toBe(true);
       expect(JSON.stringify(snapshot)).not.toMatch(/selectedCardId/i);
+      expect(JSON.stringify(snapshot)).not.toMatch(/canvasZoom|zoom/i);
     });
 
     fireEvent.click(screen.getByRole('button', { name: /arquivados/i }));

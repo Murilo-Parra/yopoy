@@ -71,9 +71,14 @@ interface QuickRegistrationOption {
 }
 
 const CARD_WIDTH = 320;
+const CARD_APPROX_HEIGHT = 260;
 const CONNECTOR_Y = 68;
-const CANVAS_WIDTH = 1640;
-const CANVAS_HEIGHT = 1900;
+const MIN_CANVAS_WIDTH = 1640;
+const MIN_CANVAS_HEIGHT = 1900;
+const CANVAS_EXPANSION_PADDING = 480;
+const MIN_CANVAS_ZOOM = 0.5;
+const MAX_CANVAS_ZOOM = 1.75;
+const CANVAS_ZOOM_STEP = 0.25;
 const TASK_CANVAS_STORAGE_KEY = 'yopoy:task-canvas:v1';
 const TASK_CANVAS_STORAGE_VERSION = 1;
 const CONNECTION_STATUS_LABELS = {
@@ -290,8 +295,8 @@ function normalizePosition(value: unknown, fallback: CanvasCardPosition): Canvas
   const x = typeof value.x === 'number' && Number.isFinite(value.x) ? value.x : fallback.x;
   const y = typeof value.y === 'number' && Number.isFinite(value.y) ? value.y : fallback.y;
   return {
-    x: clamp(x, 16, CANVAS_WIDTH - CARD_WIDTH - 16),
-    y: clamp(y, 16, CANVAS_HEIGHT - 220),
+    x: Math.max(x, 16),
+    y: Math.max(y, 16),
   };
 }
 
@@ -494,6 +499,20 @@ function getCardConnections(cardId: string, connections: CanvasCardConnection[])
   return connections.filter((connection) => connection.fromId === cardId || connection.toId === cardId);
 }
 
+function getCanvasSize(positions: Record<string, CanvasCardPosition>) {
+  const positionValues = Object.values(positions);
+  const maxX = positionValues.reduce((current, position) => Math.max(current, position.x), 0);
+  const maxY = positionValues.reduce((current, position) => Math.max(current, position.y), 0);
+  return {
+    width: Math.max(MIN_CANVAS_WIDTH, maxX + CARD_WIDTH + CANVAS_EXPANSION_PADDING),
+    height: Math.max(MIN_CANVAS_HEIGHT, maxY + CARD_APPROX_HEIGHT + CANVAS_EXPANSION_PADDING),
+  };
+}
+
+function formatCanvasZoom(zoom: number) {
+  return `${Math.round(zoom * 100)}%`;
+}
+
 export function YopoyCentralDashboard({ theme }: Props) {
   const quickRegistrationTitleId = useId();
   const initialCanvasState = useMemo(() => loadCanvasState(), []);
@@ -511,6 +530,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
   const [connectionPointer, setConnectionPointer] = useState<CanvasCardPosition | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [canvasZoom, setCanvasZoom] = useState(1);
   const [feedback, setFeedback] = useState('Mesa local pronta: arraste os cards e conecte os pontos laterais. As alterações ficam salvas neste navegador, sem sincronização externa.');
   const canvasRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -568,11 +588,11 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const createCardPosition = () => {
     const viewport = viewportRef.current;
     const localCardsCount = items.filter((item) => item.id.startsWith('local-')).length;
-    const baseX = viewport ? viewport.scrollLeft + 24 : 44;
-    const baseY = viewport ? viewport.scrollTop + 24 : 44;
+    const baseX = viewport ? viewport.scrollLeft / canvasZoom + 24 : 44;
+    const baseY = viewport ? viewport.scrollTop / canvasZoom + 24 : 44;
     return {
-      x: clamp(baseX + (localCardsCount % 3) * 28, 16, CANVAS_WIDTH - CARD_WIDTH - 16),
-      y: clamp(baseY + (localCardsCount % 3) * 36, 16, CANVAS_HEIGHT - 220),
+      x: Math.max(baseX + (localCardsCount % 3) * 28, 16),
+      y: Math.max(baseY + (localCardsCount % 3) * 36, 16),
     };
   };
 
@@ -631,6 +651,11 @@ export function YopoyCentralDashboard({ theme }: Props) {
     () => selectedCardId ? getCardConnections(selectedCardId, connections) : [],
     [connections, selectedCardId],
   );
+  const canvasSize = useMemo(() => getCanvasSize(positions), [positions]);
+  const scaledCanvasSize = useMemo(() => ({
+    width: canvasSize.width * canvasZoom,
+    height: canvasSize.height * canvasZoom,
+  }), [canvasSize.height, canvasSize.width, canvasZoom]);
   const accountantPackageItems = useMemo(() => getAccountantPackageItems(items), [items]);
   const accountantPackageSummaryText = useMemo(
     () => formatAccountantPackageText(items, connections),
@@ -651,8 +676,8 @@ export function YopoyCentralDashboard({ theme }: Props) {
     if (!firstPosition || !viewport || typeof viewport.scrollTo !== 'function') return;
 
     viewport.scrollTo({
-      left: Math.max(firstPosition.x - 16, 0),
-      top: Math.max(firstPosition.y - 16, 0),
+      left: Math.max((firstPosition.x - 16) * canvasZoom, 0),
+      top: Math.max((firstPosition.y - 16) * canvasZoom, 0),
       behavior: 'smooth',
     });
   }, [activeFilter]);
@@ -660,8 +685,8 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const canvasPoint = (clientX: number, clientY: number): CanvasCardPosition => {
     const canvasRect = canvasRef.current?.getBoundingClientRect();
     return {
-      x: clientX - (canvasRect?.left ?? 0),
-      y: clientY - (canvasRect?.top ?? 0),
+      x: (clientX - (canvasRect?.left ?? 0)) / canvasZoom,
+      y: (clientY - (canvasRect?.top ?? 0)) / canvasZoom,
     };
   };
 
@@ -689,8 +714,8 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setPositions((current) => ({
       ...current,
       [cardId]: {
-        x: clamp(point.x - drag.offsetX, 16, CANVAS_WIDTH - CARD_WIDTH - 16),
-        y: clamp(point.y - drag.offsetY, 16, CANVAS_HEIGHT - 220),
+        x: Math.max(point.x - drag.offsetX, 16),
+        y: Math.max(point.y - drag.offsetY, 16),
       },
     }));
   };
@@ -811,6 +836,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setConnections(defaultState.connections);
     setActiveFilter(defaultState.activeFilter);
     setSelectedCardId(null);
+    setCanvasZoom(1);
     setFeedback('Demonstração restaurada. Os dados locais da Mesa foram limpos.');
   };
 
@@ -834,6 +860,54 @@ export function YopoyCentralDashboard({ theme }: Props) {
       return item.sentToAccountant ? { ...item, sentToAccountant: false } : item;
     }));
     setFeedback('Pacote local limpo. Os cards continuam na Mesa.');
+  };
+
+  const changeCanvasZoom = (nextZoom: number) => {
+    setCanvasZoom(clamp(nextZoom, MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM));
+  };
+
+  const fitCanvasToContent = () => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      changeCanvasZoom(1);
+      return;
+    }
+
+    const positionsToFit = visibleItems
+      .map((item) => positions[item.id])
+      .filter((position): position is CanvasCardPosition => position !== undefined);
+
+    if (positionsToFit.length === 0) {
+      changeCanvasZoom(1);
+      return;
+    }
+
+    const minX = positionsToFit.reduce((current, position) => Math.min(current, position.x), Number.POSITIVE_INFINITY);
+    const minY = positionsToFit.reduce((current, position) => Math.min(current, position.y), Number.POSITIVE_INFINITY);
+    const maxX = positionsToFit.reduce((current, position) => Math.max(current, position.x + CARD_WIDTH), 0);
+    const maxY = positionsToFit.reduce((current, position) => Math.max(current, position.y + CARD_APPROX_HEIGHT), 0);
+    const contentWidth = Math.max(maxX - minX + 64, CARD_WIDTH);
+    const contentHeight = Math.max(maxY - minY + 64, CARD_APPROX_HEIGHT);
+    const widthZoom = viewport.clientWidth > 0 ? viewport.clientWidth / contentWidth : 1;
+    const heightZoom = viewport.clientHeight > 0 ? viewport.clientHeight / contentHeight : 1;
+    const fittedZoom = clamp(Math.min(widthZoom, heightZoom, 1), MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM);
+    const steppedZoom = Math.round(fittedZoom / CANVAS_ZOOM_STEP) * CANVAS_ZOOM_STEP;
+    const nextZoom = clamp(steppedZoom, MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM);
+
+    setCanvasZoom(nextZoom);
+    const scrollToContent = () => {
+      viewport.scrollTo({
+        left: Math.max((minX - 32) * nextZoom, 0),
+        top: Math.max((minY - 32) * nextZoom, 0),
+        behavior: 'smooth',
+      });
+    };
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(scrollToContent);
+    } else {
+      scrollToContent();
+    }
+    setFeedback('Visão ajustada ao conteúdo visível da Mesa.');
   };
 
   return (
@@ -911,6 +985,59 @@ export function YopoyCentralDashboard({ theme }: Props) {
                 <Trash2 className="h-3 w-3" /> Limpar conexões
               </button>
             )}
+          </div>
+        </div>
+        <div className={`mt-3 flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
+          <div>
+            <p className={`text-xs font-black uppercase tracking-wide ${dark ? 'text-slate-300' : 'text-slate-700'}`}>Zoom da Mesa</p>
+            <p className={`mt-1 text-[11px] leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+              Canvas expande conforme você organiza os cards. Visual local desta sessão.
+            </p>
+          </div>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end" aria-label="Controles de zoom da Mesa">
+            <button
+              type="button"
+              aria-label="Diminuir zoom"
+              disabled={canvasZoom <= MIN_CANVAS_ZOOM}
+              onClick={() => changeCanvasZoom(canvasZoom - CANVAS_ZOOM_STEP)}
+              className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50 ${
+                dark ? 'border-slate-700 text-slate-300 hover:border-indigo-500' : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300'
+              }`}
+            >
+              -
+            </button>
+            <span className={`inline-flex min-h-11 min-w-20 items-center justify-center rounded-lg px-3 py-2 text-sm font-black ${
+              dark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
+            }`}>
+              {formatCanvasZoom(canvasZoom)}
+            </span>
+            <button
+              type="button"
+              aria-label="Aumentar zoom"
+              disabled={canvasZoom >= MAX_CANVAS_ZOOM}
+              onClick={() => changeCanvasZoom(canvasZoom + CANVAS_ZOOM_STEP)}
+              className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50 ${
+                dark ? 'border-slate-700 text-slate-300 hover:border-indigo-500' : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300'
+              }`}
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={() => changeCanvasZoom(1)}
+              className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold sm:min-w-20 ${
+                dark ? 'border-slate-700 text-slate-300 hover:border-indigo-500' : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300'
+              }`}
+            >
+              Zoom 100%
+            </button>
+            <button
+              type="button"
+              onClick={fitCanvasToContent}
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-indigo-600 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-indigo-700 sm:min-w-32"
+            >
+              Ajustar visão
+            </button>
           </div>
         </div>
         {connections.length > 0 && (
@@ -1441,91 +1568,102 @@ export function YopoyCentralDashboard({ theme }: Props) {
         }`}
       >
         <div
-          ref={canvasRef}
-          data-testid="task-canvas"
-          onPointerMove={(event) => {
-            if (connectionSourceRef.current) setConnectionPointer(canvasPoint(event.clientX, event.clientY));
-          }}
-          onPointerUp={finishConnectionAtPointer}
-          onPointerCancel={() => {
-            if (connectionSourceRef.current) {
-              setFeedback('Conexão cancelada. Tente novamente a partir do ponto direito do card.');
-              cancelConnection();
-            }
-          }}
-          className={`relative touch-pan-x touch-pan-y ${
-            dark
-              ? 'bg-[radial-gradient(circle,_#30303a_1px,_transparent_1px)]'
-              : 'bg-[radial-gradient(circle,_#cbd5e1_1px,_transparent_1px)]'
-          } bg-size-[24px_24px]`}
-          style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT }}
+          data-testid="task-canvas-scroll-surface"
+          className="relative"
+          style={{ width: scaledCanvasSize.width, height: scaledCanvasSize.height }}
         >
-          <svg
-            data-testid="task-connections"
-            aria-label="Conexões entre cards"
-            className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible"
+          <div
+            ref={canvasRef}
+            data-testid="task-canvas"
+            onPointerMove={(event) => {
+              if (connectionSourceRef.current) setConnectionPointer(canvasPoint(event.clientX, event.clientY));
+            }}
+            onPointerUp={finishConnectionAtPointer}
+            onPointerCancel={() => {
+              if (connectionSourceRef.current) {
+                setFeedback('Conexão cancelada. Tente novamente a partir do ponto direito do card.');
+                cancelConnection();
+              }
+            }}
+            className={`relative touch-pan-x touch-pan-y ${
+              dark
+                ? 'bg-[radial-gradient(circle,_#30303a_1px,_transparent_1px)]'
+                : 'bg-[radial-gradient(circle,_#cbd5e1_1px,_transparent_1px)]'
+            } bg-size-[24px_24px]`}
+            style={{
+              width: canvasSize.width,
+              height: canvasSize.height,
+              transform: `scale(${canvasZoom})`,
+              transformOrigin: 'top left',
+            }}
           >
-            {connections.filter((connection) => visibleItemIds.has(connection.fromId) && visibleItemIds.has(connection.toId)).map((connection) => {
-              const from = positions[connection.fromId];
-              const to = positions[connection.toId];
-              if (!from || !to) return null;
-              const startX = from.x + CARD_WIDTH;
-              const startY = from.y + CONNECTOR_Y;
-              const endX = to.x;
-              const endY = to.y + CONNECTOR_Y;
-              const curve = Math.max(80, Math.abs(endX - startX) / 2);
-              return (
-                <path
-                  key={connection.id}
-                  data-connection-id={connection.id}
-                  d={`M ${startX} ${startY} C ${startX + curve} ${startY}, ${endX - curve} ${endY}, ${endX} ${endY}`}
-                  fill="none"
-                  stroke={connection.status === 'reconciled' ? '#059669' : dark ? '#818cf8' : '#4f46e5'}
-                  strokeWidth={connection.status === 'reconciled' ? '4' : '3'}
-                  strokeLinecap="round"
-                  strokeDasharray={connection.status === 'reconciled' ? undefined : '10 8'}
+            <svg
+              data-testid="task-connections"
+              aria-label="Conexões entre cards"
+              className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible"
+            >
+              {connections.filter((connection) => visibleItemIds.has(connection.fromId) && visibleItemIds.has(connection.toId)).map((connection) => {
+                const from = positions[connection.fromId];
+                const to = positions[connection.toId];
+                if (!from || !to) return null;
+                const startX = from.x + CARD_WIDTH;
+                const startY = from.y + CONNECTOR_Y;
+                const endX = to.x;
+                const endY = to.y + CONNECTOR_Y;
+                const curve = Math.max(80, Math.abs(endX - startX) / 2);
+                return (
+                  <path
+                    key={connection.id}
+                    data-connection-id={connection.id}
+                    d={`M ${startX} ${startY} C ${startX + curve} ${startY}, ${endX - curve} ${endY}, ${endX} ${endY}`}
+                    fill="none"
+                    stroke={connection.status === 'reconciled' ? '#059669' : dark ? '#818cf8' : '#4f46e5'}
+                    strokeWidth={connection.status === 'reconciled' ? '4' : '3'}
+                    strokeLinecap="round"
+                    strokeDasharray={connection.status === 'reconciled' ? undefined : '10 8'}
+                  />
+                );
+              })}
+              {sourcePosition && connectionPointer && (
+                <line
+                  data-testid="connection-preview"
+                  x1={sourcePosition.x + CARD_WIDTH}
+                  y1={sourcePosition.y + CONNECTOR_Y}
+                  x2={connectionPointer.x}
+                  y2={connectionPointer.y}
+                  stroke={dark ? '#a5b4fc' : '#6366f1'}
+                  strokeWidth="3"
+                  strokeDasharray="8 6"
                 />
+              )}
+            </svg>
+
+            {visibleItems.map((item) => {
+              const position = positions[item.id];
+              return (
+                <div
+                  key={item.id}
+                  data-testid={`canvas-node-${item.id}`}
+                  className="absolute z-10"
+                  style={{ left: position.x, top: position.y, width: CARD_WIDTH, touchAction: 'none' }}
+                >
+                  <SmartCard
+                    item={item}
+                    theme={theme}
+                    isSelected={selectedCardId === item.id}
+                    onSelect={setSelectedCardId}
+                    onDragPointerDown={handleCardPointerDown}
+                    onDragPointerMove={handleCardPointerMove}
+                    onDragPointerUp={finishCardDrag}
+                    onConnectionStart={beginConnection}
+                    onConnectionEnd={(_, targetId) => finishConnection(targetId)}
+                    isConnecting={connectionSourceId === item.id}
+                    canReceiveConnection={connectionSourceId !== null && connectionSourceId !== item.id}
+                  />
+                </div>
               );
             })}
-            {sourcePosition && connectionPointer && (
-              <line
-                data-testid="connection-preview"
-                x1={sourcePosition.x + CARD_WIDTH}
-                y1={sourcePosition.y + CONNECTOR_Y}
-                x2={connectionPointer.x}
-                y2={connectionPointer.y}
-                stroke={dark ? '#a5b4fc' : '#6366f1'}
-                strokeWidth="3"
-                strokeDasharray="8 6"
-              />
-            )}
-          </svg>
-
-          {visibleItems.map((item) => {
-            const position = positions[item.id];
-            return (
-              <div
-                key={item.id}
-                data-testid={`canvas-node-${item.id}`}
-                className="absolute z-10"
-                style={{ left: position.x, top: position.y, width: CARD_WIDTH, touchAction: 'none' }}
-              >
-                <SmartCard
-                  item={item}
-                  theme={theme}
-                  isSelected={selectedCardId === item.id}
-                  onSelect={setSelectedCardId}
-                  onDragPointerDown={handleCardPointerDown}
-                  onDragPointerMove={handleCardPointerMove}
-                  onDragPointerUp={finishCardDrag}
-                  onConnectionStart={beginConnection}
-                  onConnectionEnd={(_, targetId) => finishConnection(targetId)}
-                  isConnecting={connectionSourceId === item.id}
-                  canReceiveConnection={connectionSourceId !== null && connectionSourceId !== item.id}
-                />
-              </div>
-            );
-          })}
+          </div>
         </div>
       </div>
     </div>

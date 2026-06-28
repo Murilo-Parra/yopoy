@@ -157,10 +157,10 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
       });
       const data = await response.json();
       if (data.success) {
-        showFeedback(data.message || 'Espelho interno de pré-nota gerado para uso demonstrativo.', 'success');
+        showFeedback(data.message || 'Prévia interna de pré-nota gerada para uso demonstrativo.', 'success');
         fetchData();
       } else {
-        showFeedback(data.error || 'Erro ao gerar o espelho interno de pré-nota.', 'error');
+        showFeedback(data.error || 'Erro ao gerar a prévia interna de pré-nota.', 'error');
       }
     } catch (err) {
       showFeedback('Falha de rede ao tentar criar o documento auxiliar.', 'error');
@@ -238,7 +238,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
         printWindow.document.write(`
           <html>
             <head>
-              <title>Espelho Interno de Pré-nota</title>
+              <title>Prévia interna de pré-nota</title>
               <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
               <style>
                 @media print {
@@ -374,8 +374,8 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
               <FileText className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight">Espelho Interno de Pré-nota</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Visualização demonstrativa, não emitida e sem valor fiscal para conferência e contador</p>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight">Prévia interna de pré-nota</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Visualização demonstrativa, não emitida e sem valor fiscal para conferência local e contador</p>
             </div>
           </div>
         </div>
@@ -505,7 +505,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
         <div id="tab_content_generate">
           <div className="flex items-center gap-2 mb-4 p-3 bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl text-xs font-semibold">
             <Info className="w-4 h-4 shrink-0" />
-            <span>Este painel exibe pré-notas internas para conferência visual. O espelho é demonstrativo, não emitido, sem valor fiscal e pode compor pacote para contador.</span>
+            <span>Este painel exibe pré-notas internas para conferência visual. A prévia é demonstrativa, não emitida, sem valor fiscal e pode compor relatório local para contador.</span>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-[#313244]">
@@ -524,7 +524,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                 {nfeList.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-slate-400 dark:text-slate-500 font-bold bg-slate-50/50 dark:bg-transparent">
-                      Nenhuma pré-nota interna encontrada com os filtros especificados.
+                      Nenhuma prévia interna encontrada com os filtros especificados.
                     </td>
                   </tr>
                 ) : (
@@ -581,23 +581,23 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                                       id={`btn_view_${matchedDanfes[0].id}`}
                                       onClick={() => handleViewDanfe(matchedDanfes[0])}
                                       className="flex items-center gap-1 text-xs font-extrabold text-indigo-550 border border-indigo-200 dark:border-indigo-500/30 hover:bg-indigo-500 hover:text-white transition-all px-2.5 py-1.5 rounded-lg active:scale-95"
-                                      title="Visualizar representação gráfica"
+                                      title="Visualizar prévia interna"
                                     >
                                       <Eye className="w-3.5 h-3.5" />
-                                      Ver espelho
+                                      Ver prévia
                                     </button>
                                     <button
                                       id={`btn_download_${matchedDanfes[0].id}`}
                                       onClick={() => handleDownloadPDF(matchedDanfes[0].id)}
                                       className="p-1.5 text-slate-500 hover:text-emerald-500 rounded-lg border border-slate-200 dark:border-[#313244] hover:border-emerald-250 transition-all"
-                                      title="Baixar PDF demonstrativo"
+                                      title="Baixar PDF local"
                                     >
                                       <Download className="w-4 h-4" />
                                     </button>
                                     <button
                                       onClick={() => handleGenerateDanfe(doc.id)}
                                       className="p-1.5 text-slate-500 hover:text-blue-500 rounded-lg border border-slate-200 dark:border-[#313244] hover:border-blue-250 transition-all"
-                                      title="Regerar nova versão histórica"
+                                      title="Regerar nova prévia local"
                                     >
                                       <RefreshCw className="w-4 h-4" />
                                     </button>
@@ -621,7 +621,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
         <div id="tab_content_history">
           <div className="flex items-center gap-2 mb-4 p-3 bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl text-xs font-semibold">
             <AlertTriangle className="w-4 h-4 shrink-0" />
-            <span>Abaixo constam versões demonstrativas dos espelhos internos. Modificações ou regerações preservam histórico operacional, sem efeito fiscal.</span>
+            <span>Abaixo constam versões demonstrativas das prévias internas. Modificações ou regerações preservam histórico local, sem efeito fiscal.</span>
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-[#313244]">
@@ -639,7 +639,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                 {danfeList.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-slate-400 dark:text-slate-500 font-bold bg-slate-50/50 dark:bg-transparent">
-                      Nenhuma versão de espelho interno gerada anteriormente.
+                      Nenhuma versão de prévia interna gerada anteriormente.
                     </td>
                   </tr>
                 ) : (
@@ -652,7 +652,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                         </div>
                       </td>
                       <td className="p-4">
-                        <span className="font-semibold text-slate-800 dark:text-white">Pré-nota interna Nº {doc.invoice_number}</span>
+                        <span className="font-semibold text-slate-800 dark:text-white">Prévia interna Nº {doc.invoice_number}</span>
                         <span className="ml-1 text-xs text-slate-400">Série: {doc.series}</span>
                       </td>
                       <td className="p-4 text-xs text-slate-500">
@@ -678,14 +678,14 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
                             id={`btn_hist_download_${doc.id}`}
                             onClick={() => handleDownloadPDF(doc.id)}
                             className="p-1.5 text-slate-500 hover:text-emerald-500 rounded-lg border border-slate-200 dark:border-[#313244] hover:border-emerald-250 transition-all"
-                            title="Descarregar PDF"
+                            title="Descarregar PDF local"
                           >
                             <Download className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handlePrint(doc.id, true)}
                             className="p-1.5 text-slate-500 hover:text-amber-500 rounded-lg border border-slate-200 dark:border-[#313244] hover:border-amber-250 transition-all"
-                            title="Reimprimir de Forma Técnica"
+                            title="Reimprimir prévia local"
                           >
                             <Printer className="w-4 h-4" />
                           </button>
@@ -1161,7 +1161,7 @@ export default function DanfeTool({ products, savedCustomers = [], theme }: Danf
 
                 {/* FOOTER AUDIT STAMP SIGNATURE FOR THE PREVIEW CONTAINER */}
                 <div className="mt-4 pt-2 border-t border-dashed border-slate-300 text-center text-[8px] font-mono text-slate-400 flex items-center justify-between">
-                  <span>Espelho interno demonstrativo: {selectedDanfeId}</span>
+                      <span>Prévia interna demonstrativa: {selectedDanfeId}</span>
                   <span>Hash Seguração: {selectedDanfe.generation_hash}</span>
                   <span>Data: {new Date(selectedDanfe.generated_at).toLocaleString('pt-BR')}</span>
                 </div>

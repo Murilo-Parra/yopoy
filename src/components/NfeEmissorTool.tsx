@@ -319,11 +319,11 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       return;
     }
 
-    setFeedback({ status: 'info', message: 'Iniciando preparação demonstrativa da pré-nota interna...' });
+    setFeedback({ status: 'info', message: 'Iniciando preparação interna da pré-nota visual...' });
     setEmissionSteps(['draft']);
     setEmissionLog(['[SISTEMA] Iniciando preparação de rascunho interno sem valor fiscal...']);
 
-    // Build the structural draft input schema
+    // Build the internal draft input schema
     const xmlInput = {
       documentType: 'NF-e' as const,
       documentNumber: parseInt(manualInvoiceNumber, 10) || 122,
@@ -383,14 +383,14 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       }
     };
 
-    // 1. GERAÇÃO DO RASCUNHO
+    // 1. GERAÇÃO DO RASCUNHO INTERNO
     setEmissionSteps(prev => [...prev, 'validating']);
-    setEmissionLog(prev => [...prev, '[RASCUNHO] Montagem de dados internos para pré-nota sem valor fiscal.', '[INFO] Preparando dados para conferência e pacote do contador.']);
+    setEmissionLog(prev => [...prev, '[RASCUNHO] Montagem de dados internos para pré-nota sem valor fiscal.', '[INFO] Preparando dados para conferência local e revisão do contador.']);
     
-    // Generate actual original XML using XmlGenerator
+    // Generate internal XML draft using XmlGenerator
     const originalXmlString = XmlGenerator.xml_serializer(xmlInput);
 
-    // Save initial NFe document as DRAFT layout
+    // Save initial draft document as DRAFT layout
     const uniqueDocId = 'nfe_' + Math.floor(Math.random() * 10000000);
     const docPayload = {
       id: uniqueDocId,
@@ -411,7 +411,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       });
       const saveData = await saveRes.json();
       if (!saveData.success) {
-        throw new Error(saveData.error || 'Falha ao salvar rascunho no Postgres.');
+        throw new Error(saveData.error || 'Falha ao salvar rascunho interno.');
       }
     } catch (err: any) {
       setFeedback({ status: 'error', message: err.message });
@@ -422,12 +422,12 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
     // 2. CONFERÊNCIA INTERNA
     await new Promise(resolve => setTimeout(resolve, 1500));
     setEmissionSteps(prev => [...prev, 'validated', 'signing']);
-    setEmissionLog(prev => [...prev, '[CONFERÊNCIA] Verificando campos internos do tenant empresarial.', '[CONFERÊNCIA] Marcando rascunho para uso demonstrativo. Emissão real não disponível no MVP.']);
+    setEmissionLog(prev => [...prev, '[CONFERÊNCIA] Verificando campos internos do cadastro local.', '[CONFERÊNCIA] Marcando rascunho para uso demonstrativo. Emissão real não disponível no MVP.']);
 
-    // Call Sign service API
+    // Simulated signing step for the internal draft
     let signedXmlValue = '';
     try {
-      // Assina o XML no modo de contingência/fallback visual
+      // Assina o XML apenas para a prévia interna
       signedXmlValue = originalXmlString.replace('</infNFe>', '  <Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha256" /></SignedInfo><SignatureValue>MIIBygYJKoZIhvcNAQcCoIIBuzCC...</SignatureValue></Signature></infNFe>');
       
       const signRes = await authFetch(`/api/nfe/${uniqueDocId}/status`, {
@@ -440,7 +440,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       });
       const signData = await signRes.json();
       if (!signData.success) {
-        throw new Error(signData.error || 'Falha ao salvar conferência interna.');
+        throw new Error(signData.error || 'Falha ao salvar a conferência interna.');
       }
     } catch (err: any) {
       setFeedback({ status: 'error', message: `Erro na conferência interna: ${err.message}` });
@@ -448,12 +448,12 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       return;
     }
 
-    // 3. FECHAMENTO DO ESPELHO INTERNO
+    // 3. FECHAMENTO DA PRÉVIA INTERNA
     await new Promise(resolve => setTimeout(resolve, 1500));
     setEmissionSteps(prev => [...prev, 'signed', 'transmitting', 'waiting_response']);
-    setEmissionLog(prev => [...prev, '[INTERNO] Finalizando espelho visual da pré-nota.', '[INTERNO] Sem transmissão fiscal, sem autorização externa e sem valor fiscal.', '[CONTADOR] Separando dados para revisão externa.']);
+    setEmissionLog(prev => [...prev, '[INTERNO] Finalizando prévia visual da pré-nota.', '[INTERNO] Sem transmissão fiscal, sem autorização externa e sem valor fiscal.', '[CONTADOR] Separando dados para revisão local.']);
 
-    // Invoke actual sefaz transmission simulate endpoint
+    // Simulated finalization step for the internal draft
     try {
       const receiptNum = '2026' + Math.floor(Math.random() * 1000000000000);
       const protNum = '1526' + Math.floor(Math.random() * 1000000000000);
@@ -545,7 +545,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
       theme === 'dark' ? 'bg-[#0b0c10] border-[#1e2030]/80 text-[#c8d0e7]' : 'bg-white border-slate-205 text-slate-800'
     }`} id="nfe-emissor-module">
       
-      {/* Header de pré-nota demonstrativa */}
+      {/* Header de pré-nota interna */}
       <div className={`p-6 border-b flex flex-col md:flex-row md:items-center justify-between gap-4 ${
         theme === 'dark' ? 'bg-[#12131a]/80 border-[#1e2030]/80' : 'bg-slate-50/50 border-slate-100'
       }`}>
@@ -556,7 +556,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
           </div>
           <div>
             <h2 className="text-sm font-black tracking-tight flex items-center gap-2">
-              Pré-nota Interna Demonstrativa
+              Pré-nota Interna
               <span className={`text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-full ${
                 emitterData.sefazEnv === 'homologacao' 
                   ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' 
@@ -566,7 +566,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
               </span>
             </h2>
             <p className="text-[11px] text-slate-500 font-medium max-w-lg mt-0.5">
-              Rascunho interno para organizar venda, conferir dados e separar pacote para contador. Sem transmissão fiscal.
+              Rascunho interno para organizar vendas, conferir dados e preparar relatório local para contador. Sem transmissão fiscal.
             </p>
           </div>
         </div>
@@ -593,7 +593,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
             }`}
           >
             <Plus className="w-3.5 h-3.5" />
-            Nova pré-nota
+            Nova pré-nota interna
           </button>
 
           <button
@@ -647,7 +647,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
             }`}>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-3 w-full">
                 <div>
-                  <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-500 mb-1">Nº da pré-nota</label>
+                  <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-500 mb-1">Nº da pré-nota interna</label>
                   <input
                     type="number"
                     value={filters.invoice_number}
@@ -721,17 +721,17 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
               {loadingList ? (
                 <div className="p-16 text-center space-y-3">
                   <RefreshCw className="w-8 h-8 text-indigo-505 animate-spin mx-auto" />
-                  <p className="text-xs font-bold text-slate-500">Buscando pré-notas internas no Postgres...</p>
+                  <p className="text-xs font-bold text-slate-500">Buscando pré-notas internas salvas localmente...</p>
                 </div>
               ) : nfeList.length === 0 ? (
                 <div className="p-16 text-center space-y-3">
                   <FileText className="w-10 h-10 text-slate-600 mx-auto opacity-40" />
-                  <p className="text-xs font-bold text-slate-500">Nenhuma pré-nota interna correspondente aos filtros foi localizada para seu tenant.</p>
+                  <p className="text-xs font-bold text-slate-500">Nenhuma pré-nota interna correspondente aos filtros foi localizada no armazenamento local.</p>
                   <button 
                     onClick={() => setActiveSubTab('emissao')}
                     className="bg-indigo-600 text-white font-black px-4 py-2 rounded-xl text-xs uppercase cursor-pointer tracking-wider"
                   >
-                    Criar primeira pré-nota
+                    Criar primeira pré-nota interna
                   </button>
                 </div>
               ) : (
@@ -743,7 +743,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                       }`}>
                         <th className="p-4">Número / Série</th>
                         <th className="p-4">Identificação Destinatário</th>
-                        <th className="p-4">Data do rascunho</th>
+                        <th className="p-4">Data do rascunho interno</th>
                         <th className="p-4">Valor Total</th>
                         <th className="p-4">Status interno</th>
                         <th className="p-4 text-right">Ações internas</th>
@@ -1495,14 +1495,14 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
                   <div className="p-3 bg-slate-500/5 rounded-xl border border-slate-205/10">
                     <span className="font-black text-slate-300 font-mono text-[10px]">DRAFT / VALIDATING</span>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Montagem primária e análise de dados cadastrais obrigatórios.</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Montagem primária e análise de dados cadastrais obrigatórios.</p>
                   </div>
                   <div className="p-3 bg-slate-500/5 rounded-xl border border-slate-205/10">
                     <span className="font-black text-slate-300 font-mono text-[10px]">CONFERIDO</span>
-                    <p className="text-[10px] text-slate-500 mt-0.5">Campos internos revisados para gerar espelho visual.</p>
+                      <p className="text-[10px] text-slate-500 mt-0.5">Campos internos revisados para gerar prévia visual.</p>
                   </div>
                   <div className="p-3 bg-slate-500/5 rounded-xl border border-slate-205/10">
-                    <span className="font-black text-slate-300 font-mono text-[10px]">CONTADOR / REVISÃO</span>
+                      <span className="font-black text-slate-300 font-mono text-[10px]">CONTADOR / REVISÃO</span>
                     <p className="text-[10px] text-slate-500 mt-0.5">Dados separados para contador. Emissão real não disponível no MVP.</p>
                   </div>
                 </div>
@@ -1537,7 +1537,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                 <div className="flex items-center gap-2">
                   <FileText className="w-5 h-5 text-indigo-505" />
                   <h3 className="text-xs font-black uppercase tracking-wider">
-                    Nota Fiscal Eletrônica Nº {selectedNfe.invoice_number}
+                    Pré-nota interna Nº {selectedNfe.invoice_number}
                   </h3>
                 </div>
                 <button
@@ -1553,7 +1553,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <span className="text-[9px] text-slate-500 uppercase font-bold block">Status da Emissão:</span>
+                    <span className="text-[9px] text-slate-500 uppercase font-bold block">Status interno:</span>
                     <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${
                       selectedNfe.status === 'AUTHORIZED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
                     }`}>
@@ -1562,21 +1562,21 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                   </div>
 
                   <div>
-                    <span className="text-[9px] text-slate-500 uppercase font-bold block">Chave de Acesso Unificada (44 Dígitos):</span>
+                    <span className="text-[9px] text-slate-500 uppercase font-bold block">Chave visual interna (44 dígitos):</span>
                     <span className="font-mono text-[10px] text-slate-400 select-all font-bold">
-                      {selectedNfe.access_key || 'Chave não calculada durante DRAFT'}
+                      {selectedNfe.access_key || 'Chave não calculada durante rascunho'}
                     </span>
                   </div>
 
                   <div>
                     <span className="text-[9px] text-slate-500 uppercase font-bold block">Série / Documento:</span>
-                    <span className="font-medium">Série {selectedNfe.series} | Tipo: Saída Mercantil</span>
+                    <span className="font-medium">Série {selectedNfe.series} | Tipo: Saída interna</span>
                   </div>
 
                   <div>
-                    <span className="text-[9px] text-slate-500 uppercase font-bold block">Número do Protocolo Sefaz:</span>
+                    <span className="text-[9px] text-slate-500 uppercase font-bold block">Referência interna:</span>
                     <span className="font-mono font-bold text-slate-300 select-all">
-                      {selectedNfe.protocol_number || 'Sem retorno (DRAFT)'}
+                      {selectedNfe.protocol_number || 'Sem retorno local (rascunho)'}
                     </span>
                   </div>
 
@@ -1586,13 +1586,13 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                   </div>
 
                   <div>
-                    <span className="text-[9px] text-slate-500 uppercase font-bold block">Valor Total Faturado:</span>
+                    <span className="text-[9px] text-slate-500 uppercase font-bold block">Valor total visual:</span>
                     <span className="font-black text-indigo-550 text-base">R$ {selectedNfe.total_value.toFixed(2)}</span>
                   </div>
                 </div>
 
                 <div className="pt-4 border-t border-slate-205/10">
-                  <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-[#6366f1] mb-2">Estrutura XML Faturada (Conteúdo do Bloco)</h4>
+                  <h4 className="text-[10px] font-extrabold uppercase tracking-widest text-[#6366f1] mb-2">Estrutura XML interna da pré-nota</h4>
                   <textarea
                     readOnly
                     rows={8}
@@ -1619,7 +1619,7 @@ export default function NfeEmissorTool({ products = [], savedCustomers = [], the
                     className="bg-indigo-650 hover:bg-indigo-755 text-white font-black px-4 py-2 rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 cursor-pointer shadow-lg active:scale-95 transition-all"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    Baixar XML
+                    Baixar XML interno
                   </button>
                 )}
               </div>

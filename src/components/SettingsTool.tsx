@@ -197,7 +197,7 @@ export default function SettingsTool({
     }
     return [
       { id: '1', date: '2026-06-03 10:14:02', action: 'Cadastro de referência', detail: 'Arquivo de referência registrado para preparação futura. Sem transmissão fiscal no MVP.', user: 'admin@auxiliarbiz.com' },
-      { id: '2', date: '2026-06-03 10:15:20', action: 'Conferir dados internos', detail: 'Dados internos conferidos para pacote do contador.', user: 'admin@auxiliarbiz.com' },
+      { id: '2', date: '2026-06-03 10:15:20', action: 'Conferir dados internos', detail: 'Dados internos conferidos para preparação local do contador.', user: 'admin@auxiliarbiz.com' },
       { id: '3', date: '2026-06-03 10:16:11', action: 'Marcar como preparação futura', detail: 'Recurso fiscal real não disponível no MVP.', user: 'sistema' }
     ];
   });
@@ -936,7 +936,7 @@ export default function SettingsTool({
                   <option value="Lucro Real">Lucro Real (Apuração com base na DRE Auditoria)</option>
                 </select>
                 <p className="text-[10px] text-gray-500 leading-relaxed mt-1">
-                  Define o encadeamento eletrônico de impostos federais incidentes sobre as notas de faturamento.
+                  Define apenas um cadastro de referência para preparação futura. Não há transmissão fiscal no MVP.
                 </p>
               </div>
 
@@ -957,7 +957,7 @@ export default function SettingsTool({
                   </div>
                 </div>
                 <p className="text-[10px] text-gray-500 leading-relaxed mt-1">
-                  Taxa simplificada para demonstrativo DRE e recolhimento instantâneo do DAS.
+                  Taxa simplificada para demonstrativo interno e preparação futura.
                 </p>
               </div>
 
@@ -987,7 +987,7 @@ export default function SettingsTool({
               <div className="space-y-1">
                 <p className="font-bold text-xs text-indigo-500">Organização tributária interna:</p>
                 <p className="text-[10px] text-gray-550 leading-relaxed">
-                  Ao salvar, essas alíquotas servem apenas para demonstrativos internos, conciliação possível e pacote para contador. Não há transmissão fiscal, emissão real ou documento com valor fiscal no MVP.
+                  Ao salvar, essas alíquotas servem apenas para demonstrativos internos, conciliação possível e preparação para contador. Não há transmissão fiscal, emissão real ou documento com valor fiscal no MVP.
                 </p>
               </div>
             </div>
@@ -1250,7 +1250,7 @@ export default function SettingsTool({
                     <span className="text-[10px] text-gray-500 font-mono">ISO/IEC 27001 Cryptography Check</span>
                   </div>
                   <p className="text-[10px] text-gray-500">
-                    O ERP registra alterações em dados internos usados para pré-nota interna, rascunho sem valor fiscal e pacote para contador.
+                    O ERP registra alterações em dados internos usados para pré-nota interna, rascunho sem valor fiscal e preparação local para contador.
                   </p>
                   
                   <div className="space-y-2 mt-4">
@@ -1877,7 +1877,7 @@ export default function SettingsTool({
                       />
                       <div>
                         <span className="text-xs font-bold block">Pré-nota / Contador</span>
-                        <span className="text-[9px] text-gray-400 block font-sans">Rascunho interno sem valor fiscal e pacote para contador</span>
+                        <span className="text-[9px] text-gray-400 block font-sans">Rascunho interno sem valor fiscal e preparação local para contador</span>
                       </div>
                     </label>
 
@@ -2318,7 +2318,7 @@ export default function SettingsTool({
                     CONFIRMAÇÃO EXTREMA REQUERIDA!
                   </h4>
                   <p className={`text-xs leading-relaxed ${theme === 'dark' ? 'text-amber-200/80' : 'text-amber-800'}`}>
-                    Você está prestes a limpar todos os registros locais deste navegador. Esta ação apagará relatórios fiscais, notas emitidas e as configurações de faturamento executivas cadastradas.
+                    Você está prestes a limpar todos os registros locais deste navegador. Esta ação apagará dados locais, pré-notas, rascunhos e configurações de referência cadastradas.
                   </p>
                 </div>
 

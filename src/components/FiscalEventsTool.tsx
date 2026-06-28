@@ -142,15 +142,15 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
   const handleCancelNfe = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedNfeIdForCancel) {
-      triggerFeedback("Favor selecionar o documento NF-e para cancelamento.", "error");
+      triggerFeedback("Favor selecionar um documento interno para revisão.", "error");
       return;
     }
     if (cancelReason.length < 15) {
-      triggerFeedback("A justificativa de cancelamento legal perante a SEFAZ deve ter no mínimo 15 caracteres.", "error");
+      triggerFeedback("A justificativa interna deve ter no mínimo 15 caracteres.", "error");
       return;
     }
     if (!cancelProtocol) {
-      triggerFeedback("O número do protocolo de autorização original é obrigatório.", "error");
+      triggerFeedback("A referência local original é obrigatória.", "error");
       return;
     }
 
@@ -168,13 +168,13 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
 
       const data = await res.json();
       if (res.ok && data.success) {
-        triggerFeedback(`Cancelamento Homologado! Protocolo SEFAZ: ${data.eventProtocol}`, "success");
+        triggerFeedback(`Revisão registrada! Protocolo local: ${data.eventProtocol}`, "success");
         setCancelReason('');
         setSelectedNfeIdForCancel('');
         setCancelProtocol('');
         fetchData();
       } else {
-        triggerFeedback(data.error || `Erro de homologação SEFAZ: ${data.statusMessage || 'Rejeitado'}`, "error");
+        triggerFeedback(data.error || `Erro na revisão local: ${data.statusMessage || 'Rejeitado'}`, "error");
       }
     } catch (err: any) {
       triggerFeedback(`Erro de rede ou permissão insuficiente: ${err.message}`, "error");
@@ -187,7 +187,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
   const handleCceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedNfeIdForCce) {
-      triggerFeedback("Favor selecionar o documento NF-e para vincular a Carta de Correção.", "error");
+      triggerFeedback("Favor selecionar um documento interno para vincular a correção.", "error");
       return;
     }
     if (cceText.length < 15) {
@@ -213,13 +213,13 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
 
       const data = await res.json();
       if (res.ok && data.success) {
-        triggerFeedback(`Carta de Correção Registrada e Vinculada à Nota! Protocolo: ${data.protocolNumber}`, "success");
+        triggerFeedback(`Correção interna registrada. Protocolo local: ${data.protocolNumber}`, "success");
         setCceText('');
         setSelectedNfeIdForCce('');
         setCceSequence(prev => prev + 1);
         fetchData();
       } else {
-        triggerFeedback(data.error || `Rejeição SEFAZ: ${data.statusMessage || 'Erro'}`, "error");
+        triggerFeedback(data.error || `Rejeição local: ${data.statusMessage || 'Erro'}`, "error");
       }
     } catch (err: any) {
       triggerFeedback(`Erro de processamento: ${err.message}`, "error");
@@ -262,7 +262,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
         setInvalReason('');
         fetchData();
       } else {
-        triggerFeedback(data.error || `Rejeição SEFAZ: ${data.statusMessage || 'Erro'}`, "error");
+        triggerFeedback(data.error || `Rejeição local: ${data.statusMessage || 'Erro'}`, "error");
       }
     } catch (err: any) {
       triggerFeedback(`Falha técnica ao transmitir: ${err.message}`, "error");
@@ -275,7 +275,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
   const handleLiveQuery = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!queryParam) {
-      triggerFeedback("Por favor, digite o parâmetro para pesquisa na SEFAZ.", "error");
+      triggerFeedback("Por favor, digite o parâmetro para pesquisa local.", "error");
       return;
     }
 
@@ -305,10 +305,10 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
     }
   };
 
-  // Download Action for Phases
+  // Download action for demonstrative records
   const downloadXmlPhase = (docId: string, type: string) => {
     const url = `/api/sefaz/download-document/${docId}?type=${type}`;
-    // Criar tag temporária de Download
+    // Criar tag temporária de download demonstrativo
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `NFe_${type}_${docId}.xml`);
@@ -338,7 +338,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
     });
   }, [eventsList, filterType, filterStatus, searchText]);
 
-  // NF-es available for Cancellation
+  // Documents available for local review
   const authorizedNfes = useMemo(() => {
     return nfeList.filter(n => n.status === 'AUTHORIZED');
   }, [nfeList]);
@@ -361,10 +361,10 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
         <div>
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-6 w-6 text-emerald-600" />
-            <h1 className="text-xl font-bold tracking-tight">Eventos Fiscais de Documentos Autorizados</h1>
+            <h1 className="text-xl font-bold tracking-tight">Histórico Local de Revisões Demonstrativas</h1>
           </div>
           <p className="text-zinc-500 text-xs mt-1">
-            Gerenciamento completo do ciclo de vida regulatório de NF-e e NFC-e pós-autorização (Cancelamento, CC-e, Inutilização, Consultas e Downloads).
+            Histórico demonstrativo de eventos internos para pré-notas e arquivos de apoio, sem valor fiscal e sem transmissão real.
           </p>
         </div>
         <button
@@ -418,7 +418,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
           }`}
         >
           <FileX className="h-3.5 w-3.5" />
-          Cancelamento de Nota
+          Revisão Interna
         </button>
         <button
           onClick={() => setActiveTab('cce')}
@@ -429,7 +429,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
           }`}
         >
           <FileEdit className="h-3.5 w-3.5" />
-          Carta de Correção (CC-e)
+          Correção Interna
         </button>
         <button
           onClick={() => setActiveTab('inutilizacao')}
@@ -440,7 +440,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
           }`}
         >
           <Slash className="h-3.5 w-3.5 text-zinc-400" />
-          Inutilização de Faixa
+          Reserva de Numeração
         </button>
         <button
           onClick={() => setActiveTab('consulta')}
@@ -451,7 +451,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
           }`}
         >
           <SearchCode className="h-3.5 w-3.5" />
-          Consulta de Situação Live
+          Consulta de Situação Local
         </button>
       </div>
 
@@ -474,24 +474,24 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
               </select>
             </div>
             <div>
-              <label className="block text-[10px] uppercase tracking-wider font-bold text-zinc-400 mb-1">Status Sefaz</label>
+              <label className="block text-[10px] uppercase tracking-wider font-bold text-zinc-400 mb-1">Status local</label>
               <select
                 value={filterStatus}
                 onChange={e => setFilterStatus(e.target.value)}
                 className="w-full text-xs p-2 rounded bg-white hover:bg-zinc-100 dark:bg-zinc-800 border dark:border-zinc-700"
               >
                 <option value="ALL">Qualquer Status</option>
-                <option value="SUCCESS">Homologados / Registrados</option>
-                <option value="REJECTED">Rejeitados pelo Servidor</option>
+                <option value="SUCCESS">Registrados / Conferidos</option>
+                <option value="REJECTED">Pendentes / Revisão</option>
               </select>
             </div>
             <div className="md:col-span-2">
-              <label className="block text-[10px] uppercase tracking-wider font-bold text-zinc-400 mb-1">Texto de Pesquisa</label>
+              <label className="block text-[10px] uppercase tracking-wider font-bold text-zinc-400 mb-1">Texto de pesquisa</label>
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-400" />
                 <input
                   type="text"
-                  placeholder="Pesquise por chave, protocolo ou ocorrência..."
+                  placeholder="Pesquise por referência, protocolo local ou ocorrência..."
                   value={searchText}
                   onChange={e => setSearchText(e.target.value)}
                   className="w-full text-xs p-2 pl-8.5 rounded bg-white dark:bg-zinc-800 border dark:border-zinc-700"
@@ -508,9 +508,9 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
                   <th className="p-3">Evento / Data</th>
                   <th className="p-3">ID do Documento</th>
                   <th className="p-3">Seq</th>
-                  <th className="p-3">Protocolo Homologado</th>
-                  <th className="p-3">Código / Retorno SEFAZ</th>
-                  <th className="p-3 text-right">Ação de Downloads</th>
+                  <th className="p-3">Protocolo local</th>
+                  <th className="p-3">Código / Retorno local</th>
+                  <th className="p-3 text-right">Ação de arquivos</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-200 dark:divide-zinc-800 text-xs text-zinc-700 dark:text-zinc-300">
@@ -520,7 +520,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
                       <div className="flex flex-col items-center justify-center gap-1">
                         <Activity className="h-8 w-8 text-zinc-300" />
                         <span className="font-semibold">Nenhum evento registrado</span>
-                        <span className="text-[10px]">Realize cancelamentos, envie cartas de correção ou faça inutilizações de números para visualizar o histórico de eventos da SEFAZ neste ambiente.</span>
+                        <span className="text-[10px]">Registros históricos locais de revisão, correção e reserva de numeração aparecerão aqui.</span>
                       </div>
                     </td>
                   </tr>
@@ -536,9 +536,9 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
                             {evt.event_type === 'INVALIDATION' && <Slash className="h-4 w-4 text-purple-500" />}
                             <div>
                               <div className="font-bold">
-                                {evt.event_type === 'CANCELLATION' && 'Cancelamento'}
-                                {evt.event_type === 'CORRECTION_LETTER' && 'Carta de Correção'}
-                                {evt.event_type === 'INVALIDATION' && 'Inutilização'}
+                              {evt.event_type === 'CANCELLATION' && 'Revisão interna'}
+                                {evt.event_type === 'CORRECTION_LETTER' && 'Correção interna'}
+                                {evt.event_type === 'INVALIDATION' && 'Reserva de numeração'}
                               </div>
                               <div className="text-[10px] text-zinc-400 flex items-center gap-1">
                                 <Calendar className="h-3 w-3" />
@@ -551,7 +551,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
                           {evt.document_id ? (
                             <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">{evt.document_id}</span>
                           ) : (
-                            <span className="text-zinc-400 italic">Global / Faixa</span>
+                            <span className="text-zinc-400 italic">Local / Faixa</span>
                           )}
                         </td>
                         <td className="p-3 text-center font-bold text-zinc-500">{evt.event_sequence}</td>
@@ -570,14 +570,14 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
                             <>
                               <button
                                 onClick={() => downloadXmlPhase(evt.document_id!, 'original')}
-                                title="Download XML Original"
+                            title="Download de arquivo original"
                                 className="p-1 rounded bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition"
                               >
                                 <Download className="h-3 w-3 inline" /> <span className="text-[10px]">Orig</span>
                               </button>
                               <button
                                 onClick={() => downloadXmlPhase(evt.document_id!, 'authorized')}
-                                title="Download XML Autorizado"
+                            title="Download de arquivo interno"
                                 className="p-1 rounded bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 transition"
                               >
                                 <Download className="h-3 w-3 inline" /> <span className="text-[10px]">Aut</span>
@@ -587,7 +587,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
                           {evt.event_type === 'CANCELLATION' && evt.document_id && (
                             <button
                               onClick={() => downloadXmlPhase(evt.document_id!, 'cancellation')}
-                              title="Download XML de Cancelamento"
+                            title="Download de arquivo de revisão"
                               className="p-1 rounded bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-700 dark:text-rose-400 transition"
                             >
                               <Download className="h-3 w-3 inline" /> <span className="text-[10px]">Canc</span>
@@ -596,7 +596,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
                           {evt.event_type === 'CORRECTION_LETTER' && evt.document_id && (
                             <button
                               onClick={() => downloadXmlPhase(evt.document_id!, 'cce')}
-                              title="Download XML de CC-e"
+                            title="Download de arquivo de correção"
                               className="p-1 rounded bg-sky-50 hover:bg-sky-100 dark:bg-sky-950/20 dark:hover:bg-sky-900/30 text-sky-700 dark:text-sky-400 transition"
                             >
                               <Download className="h-3 w-3 inline" /> <span className="text-[10px]">CCe</span>
@@ -619,24 +619,24 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
           <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 p-4 rounded-xl flex gap-3 text-xs text-amber-800 dark:text-amber-300">
             <Info className="h-5 w-5 text-amber-600 shrink-0" />
             <div>
-              <span className="font-bold">Regulamento de Cancelamento perante a SEFAZ:</span>
+              <span className="font-bold">Regra interna de revisão:</span>
               <p className="mt-1">
-                Uma NF-e autorizada somente pode ser cancelada dentro do prazo legal máximo especificado pela fazenda estadual (geralmente de 24 horas no modelo comercial). O cancelamento homologado gera um evento formal que invalida fiscalmente o documento mercantil.
+                Este bloco serve apenas como histórico demonstrativo. Não há cancelamento fiscal real, transmissão à SEFAZ ou invalidação oficial de documento.
               </p>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5 U">Selecionar Nota Fiscal (Autorizada)</label>
+            <label className="block text-xs font-bold text-zinc-400 mb-1.5 U">Selecionar documento interno</label>
             <select
               value={selectedNfeIdForCancel}
               onChange={e => handleCancelNfeSelection(e.target.value)}
               className="w-full text-xs p-2.5 rounded bg-white hover:bg-zinc-50 dark:bg-zinc-900 border dark:border-zinc-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
-              <option value="">Selecione uma nota fiscal homologada autorizada...</option>
+              <option value="">Selecione um documento interno registrado...</option>
               {authorizedNfes.map(n => (
                 <option key={n.id} value={n.id}>
-                  NF-e Nº {n.invoice_number} | Série: {n.series} | ID/Chave: {n.id.slice(0, 16)}... | Valor: R$ {Number(n.total_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  Pré-nota Nº {n.invoice_number} | Série: {n.series} | ID/Chave: {n.id.slice(0, 16)}... | Valor: R$ {Number(n.total_value).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                 </option>
               ))}
             </select>
@@ -644,26 +644,26 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Protocolo de Autorização Original</label>
+              <label className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Referência local original</label>
               <input
                 type="text"
-                placeholder="Obtido automaticamente da nota selecionada..."
+                placeholder="Obtido automaticamente do documento selecionado..."
                 value={cancelProtocol}
                 onChange={e => setCancelProtocol(e.target.value)}
                 className="w-full text-xs p-2.5 rounded bg-white dark:bg-zinc-900 border dark:border-zinc-800 font-mono"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-zinc-450 mb-1.5 text-zinc-500">Mínimo de Caracteres Exigidos</label>
-              <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded inline-block">15 caracteres (Regulamento SEFAZ)</span>
+              <label className="block text-xs font-bold text-zinc-450 mb-1.5 text-zinc-500">Mínimo de caracteres</label>
+              <span className="text-[10px] bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded inline-block">15 caracteres (regra interna)</span>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Justificativa Legal para Cancelamento</label>
+            <label className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Justificativa interna</label>
             <textarea
               rows={3}
-              placeholder="Digite detalhadamente a justificativa fiscal de cancelamento da nota (mínimo de 15 caracteres)..."
+              placeholder="Digite detalhadamente a justificativa interna (mínimo de 15 caracteres)..."
               value={cancelReason}
               onChange={e => setCancelReason(e.target.value)}
               className="w-full text-xs p-2.5 rounded bg-white dark:bg-zinc-900 border dark:border-zinc-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -679,7 +679,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
             className="w-full md:w-auto flex items-center justify-center gap-1.5 text-xs px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg transition disabled:opacity-50"
           >
             <FileX className="h-4 w-4" />
-            Sinalizar Transmissão de Cancelamento para a SEFAZ
+            Registrar revisão local
           </button>
         </form>
       )}
@@ -690,31 +690,31 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
           <div className="bg-sky-50 dark:bg-sky-950/20 border border-sky-200 dark:border-sky-850 p-4 rounded-xl flex gap-3 text-xs text-sky-800 dark:text-sky-300">
             <Info className="h-5 w-5 text-sky-600 shrink-0" />
             <div>
-              <span className="font-bold">Carta de Correção Eletrônica (CC-e) - Regras Restritas / Vedações:</span>
+              <span className="font-bold">Correção interna - Regras restritas:</span>
               <p className="mt-1">
-                Conforme a legislação nacional, a CC-e <span className="font-bold underline">não</span> pode corrigir variáveis que modifiquem os valores totais dos tributos/impostos, o CPF do destinatário, as alíquotas de ICMS, valores monetários cruciais, ou a data de emissão do documento fiscal eletrônico.
+                Este fluxo é apenas demonstrativo. Não corrige documento fiscal real, não transmite para SEFAZ e não substitui conferência fiscal.
               </p>
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Selecionar Nota Fiscal (Autorizada)</label>
+            <label className="block text-xs font-bold text-zinc-400 mb-1.5">Selecionar documento interno</label>
             <select
               value={selectedNfeIdForCce}
               onChange={e => setSelectedNfeIdForCce(e.target.value)}
               className="w-full text-xs p-2.5 rounded bg-white hover:bg-zinc-50 dark:bg-zinc-900 border dark:border-zinc-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
-              <option value="">Selecione uma nota fiscal homologada autorizada...</option>
+              <option value="">Selecione um documento interno registrado...</option>
               {authorizedNfes.map(n => (
                 <option key={n.id} value={n.id}>
-                  NF-e Nº {n.invoice_number} | Série: {n.series} | Chave: {n.id.slice(0, 16)}... | Emitida em: {new Date(n.issue_date).toLocaleDateString()}
+                  Pré-nota Nº {n.invoice_number} | Série: {n.series} | Referência: {n.id.slice(0, 16)}... | Emitida em: {new Date(n.issue_date).toLocaleDateString()}
                 </option>
               ))}
             </select>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Sequencial do Evento CC-e</label>
+            <label className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Sequencial interno</label>
             <input
               type="number"
               min={1}
@@ -722,14 +722,14 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
               onChange={e => setCceSequence(Number(e.target.value))}
               className="w-24 text-xs p-2.5 rounded bg-white dark:bg-zinc-900 border dark:border-zinc-800"
             />
-            <span className="text-[10px] text-zinc-400 block mt-1">Geralmente incrementado automaticamente caso envie múltiplas correções para a mesma nota fiscal.</span>
+            <span className="text-[10px] text-zinc-400 block mt-1">Geralmente incrementado automaticamente em revisões locais para o mesmo documento.</span>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Texto de Correção Regulamentar</label>
+            <label className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Texto de correção interna</label>
             <textarea
               rows={4}
-              placeholder="Digite o texto explanativo discriminando a retificação na nota fiscal eletrônica corporativa..."
+              placeholder="Digite o texto explanativo discriminando a retificação interna..."
               value={cceText}
               onChange={e => setCceText(e.target.value)}
               className="w-full text-xs p-2.5 rounded bg-white dark:bg-zinc-900 border dark:border-zinc-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -745,7 +745,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
             className="w-full md:w-auto flex items-center justify-center gap-1.5 text-xs px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg transition disabled:opacity-50"
           >
             <FileEdit className="h-4 w-4" />
-            Legalizar e Transmitir Carta CC-e para a SEFAZ
+            Registrar correção local
           </button>
         </form>
       )}
@@ -756,27 +756,27 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
           <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-800 p-4 rounded-xl flex gap-3 text-xs text-purple-800 dark:text-purple-300">
             <Info className="h-5 w-5 text-purple-600 shrink-0" />
             <div>
-              <span className="font-bold">Norma Geral de Inutilização Fiscal:</span>
+              <span className="font-bold">Reserva interna de numeração:</span>
               <p className="mt-1">
-                A inutilização de numeração destina-se a sinalizar quebras na sequência cronológica de numeração fiscal decorrentes de erros de sistema ou pulos não faturados antes que tal número seja transmitido. <span className="font-bold underline">Não</span> é permitido inutilizar números que já constam faturados ou associados a notas em processamento.
+                A reserva de numeração é apenas demonstrativa e serve para organizar a sequência local. Não há inutilização fiscal real, transmissão ou protocolo oficial.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-bold text-zinc-400 mb-1.5">Modelo Fiscal</label>
+              <label className="block text-xs font-bold text-zinc-400 mb-1.5">Modelo interno</label>
               <select
                 value={invalType}
                 onChange={e => setInvalType(e.target.value as any)}
                 className="w-full text-xs p-2.5 rounded bg-white dark:bg-zinc-900 border dark:border-zinc-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
               >
-                <option value="NF-e">NF-e (Modelo 55)</option>
-                <option value="NFC-e">NFC-e (Modelo 65)</option>
+                <option value="NF-e">Documento 55 interno</option>
+                <option value="NFC-e">Documento 65 interno</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-zinc-400 mb-1.5">Série Fiscal</label>
+              <label className="block text-xs font-bold text-zinc-400 mb-1.5">Série interna</label>
               <input
                 type="number"
                 min={1}
@@ -810,10 +810,10 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Motivo técnico / Justificativa legal</label>
+            <label className="block text-xs font-bold text-zinc-400 mb-1.5 uppercase">Motivo técnico / justificativa interna</label>
             <textarea
               rows={3}
-              placeholder="Descreva minuciosamente o erro técnico motivador de saltar esta numeração fiscal (mínimo de 15 caracteres)..."
+              placeholder="Descreva minuciosamente o motivo técnico para reservar esta numeração (mínimo de 15 caracteres)..."
               value={invalReason}
               onChange={e => setInvalReason(e.target.value)}
               className="w-full text-xs p-2.5 rounded bg-white dark:bg-zinc-900 border dark:border-zinc-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -829,7 +829,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
             className="w-full md:w-auto flex items-center justify-center gap-1.5 text-xs px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition disabled:opacity-50"
           >
             <Slash className="h-4 w-4" />
-            Inutilizar Faixa Sequencial na SEFAZ
+            Reservar faixa sequencial local
           </button>
         </form>
       )}
@@ -838,7 +838,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
       {activeTab === 'consulta' && (
         <div className="space-y-4">
           <form onSubmit={handleLiveQuery} className="bg-zinc-50 dark:bg-zinc-900/50 p-4 rounded-xl border dark:border-zinc-800 space-y-4">
-            <h2 className="text-xs font-bold uppercase text-zinc-400 tracking-wider">Metodologia de Consulta da Situação da NF-e</h2>
+            <h2 className="text-xs font-bold uppercase text-zinc-400 tracking-wider">Metodologia de consulta da situação local</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-bold text-zinc-400 mb-1.5">Formato de Pesquisa</label>
@@ -847,17 +847,17 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
                   onChange={e => setQueryType(e.target.value as any)}
                   className="w-full text-xs p-2.5 rounded bg-white dark:bg-zinc-900 border dark:border-zinc-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 >
-                  <option value="key">Pela Chave de Acesso (44 dígitos)</option>
-                  <option value="protocol">Pelo Número do Protocolo</option>
-                  <option value="number">Pelo Número do Documento</option>
+                  <option value="key">Pela chave interna (44 dígitos)</option>
+                  <option value="protocol">Pelo número de referência</option>
+                  <option value="number">Pelo número do documento</option>
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-zinc-400 mb-1.5">Código / Chave ou Protocolo</label>
+                <label className="block text-xs font-bold text-zinc-400 mb-1.5">Código / chave ou protocolo local</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
-                    placeholder="Cole a chave de faturamento, protocolo correspondente ou número da nota fiscal..."
+                    placeholder="Cole a chave interna, protocolo local ou número do documento..."
                     value={queryParam}
                     onChange={e => setQueryParam(e.target.value)}
                     className="w-full text-xs p-2.5 rounded bg-white dark:bg-zinc-900 border dark:border-zinc-800 font-mono"
@@ -887,7 +887,7 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
                 <div className="flex justify-between items-center border-b pb-3 border-zinc-150 dark:border-zinc-800">
                   <div className="flex items-center gap-2">
                     <Layers className="h-5 w-5 text-emerald-600" />
-                    <h3 className="text-sm font-bold">Retorno Oficial do Webservice SEFAZ</h3>
+                    <h3 className="text-sm font-bold">Retorno local demonstrativo</h3>
                   </div>
                   <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full font-bold">
                     Código {queryResult.statusCode}
@@ -896,17 +896,17 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-zinc-400">Mensagem da Receita</span>
+                    <span className="text-[10px] uppercase font-bold text-zinc-400">Mensagem local</span>
                     <p className="font-bold text-zinc-800 dark:text-zinc-200 mt-0.5">{queryResult.statusMessage}</p>
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-zinc-400">Data e Hora do Processamento</span>
+                    <span className="text-[10px] uppercase font-bold text-zinc-400">Data e hora do processamento</span>
                     <p className="font-bold mt-0.5 text-zinc-800 dark:text-zinc-200">
                       {new Date(queryResult.details.date).toLocaleString()}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[10px] uppercase font-bold text-zinc-400">Status Geral do Documento</span>
+                    <span className="text-[10px] uppercase font-bold text-zinc-400">Status geral do documento</span>
                     <p className="font-bold text-emerald-600 mt-0.5">{queryResult.details.status}</p>
                   </div>
                 </div>
@@ -915,17 +915,17 @@ export default function FiscalEventsTool({ savedCustomers = [], theme }: FiscalE
                 <div className="space-y-2 mt-4">
                   <h4 className="text-xs font-bold tracking-tight text-zinc-400 uppercase flex items-center gap-1">
                     <Activity className="h-3.5 w-3.5 text-emerald-600" />
-                    Seqüência de Eventos Fiscais Homologados Vinculados a esta Nota
+                    Sequência de eventos internos vinculados a este documento
                   </h4>
                   {queryResult.details.events.length === 0 ? (
-                    <p className="text-zinc-400 text-xs italic">Nenhum evento fiscal de cancelamento ou CC-e registrado para este parâmetro.</p>
+                    <p className="text-zinc-400 text-xs italic">Nenhum evento interno de revisão ou correção registrado para este parâmetro.</p>
                   ) : (
                     <div className="space-y-2">
                       {queryResult.details.events.map((e: any) => (
                         <div key={e.id} className="p-3 bg-zinc-50 dark:bg-zinc-905 rounded border dark:border-zinc-800 flex justify-between items-center text-xs">
                           <div>
                             <span className="font-bold uppercase text-[10px] bg-emerald-50 dark:bg-emerald-900/10 text-emerald-700 px-1.5 py-0.5 rounded">
-                              {e.type === 'CANCELLATION' ? 'Cancelamento de Nota' : 'Carta de Correção (CC-e)'}
+                              {e.type === 'CANCELLATION' ? 'Revisão interna' : 'Correção interna'}
                             </span>
                             <div className="text-[10px] text-zinc-400 mt-1">Registrado em: {new Date(e.created_at).toLocaleString()}</div>
                           </div>

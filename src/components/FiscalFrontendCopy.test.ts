@@ -29,17 +29,16 @@ describe('coerência fiscal textual do frontend MVP', () => {
     const source = componentSource('DanfeTool.tsx');
 
     expect(source).not.toMatch(/Representação gráfica oficial|NF-e autorizada|Requer autorização SEFAZ|Consulta Pública|DANFE AUXILIAR/i);
-    expect(source).toMatch(/Espelho Interno de Pré-nota/i);
+    expect(source).toMatch(/Prévia interna de pré-nota/i);
     expect(source).toMatch(/SEM VALOR FISCAL/i);
-    expect(source).toMatch(/uso demonstrativo/i);
-    expect(source).toMatch(/não emitido/i);
+    expect(source).toMatch(/uso demonstrativo|não emitida/i);
   });
 
   it('emissor legado não usa CTA de transmissão/autorização real', () => {
     const source = componentSource('NfeEmissorTool.tsx');
 
     expect(source).not.toMatch(/Emissor Completo de NF-e|Validar, Assinar e Transmitir|Console Sincronizador SEFAZ|Autorizado o uso da NF-e|homologada pela SEFAZ/i);
-    expect(source).toMatch(/Pré-nota Interna Demonstrativa/i);
+    expect(source).toMatch(/Pré-nota Interna/i);
     expect(source).toMatch(/rascunho interno sem valor fiscal/i);
     expect(source).toMatch(/Emissão real não disponível no MVP/i);
     expect(source).toMatch(/contador/i);

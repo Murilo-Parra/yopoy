@@ -73,9 +73,17 @@ function createQuickCard(values: {
   fireEvent.click(screen.getByRole('button', { name: /criar card/i }));
 }
 
-function createFolder(name: string) {
-  fireEvent.change(screen.getByLabelText(/^criar pasta$/i), { target: { value: name } });
-  fireEvent.click(screen.getByRole('button', { name: /^criar pasta$/i }));
+function openCanvasContextMenu(clientX = 180, clientY = 160) {
+  fireEvent.contextMenu(screen.getByTestId('task-canvas'), { clientX, clientY });
+}
+
+function createFolder(name: string, clientX = 180, clientY = 160) {
+  openCanvasContextMenu(clientX, clientY);
+  fireEvent.click(screen.getByRole('menuitem', { name: /criar pasta aqui/i }));
+  if (name === 'Nova pasta') return;
+  fireEvent.click(screen.getByRole('button', { name: /^renomear pasta$/i }));
+  fireEvent.change(screen.getByLabelText(/^nome da pasta$/i), { target: { value: name } });
+  fireEvent.click(screen.getByRole('button', { name: /salvar nome da pasta/i }));
 }
 
 function getFolderCard(name: RegExp) {
@@ -138,10 +146,10 @@ describe('YopoyCentralDashboard', () => {
     render(<YopoyCentralDashboard theme="light" />);
 
     expect(screen.getByRole('heading', { name: /mesa visual/i })).toBeTruthy();
-    expect(screen.getByText(/comece pela mesa/i)).toBeTruthy();
+    expect(screen.getByText(/clique com o botão direito na mesa/i)).toBeTruthy();
     expect(screen.getByTestId('task-canvas')).toBeTruthy();
     expect(within(getCaptureCard()).getByText(/^novo$/i)).toBeTruthy();
-    expect(within(getCaptureCard()).getByText(/ficha operacional/i)).toBeTruthy();
+    expect(within(getCaptureCard()).getByText(/captura \/ anotação/i)).toBeTruthy();
     expect(within(getCaptureCard()).queryByText(/ações alternativas/i)).toBeNull();
     expect(screen.getByText(/nenhum card selecionado/i)).toBeTruthy();
     expect(screen.getByText(/demonstração salva localmente/i)).toBeTruthy();
@@ -149,6 +157,7 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getAllByText(/sem sincronização externa/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/pré-notas são visuais, sem valor fiscal/i)).toBeTruthy();
     expect(screen.getByRole('button', { name: /registro rápido/i })).toBeTruthy();
+    expect(screen.getByText(/clique com o botão direito na mesa/i)).toBeTruthy();
     expect(screen.getByText(/registre agora, organize depois/i)).toBeTruthy();
     expect(screen.getByText(/este card fica salvo neste navegador/i)).toBeTruthy();
     expect(screen.getByRole('heading', { name: /pacote local para contador/i })).toBeTruthy();
@@ -168,7 +177,7 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getByText(/no celular: arraste pelo corpo do card/i)).toBeTruthy();
   });
 
-  it('mostra controles de zoom, aplica escala e ajusta a visão ao conteúdo', () => {
+  it('abre menu contextual da Mesa, cria pasta na posição clicada e controla zoom', async () => {
     render(<YopoyCentralDashboard theme="light" />);
     const viewport = screen.getByTestId('task-canvas-viewport');
     const scrollTo = vi.fn();
@@ -180,23 +189,78 @@ describe('YopoyCentralDashboard', () => {
       return 1;
     } });
 
-    expect(screen.getByText(/zoom da mesa/i)).toBeTruthy();
-    expect(screen.getByText('100%')).toBeTruthy();
+    expect(screen.queryByText(/zoom da mesa/i)).toBeNull();
+    expect(screen.queryByLabelText(/^criar pasta$/i)).toBeNull();
     expect(screen.getByTestId('task-canvas').style.transform).toBe('scale(1)');
 
-    fireEvent.click(screen.getByRole('button', { name: /diminuir zoom/i }));
-    expect(screen.getByText('75%')).toBeTruthy();
+    openCanvasContextMenu(260, 220);
+    expect(screen.getByRole('menu', { name: /menu contextual da mesa/i })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /criar pasta aqui/i })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /restaurar demonstração/i })).toBeTruthy();
+    expect(screen.getByText(/zoom atual: 100%/i)).toBeTruthy();
+    fireEvent.click(screen.getByRole('menuitem', { name: /diminuir zoom/i }));
     expect(screen.getByTestId('task-canvas').style.transform).toBe('scale(0.75)');
 
-    fireEvent.click(screen.getByRole('button', { name: /zoom 100%/i }));
-    fireEvent.click(screen.getByRole('button', { name: /aumentar zoom/i }));
-    expect(screen.getByText('125%')).toBeTruthy();
+    openCanvasContextMenu(260, 220);
+    fireEvent.click(screen.getByRole('menuitem', { name: /zoom 100%/i }));
+    openCanvasContextMenu(260, 220);
+    fireEvent.click(screen.getByRole('menuitem', { name: /aumentar zoom/i }));
     expect(screen.getByTestId('task-canvas').style.transform).toBe('scale(1.25)');
 
-    fireEvent.click(screen.getByRole('button', { name: /ajustar visão/i }));
-    expect(screen.getByText('50%')).toBeTruthy();
+    openCanvasContextMenu(260, 220);
+    fireEvent.click(screen.getByRole('menuitem', { name: /ajustar visão/i }));
     expect(screen.getByText(/visão ajustada ao conteúdo visível da mesa/i)).toBeTruthy();
     expect(scrollTo).toHaveBeenCalled();
+
+    openCanvasContextMenu(300, 260);
+    fireEvent.click(screen.getByRole('menuitem', { name: /criar pasta aqui/i }));
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      const folder = snapshot.items.find((item) => item.kind === 'folder' && item.title === 'Nova pasta');
+      expect(folder?.parentFolderId).toBeNull();
+      expect(snapshot.positions[folder?.id ?? '']).toEqual({ x: 600, y: 520 });
+    });
+  });
+
+  it('mantém topo limpo e diferencia visualmente tipos operacionais', () => {
+    render(<YopoyCentralDashboard theme="light" />);
+
+    expect(screen.queryByLabelText(/^criar pasta$/i)).toBeNull();
+    expect(screen.queryByText(/zoom da mesa/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /restaurar demonstração/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /registro rápido/i })).toBeTruthy();
+    expect(screen.getByText(/filtros da mesa/i)).toBeTruthy();
+
+    expect(within(screen.getByTestId('canvas-node-mock-sale-01')).getByText(/comanda \/ venda/i)).toBeTruthy();
+    expect(within(screen.getByTestId('canvas-node-mock-payment-01')).getByText(/pagamento \/ comprovante/i)).toBeTruthy();
+    expect(within(screen.getByTestId('canvas-node-mock-expense-01')).getAllByText(/^despesa$/i).length).toBeGreaterThan(0);
+    expect(within(screen.getByTestId('canvas-node-mock-pre-invoice-01')).getAllByText(/pré-nota visual/i).length).toBeGreaterThan(0);
+    expect(within(screen.getByTestId('canvas-node-mock-pre-invoice-01')).getAllByText(/sem valor fiscal/i).length).toBeGreaterThan(0);
+    expect(within(screen.getByTestId('canvas-node-mock-capture-01')).getByText(/captura \/ anotação/i)).toBeTruthy();
+  });
+
+  it('abre menu contextual de card e de pasta com ações úteis', () => {
+    render(<YopoyCentralDashboard theme="light" />);
+
+    fireEvent.contextMenu(screen.getByRole('heading', { name: /comanda mesa 1/i }).closest('article') as HTMLElement, {
+      clientX: 420,
+      clientY: 180,
+    });
+    expect(screen.getByRole('menu', { name: /menu contextual do card/i })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /selecionar card/i })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /preparar pré-nota visual/i })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /separar para contador/i })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /^arquivar$/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole('menuitem', { name: /abrir painel do card/i }));
+    expect(screen.getByText(/painel do card aberto/i)).toBeTruthy();
+
+    createFolder('Menu Pasta', 260, 220);
+    fireEvent.contextMenu(getFolderCard(/^menu pasta$/i), { clientX: 300, clientY: 240 });
+    expect(screen.getByRole('menu', { name: /menu contextual da pasta/i })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /abrir pasta/i })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /renomear pasta/i })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /arquivar pasta/i })).toBeTruthy();
+    expect(screen.getByRole('menuitem', { name: /ver painel da pasta/i })).toBeTruthy();
   });
 
   it('cria pasta local, salva no snapshot e abre submesa vazia pelo painel', async () => {
@@ -204,15 +268,14 @@ describe('YopoyCentralDashboard', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0.345678);
     render(<YopoyCentralDashboard theme="light" />);
 
-    expect(screen.getByLabelText(/^criar pasta$/i)).toBeTruthy();
-    expect(screen.getByText(/pastas são locais e servem para organizar cards/i)).toBeTruthy();
+    expect(screen.queryByLabelText(/^criar pasta$/i)).toBeNull();
 
     createFolder('Mesa 1');
 
-    expect(screen.getByText(/pasta criada localmente nesta mesa/i)).toBeTruthy();
+    expect(screen.getByText(/pasta renomeada localmente nesta mesa/i)).toBeTruthy();
     const folderCard = getFolderCard(/^mesa 1$/i);
-    expect(within(folderCard).getAllByText(/submesa local/i).length).toBeGreaterThan(0);
-    expect(within(folderCard).getByText(/0 card\(s\) nesta pasta/i)).toBeTruthy();
+    expect(within(folderCard).getAllByText(/pasta \/ submesa/i).length).toBeGreaterThan(0);
+    expect(within(folderCard).getByText(/0 item\(ns\) e 0 subpasta\(s\)/i)).toBeTruthy();
     expect(within(folderCard).queryByText(/R\$/i)).toBeNull();
 
     await waitFor(() => {
@@ -225,7 +288,7 @@ describe('YopoyCentralDashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: /abrir pasta/i }));
 
     expect(screen.getByRole('heading', { name: /submesa: mesa 1/i })).toBeTruthy();
-    expect(screen.getByText(/mesa principal \/ mesa 1/i)).toBeTruthy();
+    expect(screen.getByRole('navigation', { name: /caminho da mesa/i }).textContent).toMatch(/mesa principal.*mesa 1/i);
     expect(screen.getByText(/esta pasta ainda está vazia/i)).toBeTruthy();
     expect(screen.getByText(/volte para a mesa principal e mova cards para cá/i)).toBeTruthy();
 
@@ -260,7 +323,7 @@ describe('YopoyCentralDashboard', () => {
 
     const movedCard = screen.getByRole('heading', { name: /comanda mesa 1/i }).closest('article') as HTMLElement;
     selectCard(movedCard);
-    expect(screen.getByText(/este card está em/i)).toBeTruthy();
+    expect(screen.getByText(/este item está em/i)).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /mover para mesa principal/i }));
     expect(screen.getByText(/card voltou para a mesa principal/i)).toBeTruthy();
     expect(screen.queryByRole('heading', { name: /comanda mesa 1/i })).toBeNull();
@@ -305,6 +368,69 @@ describe('YopoyCentralDashboard', () => {
     selectCard(getFolderCard(/pedidos ifood/i));
     fireEvent.click(screen.getByRole('button', { name: /abrir pasta/i }));
     expect(screen.getByRole('heading', { name: /recebimento dentro da pasta/i })).toBeTruthy();
+  });
+
+  it('arrasta card comum para cima de uma pasta e salva parentFolderId', async () => {
+    render(<YopoyCentralDashboard theme="light" />);
+
+    createFolder('Pedidos', 180, 160);
+    const folderCard = getFolderCard(/^pedidos$/i);
+    const captureCard = getCaptureCard();
+
+    fireEvent.pointerDown(captureCard, { pointerId: 31, button: 0, clientX: 850, clientY: 80 });
+    fireEvent.pointerMove(captureCard, { pointerId: 31, clientX: 220, clientY: 200 });
+    expect(within(folderCard).getByText(/soltar aqui/i)).toBeTruthy();
+    fireEvent.pointerUp(captureCard, { pointerId: 31, clientX: 220, clientY: 200 });
+
+    expect(screen.getByText(/card movido para a pasta local/i)).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /foto de comprovante pix/i })).toBeNull();
+
+    selectCard(folderCard);
+    fireEvent.click(screen.getByRole('button', { name: /abrir pasta/i }));
+    expect(screen.getByRole('heading', { name: /foto de comprovante pix/i })).toBeTruthy();
+
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      const folder = snapshot.items.find((item) => item.kind === 'folder' && item.title === 'Pedidos');
+      expect(snapshot.items.find((item) => item.id === 'mock-capture-01')?.parentFolderId).toBe(folder?.id);
+    });
+  });
+
+  it('arrasta pasta para dentro de outra pasta, abre subpasta e mostra breadcrumb hierárquico', async () => {
+    render(<YopoyCentralDashboard theme="light" />);
+
+    createFolder('Pedidos', 180, 160);
+    createFolder('Delivery', 560, 160);
+    const pedidosCard = getFolderCard(/^pedidos$/i);
+    const deliveryCard = getFolderCard(/^delivery$/i);
+
+    fireEvent.pointerDown(pedidosCard, { pointerId: 32, button: 0, clientX: 190, clientY: 170 });
+    fireEvent.pointerMove(pedidosCard, { pointerId: 32, clientX: 600, clientY: 200 });
+    expect(within(deliveryCard).getByText(/soltar aqui/i)).toBeTruthy();
+    fireEvent.pointerUp(pedidosCard, { pointerId: 32, clientX: 600, clientY: 200 });
+
+    expect(screen.getByText(/pasta movida para dentro de outra pasta local/i)).toBeTruthy();
+    expect(screen.queryByRole('heading', { name: /^pedidos$/i })).toBeNull();
+
+    selectCard(deliveryCard);
+    fireEvent.click(screen.getByRole('button', { name: /abrir pasta/i }));
+    expect(screen.getByRole('heading', { name: /^pedidos$/i })).toBeTruthy();
+    expect(within(getFolderCard(/^pedidos$/i)).getByText(/pasta \/ submesa/i)).toBeTruthy();
+
+    selectCard(getFolderCard(/^pedidos$/i));
+    fireEvent.click(screen.getByRole('button', { name: /abrir pasta/i }));
+    expect(screen.getByRole('heading', { name: /submesa: pedidos/i })).toBeTruthy();
+    expect(screen.getByRole('navigation', { name: /caminho da mesa/i }).textContent).toMatch(/mesa principal.*delivery.*pedidos/i);
+    fireEvent.click(screen.getByRole('button', { name: /voltar um nível/i }));
+    expect(screen.getByRole('heading', { name: /submesa: delivery/i })).toBeTruthy();
+
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      const pedidos = snapshot.items.find((item) => item.kind === 'folder' && item.title === 'Pedidos');
+      const delivery = snapshot.items.find((item) => item.kind === 'folder' && item.title === 'Delivery');
+      expect(pedidos?.parentFolderId).toBe(delivery?.id);
+      expect(JSON.stringify(snapshot)).not.toMatch(/activeFolderId|selectedCardId|canvasZoom|contextMenu/i);
+    });
   });
 
   it('deriva tamanho expansível do canvas quando há card em posição distante', () => {
@@ -613,8 +739,10 @@ describe('YopoyCentralDashboard', () => {
 
   it('move um card com Pointer Events e salva sua posição lógica mesmo com zoom', async () => {
     render(<YopoyCentralDashboard theme="light" />);
-    fireEvent.click(screen.getByRole('button', { name: /diminuir zoom/i }));
-    fireEvent.click(screen.getByRole('button', { name: /diminuir zoom/i }));
+    openCanvasContextMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: /diminuir zoom/i }));
+    openCanvasContextMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: /diminuir zoom/i }));
     const card = getCaptureCard();
     const node = screen.getByTestId('canvas-node-mock-capture-01');
     const initialLeft = node.style.left;
@@ -648,7 +776,8 @@ describe('YopoyCentralDashboard', () => {
 
   it('conecta dois cards pelos conectores com zoom, desenha uma linha SVG e salva a conexão', async () => {
     render(<YopoyCentralDashboard theme="dark" />);
-    fireEvent.click(screen.getByRole('button', { name: /aumentar zoom/i }));
+    openCanvasContextMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: /aumentar zoom/i }));
     const source = screen.getByRole('button', { name: /iniciar conexão de foto de comprovante/i });
     const target = screen.getByRole('button', { name: /conectar em comprovante pix/i });
     expect(source.className).toContain('h-11');
@@ -906,7 +1035,8 @@ describe('YopoyCentralDashboard', () => {
 
   it('leva o viewport ao primeiro card do filtro com zoom sem alterar sua posição', () => {
     render(<YopoyCentralDashboard theme="light" />);
-    fireEvent.click(screen.getByRole('button', { name: /diminuir zoom/i }));
+    openCanvasContextMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: /diminuir zoom/i }));
     const viewport = screen.getByTestId('task-canvas-viewport');
     const scrollTo = vi.fn();
     Object.defineProperty(viewport, 'scrollTo', { configurable: true, value: scrollTo });
@@ -922,7 +1052,8 @@ describe('YopoyCentralDashboard', () => {
 
   it('salva estado do card e filtro ativo no localStorage', async () => {
     render(<YopoyCentralDashboard theme="light" />);
-    fireEvent.click(screen.getByRole('button', { name: /aumentar zoom/i }));
+    openCanvasContextMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: /aumentar zoom/i }));
     selectCard(getCaptureCard());
     fireEvent.click(screen.getByRole('button', { name: /avançar para pendente/i }));
 
@@ -1062,7 +1193,8 @@ describe('YopoyCentralDashboard', () => {
     await waitFor(() => expect(window.localStorage.getItem(STORAGE_KEY)).not.toBeNull());
     expect(screen.getAllByRole('heading', { name: /card local para remover/i }).length).toBeGreaterThan(0);
 
-    fireEvent.click(screen.getByRole('button', { name: /restaurar demonstração/i }));
+    openCanvasContextMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: /restaurar demonstração/i }));
 
     expect(screen.getByText(/demonstração restaurada\. os dados locais da mesa foram limpos/i)).toBeTruthy();
     expect(screen.queryByRole('heading', { name: /card local para remover/i })).toBeNull();

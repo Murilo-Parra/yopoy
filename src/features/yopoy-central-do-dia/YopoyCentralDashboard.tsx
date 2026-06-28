@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import {
@@ -12,11 +13,15 @@ import {
   ArchiveRestore,
   ArrowRight,
   Check,
+  ChevronRight,
   Clipboard,
   FolderCheck,
   Folder,
   Link2,
+  Maximize2,
+  Minus,
   MousePointer2,
+  MoreHorizontal,
   PackageCheck,
   PackageOpen,
   Plus,
@@ -60,6 +65,14 @@ interface DragState {
   pointerId: number;
   offsetX: number;
   offsetY: number;
+}
+
+interface ContextMenuState {
+  type: 'canvas' | 'card' | 'folder';
+  x: number;
+  y: number;
+  canvasPosition: CanvasCardPosition;
+  itemId?: string;
 }
 
 interface QuickRegistrationOption {
@@ -352,12 +365,50 @@ function getItemScopeId(item: SmartCardItem) {
 
 function areItemsInSameScope(first?: SmartCardItem, second?: SmartCardItem) {
   if (!first || !second) return false;
+  if (first.kind === 'folder' || second.kind === 'folder') return false;
   return getItemScopeId(first) === getItemScopeId(second);
 }
 
 function keepScopedConnections(items: SmartCardItem[], connections: CanvasCardConnection[]) {
   const itemById = new Map(items.map((item) => [item.id, item]));
   return connections.filter((connection) => areItemsInSameScope(itemById.get(connection.fromId), itemById.get(connection.toId)));
+}
+
+function getFolderChildCounts(items: SmartCardItem[], folderId: string) {
+  return items.reduce((current, item) => {
+    if (item.parentFolderId !== folderId) return current;
+    if (item.kind === 'folder') return { ...current, folders: current.folders + 1 };
+    return { ...current, cards: current.cards + 1 };
+  }, { cards: 0, folders: 0 });
+}
+
+function getFolderPath(folderId: string | null, itemsById: Map<string, SmartCardItem>) {
+  const path: SmartCardItem[] = [];
+  const visited = new Set<string>();
+  let currentId = folderId;
+
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+    const item = itemsById.get(currentId);
+    if (!item || item.kind !== 'folder') break;
+    path.unshift(item);
+    currentId = item.parentFolderId ?? null;
+  }
+
+  return path;
+}
+
+function isDescendantFolder(folderId: string, possibleAncestorId: string, itemsById: Map<string, SmartCardItem>) {
+  const visited = new Set<string>();
+  let currentId = itemsById.get(folderId)?.parentFolderId ?? null;
+
+  while (currentId && !visited.has(currentId)) {
+    if (currentId === possibleAncestorId) return true;
+    visited.add(currentId);
+    currentId = itemsById.get(currentId)?.parentFolderId ?? null;
+  }
+
+  return false;
 }
 
 function normalizeCanvasState(value: unknown): CanvasState | null {
@@ -545,7 +596,6 @@ function formatCanvasZoom(zoom: number) {
 
 export function YopoyCentralDashboard({ theme }: Props) {
   const quickRegistrationTitleId = useId();
-  const folderNameInputId = useId();
   const initialCanvasState = useMemo(() => loadCanvasState(), []);
   const [items, setItems] = useState<SmartCardItem[]>(() => initialCanvasState.items);
   const [positions, setPositions] = useState<Record<string, CanvasCardPosition>>(() => initialCanvasState.positions);
@@ -562,9 +612,11 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const [connectionPointer, setConnectionPointer] = useState<CanvasCardPosition | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
-  const [folderName, setFolderName] = useState('');
-  const [folderFormError, setFolderFormError] = useState('');
   const [selectedMoveFolderId, setSelectedMoveFolderId] = useState('');
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [folderRenameValue, setFolderRenameValue] = useState('');
   const [canvasZoom, setCanvasZoom] = useState(1);
   const [feedback, setFeedback] = useState('Mesa local pronta: arraste os cards e conecte os pontos laterais. As alterações ficam salvas neste navegador, sem sincronização externa.');
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -578,6 +630,20 @@ export function YopoyCentralDashboard({ theme }: Props) {
   useEffect(() => () => {
     document.body.style.userSelect = '';
   }, []);
+
+  useEffect(() => {
+    if (!contextMenu) return undefined;
+    const closeMenu = () => setContextMenu(null);
+    const closeMenuWithEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') closeMenu();
+    };
+    window.addEventListener('click', closeMenu);
+    window.addEventListener('keydown', closeMenuWithEscape);
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('keydown', closeMenuWithEscape);
+    };
+  }, [contextMenu]);
 
   useEffect(() => {
     if (!hasHydratedRef.current) {
@@ -680,18 +746,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setFeedback(activeFolderId ? 'Card criado dentro desta pasta local.' : 'Card criado e salvo neste navegador.');
   };
 
-  const handleCreateFolder = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const title = folderName.trim();
-    if (activeFolderId) {
-      setFolderFormError('Crie pastas pela Mesa principal neste bloco.');
-      return;
-    }
-    if (!title) {
-      setFolderFormError('Informe um nome para criar a pasta.');
-      return;
-    }
-
+  const createFolderAt = (position: CanvasCardPosition, title = 'Nova pasta') => {
     const item: SmartCardItem = {
       id: createLocalFolderId(),
       kind: 'folder',
@@ -703,17 +758,20 @@ export function YopoyCentralDashboard({ theme }: Props) {
       linked: false,
       hasPreInvoice: false,
       sentToAccountant: false,
-      parentFolderId: null,
+      parentFolderId: activeFolderId,
       tags: ['Pasta local'],
     };
-    const position = createCardPosition();
     setItems((current) => [item, ...current]);
-    setPositions((current) => ({ ...current, [item.id]: position }));
-    setFolderName('');
-    setFolderFormError('');
+    setPositions((current) => ({
+      ...current,
+      [item.id]: {
+        x: Math.max(position.x, 16),
+        y: Math.max(position.y, 16),
+      },
+    }));
     setActiveFilter('all');
     setSelectedCardId(item.id);
-    setFeedback('Pasta criada localmente nesta Mesa.');
+    setFeedback('Pasta criada localmente nesta posição.');
   };
 
   const enterFolder = (folderId: string) => {
@@ -728,6 +786,17 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setFeedback('Submesa local aberta. Você está organizando apenas os cards desta pasta.');
   };
 
+  const leaveOneFolderLevel = () => {
+    const parentFolderId = activeFolder?.parentFolderId ?? null;
+    setActiveFolderId(parentFolderId);
+    setSelectedCardId(null);
+    setCanvasZoom(1);
+    if (typeof viewportRef.current?.scrollTo === 'function') {
+      viewportRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
+    }
+    setFeedback(parentFolderId ? 'Você voltou um nível na hierarquia de pastas.' : 'Você voltou para a Mesa principal.');
+  };
+
   const leaveFolder = () => {
     setActiveFolderId(null);
     setSelectedCardId(null);
@@ -738,10 +807,28 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setFeedback('Você voltou para a Mesa principal.');
   };
 
-  const moveCardToScope = (cardId: string, parentFolderId: string | null) => {
+  const canMoveItemToScope = (itemId: string, parentFolderId: string | null) => {
+    const item = itemsById.get(itemId);
+    if (!item) return false;
+    if (!parentFolderId) return true;
+    const target = itemsById.get(parentFolderId);
+    if (!target || target.kind !== 'folder' || target.archived) return false;
+    if (item.kind !== 'folder') return true;
+    if (item.id === parentFolderId) return false;
+    return !isDescendantFolder(parentFolderId, item.id, itemsById);
+  };
+
+  const moveItemToScope = (itemId: string, parentFolderId: string | null) => {
+    const item = itemsById.get(itemId);
+    if (!item) return;
+    if (!canMoveItemToScope(itemId, parentFolderId)) {
+      setFeedback('Não é possível mover uma pasta para dentro dela mesma ou de uma subpasta.');
+      return;
+    }
+
     setItems((currentItems) => {
       const updatedItems = currentItems.map((item) => {
-        if (item.id !== cardId || item.kind === 'folder') return item;
+        if (item.id !== itemId) return item;
         return { ...item, parentFolderId };
       });
       setConnections((currentConnections) => {
@@ -752,17 +839,33 @@ export function YopoyCentralDashboard({ theme }: Props) {
       return syncLinkedCards(updatedItems, keepScopedConnections(updatedItems, connections));
     });
     setSelectedCardId(null);
-    setFeedback(parentFolderId ? 'Card movido para a pasta local.' : 'Card voltou para a Mesa principal.');
+    if (!parentFolderId) {
+      setFeedback(item.kind === 'folder' ? 'Pasta voltou para a Mesa principal.' : 'Card voltou para a Mesa principal.');
+      return;
+    }
+    setFeedback(item.kind === 'folder' ? 'Pasta movida para dentro de outra pasta local.' : 'Card movido para a pasta local.');
+  };
+
+  const renameFolder = (folderId: string) => {
+    const title = folderRenameValue.trim();
+    if (!title) {
+      setFeedback('Informe um nome para renomear a pasta.');
+      return;
+    }
+    updateItem(folderId, (item) => item.kind === 'folder' ? { ...item, title } : item, 'Pasta renomeada localmente nesta Mesa.');
+    setRenamingFolderId(null);
+    setFolderRenameValue('');
   };
 
   const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
-  const rootFolders = useMemo(
-    () => items.filter((item) => item.kind === 'folder' && !item.parentFolderId && !item.archived),
-    [items],
-  );
   const activeFolder = activeFolderId ? itemsById.get(activeFolderId) ?? null : null;
+  const folderPath = useMemo(() => getFolderPath(activeFolderId, itemsById), [activeFolderId, itemsById]);
+  const availableFoldersInScope = useMemo(
+    () => items.filter((item) => item.kind === 'folder' && (item.parentFolderId ?? null) === activeFolderId && !item.archived),
+    [activeFolderId, items],
+  );
   const visibleItems = useMemo(() => items.filter((item) => {
-    const inActiveScope = activeFolderId ? item.parentFolderId === activeFolderId && item.kind !== 'folder' : !item.parentFolderId;
+    const inActiveScope = (item.parentFolderId ?? null) === activeFolderId;
     if (!inActiveScope) return false;
     if (activeFilter === 'all') return true;
     if (activeFilter === 'archived') return item.archived;
@@ -813,6 +916,56 @@ export function YopoyCentralDashboard({ theme }: Props) {
     };
   };
 
+  const getFolderAtPoint = (point: CanvasCardPosition, draggedItemId?: string) => {
+    return visibleItems.find((item) => {
+      if (item.kind !== 'folder' || item.archived || item.id === draggedItemId) return false;
+      if (draggedItemId && !canMoveItemToScope(draggedItemId, item.id)) return false;
+      const position = positions[item.id];
+      if (!position) return false;
+      return point.x >= position.x
+        && point.x <= position.x + CARD_WIDTH
+        && point.y >= position.y
+        && point.y <= position.y + CARD_APPROX_HEIGHT;
+    }) ?? null;
+  };
+
+  const openCanvasContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
+    if ((event.target as HTMLElement).closest('[data-card-id]')) return;
+    event.preventDefault();
+    setContextMenu({
+      type: 'canvas',
+      x: event.clientX,
+      y: event.clientY,
+      canvasPosition: canvasPoint(event.clientX, event.clientY),
+    });
+  };
+
+  const openCanvasOptionsMenu = () => {
+    const viewport = viewportRef.current;
+    const left = viewport ? viewport.getBoundingClientRect().left + 16 : 24;
+    const top = viewport ? viewport.getBoundingClientRect().top + 16 : 24;
+    setContextMenu({
+      type: 'canvas',
+      x: left,
+      y: top,
+      canvasPosition: createCardPosition(),
+    });
+  };
+
+  const openItemContextMenu = (event: ReactMouseEvent<HTMLElement>, itemId: string) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const item = itemsById.get(itemId);
+    setSelectedCardId(itemId);
+    setContextMenu({
+      type: item?.kind === 'folder' ? 'folder' : 'card',
+      x: event.clientX,
+      y: event.clientY,
+      canvasPosition: canvasPoint(event.clientX, event.clientY),
+      itemId,
+    });
+  };
+
   const handleCardPointerDown = (event: ReactPointerEvent<HTMLElement>, cardId: string) => {
     if (event.button !== 0 || (event.target as HTMLElement).closest('[data-no-card-drag]')) return;
     const point = canvasPoint(event.clientX, event.clientY);
@@ -834,6 +987,8 @@ export function YopoyCentralDashboard({ theme }: Props) {
     const drag = dragRef.current;
     if (!drag || drag.cardId !== cardId || drag.pointerId !== event.pointerId) return;
     const point = canvasPoint(event.clientX, event.clientY);
+    const targetFolder = getFolderAtPoint(point, cardId);
+    setDropTargetFolderId(targetFolder?.id ?? null);
     setPositions((current) => ({
       ...current,
       [cardId]: {
@@ -851,6 +1006,12 @@ export function YopoyCentralDashboard({ theme }: Props) {
     }
     dragRef.current = null;
     document.body.style.userSelect = '';
+    const targetFolderId = dropTargetFolderId;
+    setDropTargetFolderId(null);
+    if (targetFolderId) {
+      moveItemToScope(cardId, targetFolderId);
+      return;
+    }
     setFeedback('Posição do card salva neste navegador.');
   };
 
@@ -961,6 +1122,10 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setSelectedCardId(null);
     setActiveFolderId(null);
     setSelectedMoveFolderId('');
+    setContextMenu(null);
+    setDropTargetFolderId(null);
+    setRenamingFolderId(null);
+    setFolderRenameValue('');
     setCanvasZoom(1);
     setFeedback('Demonstração restaurada. Os dados locais da Mesa foram limpos.');
   };
@@ -1047,17 +1212,35 @@ export function YopoyCentralDashboard({ theme }: Props) {
             <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-white">
               <Sparkles className="h-3.5 w-3.5" /> Canvas local
             </span>
-            <p className={`mt-4 text-xs font-bold ${dark ? 'text-indigo-200' : 'text-indigo-700'}`}>
-              Mesa principal{activeFolder ? ` / ${activeFolder.title}` : ''}
-            </p>
+            <nav aria-label="Caminho da Mesa" className={`mt-4 flex flex-wrap items-center gap-1 text-xs font-bold ${dark ? 'text-indigo-200' : 'text-indigo-700'}`}>
+              <button
+                type="button"
+                onClick={leaveFolder}
+                className="rounded-md px-1 py-0.5 hover:underline"
+              >
+                Mesa principal
+              </button>
+              {folderPath.map((folder) => (
+                <span key={folder.id} className="inline-flex items-center gap-1">
+                  <ChevronRight className="h-3 w-3" />
+                  <button
+                    type="button"
+                    onClick={() => enterFolder(folder.id)}
+                    className="rounded-md px-1 py-0.5 hover:underline"
+                  >
+                    {folder.title}
+                  </button>
+                </span>
+              ))}
+            </nav>
             <h1 className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">
               {activeFolder ? `Submesa: ${activeFolder.title}` : 'Mesa Visual'}
             </h1>
             <p className={`mt-2 max-w-2xl text-sm leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
-              {activeFolder ? 'Você está organizando apenas os cards desta pasta.' : 'Organize livremente: arraste os cards pela área e ligue o ponto direito de um card ao ponto esquerdo de outro.'}
+              {activeFolder ? 'Você está organizando apenas os itens desta pasta.' : 'Clique com o botão direito na Mesa para criar pastas, ajustar zoom e organizar a área.'}
             </p>
             <p className={`mt-2 max-w-2xl text-xs leading-relaxed ${dark ? 'text-indigo-200' : 'text-indigo-700'}`}>
-              Comece pela Mesa: registre uma venda, conecte um recebimento, concilie visualmente e separe para o contador.
+              No celular, use Opções da Mesa ou toque nos cards para selecionar. Registre primeiro, organize depois.
             </p>
           </div>
           <div className={`rounded-2xl border p-3 text-xs leading-relaxed md:max-w-sm ${
@@ -1071,23 +1254,31 @@ export function YopoyCentralDashboard({ theme }: Props) {
 
       <section aria-label="Controles da Mesa" className={`rounded-2xl border p-3 ${dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'}`}>
         <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex gap-2 overflow-x-auto pb-1" aria-label="Filtros dos cards">
-            {FILTERS.map((filter) => (
-              <button
-                key={filter.id}
-                type="button"
-                aria-pressed={activeFilter === filter.id}
-                onClick={() => setActiveFilter(filter.id)}
-                className={`shrink-0 rounded-full px-3 py-2 text-xs font-bold transition-colors ${
-                  activeFilter === filter.id
-                    ? 'bg-indigo-600 text-white'
-                    : dark ? 'bg-slate-900 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-indigo-700'
-                }`}
-              >
-                {filter.label}
-              </button>
-            ))}
-          </div>
+          <details className="group max-w-full">
+            <summary className={`flex min-h-11 cursor-pointer list-none items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black [&::-webkit-details-marker]:hidden ${
+              dark ? 'border-slate-700 bg-slate-950 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-700'
+            }`}>
+              Filtros da Mesa
+              <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-[10px] text-white">{FILTERS.find((filter) => filter.id === activeFilter)?.label}</span>
+            </summary>
+            <div className="mt-2 flex gap-2 overflow-x-auto pb-1" aria-label="Filtros dos cards">
+              {FILTERS.map((filter) => (
+                <button
+                  key={filter.id}
+                  type="button"
+                  aria-pressed={activeFilter === filter.id}
+                  onClick={() => setActiveFilter(filter.id)}
+                  className={`shrink-0 rounded-full px-3 py-2 text-xs font-bold transition-colors ${
+                    activeFilter === filter.id
+                      ? 'bg-indigo-600 text-white'
+                      : dark ? 'bg-slate-900 text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-indigo-700'
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+          </details>
           <div className="flex flex-wrap items-center gap-2">
             <span className={`inline-flex items-center gap-1.5 text-xs ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
               <MousePointer2 className="h-3.5 w-3.5" /> Arraste pelo corpo do card
@@ -1096,25 +1287,27 @@ export function YopoyCentralDashboard({ theme }: Props) {
               <Link2 className="h-3.5 w-3.5" /> {connections.length} conexões
             </span>
             {activeFolder && (
-              <button
-                type="button"
-                onClick={leaveFolder}
-                className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold ${
-                  dark ? 'border-slate-700 text-slate-300 hover:border-amber-500' : 'border-slate-200 text-slate-600 hover:border-amber-300'
-                }`}
-              >
-                Voltar para Mesa principal
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={leaveOneFolderLevel}
+                  className={`inline-flex min-h-10 items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold ${
+                    dark ? 'border-slate-700 text-slate-300 hover:border-amber-500' : 'border-slate-200 text-slate-600 hover:border-amber-300'
+                  }`}
+                >
+                  Voltar um nível
+                </button>
+                <button
+                  type="button"
+                  onClick={leaveFolder}
+                  className={`inline-flex min-h-10 items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold ${
+                    dark ? 'border-slate-700 text-slate-300 hover:border-amber-500' : 'border-slate-200 text-slate-600 hover:border-amber-300'
+                  }`}
+                >
+                  Voltar para Mesa principal
+                </button>
+              </>
             )}
-            <button
-              type="button"
-              onClick={restoreDemonstration}
-              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold ${
-                dark ? 'border-slate-700 text-slate-300 hover:border-indigo-500' : 'border-slate-200 text-slate-600 hover:border-indigo-300'
-              }`}
-            >
-              <RotateCcw className="h-3 w-3" /> Restaurar demonstração
-            </button>
             {connections.length > 0 && (
               <button
                 type="button"
@@ -1126,100 +1319,6 @@ export function YopoyCentralDashboard({ theme }: Props) {
                 <Trash2 className="h-3 w-3" /> Limpar conexões
               </button>
             )}
-          </div>
-        </div>
-        <form
-          onSubmit={handleCreateFolder}
-          className={`mt-3 rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}
-        >
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(180px,1fr)_auto] lg:items-end">
-            <label htmlFor={folderNameInputId} className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
-              Criar pasta
-              <input
-                id={folderNameInputId}
-                value={folderName}
-                onChange={(event) => {
-                  setFolderName(event.target.value);
-                  setFolderFormError('');
-                }}
-                disabled={activeFolderId !== null}
-                className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm disabled:cursor-not-allowed disabled:opacity-60 ${
-                  dark ? 'border-slate-700 bg-slate-900 text-slate-100 placeholder:text-slate-500' : 'border-slate-200 bg-white text-slate-900 placeholder:text-slate-400'
-                }`}
-                placeholder="Ex: Mesa 1, Caixa da noite, Pedidos iFood, Contador"
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={activeFolderId !== null}
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-xs font-black text-white transition-colors hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <Folder className="h-3.5 w-3.5" /> Criar pasta
-            </button>
-          </div>
-          <p className={`mt-2 text-[11px] leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-            Pastas são locais e servem para organizar cards. Nenhum dado é enviado.
-          </p>
-          {activeFolderId && (
-            <p className={`mt-1 text-[11px] font-bold ${dark ? 'text-amber-300' : 'text-amber-700'}`}>Crie pastas pela Mesa principal neste bloco.</p>
-          )}
-          {folderFormError && (
-            <p role="alert" className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">
-              {folderFormError}
-            </p>
-          )}
-        </form>
-        <div className={`mt-3 flex flex-col gap-3 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
-          <div>
-            <p className={`text-xs font-black uppercase tracking-wide ${dark ? 'text-slate-300' : 'text-slate-700'}`}>Zoom da Mesa</p>
-            <p className={`mt-1 text-[11px] leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Canvas expande conforme você organiza os cards. Visual local desta sessão.
-            </p>
-          </div>
-          <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] gap-2 sm:flex sm:flex-wrap sm:items-center sm:justify-end" aria-label="Controles de zoom da Mesa">
-            <button
-              type="button"
-              aria-label="Diminuir zoom"
-              disabled={canvasZoom <= MIN_CANVAS_ZOOM}
-              onClick={() => changeCanvasZoom(canvasZoom - CANVAS_ZOOM_STEP)}
-              className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50 ${
-                dark ? 'border-slate-700 text-slate-300 hover:border-indigo-500' : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300'
-              }`}
-            >
-              -
-            </button>
-            <span className={`inline-flex min-h-11 min-w-20 items-center justify-center rounded-lg px-3 py-2 text-sm font-black ${
-              dark ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
-            }`}>
-              {formatCanvasZoom(canvasZoom)}
-            </span>
-            <button
-              type="button"
-              aria-label="Aumentar zoom"
-              disabled={canvasZoom >= MAX_CANVAS_ZOOM}
-              onClick={() => changeCanvasZoom(canvasZoom + CANVAS_ZOOM_STEP)}
-              className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 text-sm font-black disabled:cursor-not-allowed disabled:opacity-50 ${
-                dark ? 'border-slate-700 text-slate-300 hover:border-indigo-500' : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300'
-              }`}
-            >
-              +
-            </button>
-            <button
-              type="button"
-              onClick={() => changeCanvasZoom(1)}
-              className={`inline-flex min-h-11 items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold sm:min-w-20 ${
-                dark ? 'border-slate-700 text-slate-300 hover:border-indigo-500' : 'border-slate-200 bg-white text-slate-700 hover:border-indigo-300'
-              }`}
-            >
-              Zoom 100%
-            </button>
-            <button
-              type="button"
-              onClick={fitCanvasToContent}
-              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-indigo-600 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-indigo-700 sm:min-w-32"
-            >
-              Ajustar visão
-            </button>
           </div>
         </div>
         {connections.length > 0 && (
@@ -1503,7 +1602,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
                 )}
                 {selectedCard.kind === 'folder' && (
                   <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">
-                    {items.filter((item) => item.parentFolderId === selectedCard.id).length} card(s) nesta pasta
+                    {getFolderChildCounts(items, selectedCard.id).cards} item(ns) e {getFolderChildCounts(items, selectedCard.id).folders} subpasta(s)
                   </span>
                 )}
               </div>
@@ -1542,6 +1641,45 @@ export function YopoyCentralDashboard({ theme }: Props) {
                   >
                     <Folder className="h-3.5 w-3.5" /> Abrir pasta
                   </button>
+                )}
+                {selectedCard.kind === 'folder' && (
+                  <div className={`rounded-lg border p-3 sm:col-span-2 xl:col-span-1 ${dark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white'}`}>
+                    <p className={`text-[10px] font-black uppercase tracking-wide ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Renomear pasta</p>
+                    {renamingFolderId === selectedCard.id ? (
+                      <>
+                        <label className={`mt-2 block text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
+                          Nome da pasta
+                          <input
+                            value={folderRenameValue}
+                            onChange={(event) => setFolderRenameValue(event.target.value)}
+                            className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm ${
+                              dark ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
+                            }`}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => renameFolder(selectedCard.id)}
+                          className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-amber-600 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-amber-700"
+                        >
+                          Salvar nome da pasta
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRenamingFolderId(selectedCard.id);
+                          setFolderRenameValue(selectedCard.title);
+                        }}
+                        className={`mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold ${
+                          dark ? 'border-slate-700 text-slate-300 hover:border-amber-500' : 'border-slate-200 text-slate-600 hover:border-amber-300'
+                        }`}
+                      >
+                        Renomear pasta
+                      </button>
+                    )}
+                  </div>
                 )}
                 {selectedCard.kind !== 'folder' && !selectedCard.archived && selectedCard.status !== 'resolved' && (
                   <button
@@ -1596,17 +1734,17 @@ export function YopoyCentralDashboard({ theme }: Props) {
                     <Link2 className="h-3.5 w-3.5" /> Simular vínculo visual
                   </button>
                 )}
-                {selectedCard.kind !== 'folder' && !selectedCard.archived && (
+                {!selectedCard.archived && (
                   <div className={`rounded-lg border p-3 sm:col-span-2 xl:col-span-1 ${dark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white'}`}>
                     <p className={`text-[10px] font-black uppercase tracking-wide ${dark ? 'text-slate-500' : 'text-slate-400'}`}>Mover para pasta</p>
                     {selectedCard.parentFolderId ? (
                       <>
                         <p className={`mt-2 text-xs ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-                          Este card está em: <strong>{itemsById.get(selectedCard.parentFolderId)?.title ?? 'Pasta local'}</strong>
+                          Este item está em: <strong>{itemsById.get(selectedCard.parentFolderId)?.title ?? 'Pasta local'}</strong>
                         </p>
                         <button
                           type="button"
-                          onClick={() => moveCardToScope(selectedCard.id, null)}
+                          onClick={() => moveItemToScope(selectedCard.id, null)}
                           className={`mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold ${
                             dark ? 'border-slate-700 text-slate-300 hover:border-amber-500' : 'border-slate-200 text-slate-600 hover:border-amber-300'
                           }`}
@@ -1614,25 +1752,25 @@ export function YopoyCentralDashboard({ theme }: Props) {
                           Mover para Mesa principal
                         </button>
                       </>
-                    ) : rootFolders.length > 0 ? (
+                    ) : availableFoldersInScope.filter((folder) => folder.id !== selectedCard.id && canMoveItemToScope(selectedCard.id, folder.id)).length > 0 ? (
                       <>
                         <label className={`mt-2 block text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
                           Pasta
                           <select
-                            value={selectedMoveFolderId || rootFolders[0]?.id}
+                            value={selectedMoveFolderId || availableFoldersInScope.find((folder) => folder.id !== selectedCard.id && canMoveItemToScope(selectedCard.id, folder.id))?.id}
                             onChange={(event) => setSelectedMoveFolderId(event.target.value)}
                             className={`mt-1 h-11 w-full rounded-lg border px-3 text-sm ${
                               dark ? 'border-slate-700 bg-slate-900 text-slate-100' : 'border-slate-200 bg-white text-slate-900'
                             }`}
                           >
-                            {rootFolders.map((folder) => (
+                            {availableFoldersInScope.filter((folder) => folder.id !== selectedCard.id && canMoveItemToScope(selectedCard.id, folder.id)).map((folder) => (
                               <option key={folder.id} value={folder.id}>{folder.title}</option>
                             ))}
                           </select>
                         </label>
                         <button
                           type="button"
-                          onClick={() => moveCardToScope(selectedCard.id, selectedMoveFolderId || rootFolders[0]?.id || null)}
+                          onClick={() => moveItemToScope(selectedCard.id, selectedMoveFolderId || availableFoldersInScope.find((folder) => folder.id !== selectedCard.id && canMoveItemToScope(selectedCard.id, folder.id))?.id || null)}
                           className="mt-3 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-amber-600 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-amber-700"
                         >
                           Mover para pasta
@@ -1806,10 +1944,20 @@ export function YopoyCentralDashboard({ theme }: Props) {
       <div
         ref={viewportRef}
         data-testid="task-canvas-viewport"
-        className={`h-[58svh] min-h-[360px] max-h-[640px] overflow-auto overscroll-contain rounded-2xl border shadow-inner sm:h-[70vh] sm:min-h-[560px] sm:max-h-[720px] sm:rounded-3xl ${
+        className={`relative h-[58svh] min-h-[360px] max-h-[640px] overflow-auto overscroll-contain rounded-2xl border shadow-inner sm:h-[70vh] sm:min-h-[560px] sm:max-h-[720px] sm:rounded-3xl ${
           dark ? 'border-slate-800 bg-[#0c0c11]' : 'border-slate-200 bg-slate-100'
         }`}
       >
+        <button
+          type="button"
+          data-no-card-drag
+          onClick={openCanvasOptionsMenu}
+          className={`sticky left-3 top-3 z-40 inline-flex min-h-11 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-black shadow-sm sm:hidden ${
+            dark ? 'border-slate-700 bg-[#121218] text-slate-200' : 'border-slate-200 bg-white text-slate-700'
+          }`}
+        >
+          <MoreHorizontal className="h-4 w-4" /> Opções da Mesa
+        </button>
         {activeFolder && visibleItems.length === 0 && (
           <div className={`sticky left-4 top-4 z-30 w-[min(360px,calc(100vw-3rem))] rounded-xl border p-4 text-sm shadow-lg ${
             dark ? 'border-slate-800 bg-[#121218] text-slate-300' : 'border-slate-200 bg-white text-slate-600'
@@ -1826,6 +1974,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
           <div
             ref={canvasRef}
             data-testid="task-canvas"
+            onContextMenu={openCanvasContextMenu}
             onPointerMove={(event) => {
               if (connectionSourceRef.current) setConnectionPointer(canvasPoint(event.clientX, event.clientY));
             }}
@@ -1901,9 +2050,12 @@ export function YopoyCentralDashboard({ theme }: Props) {
                   <SmartCard
                     item={item}
                     theme={theme}
-                    folderItemsCount={item.kind === 'folder' ? items.filter((child) => child.parentFolderId === item.id).length : undefined}
+                    folderItemsCount={item.kind === 'folder' ? getFolderChildCounts(items, item.id).cards : undefined}
+                    folderFoldersCount={item.kind === 'folder' ? getFolderChildCounts(items, item.id).folders : undefined}
                     isSelected={selectedCardId === item.id}
+                    isDropTarget={dropTargetFolderId === item.id}
                     onSelect={setSelectedCardId}
+                    onContextMenu={openItemContextMenu}
                     onDragPointerDown={handleCardPointerDown}
                     onDragPointerMove={handleCardPointerMove}
                     onDragPointerUp={finishCardDrag}
@@ -1918,6 +2070,271 @@ export function YopoyCentralDashboard({ theme }: Props) {
           </div>
         </div>
       </div>
+
+      {contextMenu && (
+        <div
+          role="menu"
+          aria-label={
+            contextMenu.type === 'canvas'
+              ? 'Menu contextual da Mesa'
+              : contextMenu.type === 'folder'
+                ? 'Menu contextual da pasta'
+                : 'Menu contextual do card'
+          }
+          onClick={(event) => event.stopPropagation()}
+          className={`fixed z-50 w-64 rounded-xl border p-2 text-xs shadow-2xl ${
+            dark ? 'border-slate-700 bg-[#121218] text-slate-100' : 'border-slate-200 bg-white text-slate-800'
+          }`}
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          {contextMenu.type === 'canvas' && (
+            <div className="grid gap-1">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  createFolderAt(contextMenu.canvasPosition);
+                  setContextMenu(null);
+                }}
+                className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-amber-100 hover:text-amber-800 dark:hover:bg-amber-950"
+              >
+                <Folder className="h-4 w-4" /> Criar pasta aqui
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setQuickRegistrationOpen(true);
+                  setQuickFormError('');
+                  setContextMenu(null);
+                }}
+                className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-indigo-100 hover:text-indigo-800 dark:hover:bg-indigo-950"
+              >
+                <Plus className="h-4 w-4" /> Registro rápido
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  fitCanvasToContent();
+                  setContextMenu(null);
+                }}
+                className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                <Maximize2 className="h-4 w-4" /> Ajustar visão
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  changeCanvasZoom(1);
+                  setContextMenu(null);
+                }}
+                className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Zoom 100%
+              </button>
+              <div className="grid grid-cols-2 gap-1">
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={canvasZoom <= MIN_CANVAS_ZOOM}
+                  onClick={() => {
+                    changeCanvasZoom(canvasZoom - CANVAS_ZOOM_STEP);
+                    setContextMenu(null);
+                  }}
+                  className="flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 py-2 font-bold hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800"
+                >
+                  <Minus className="h-4 w-4" /> Diminuir zoom
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  disabled={canvasZoom >= MAX_CANVAS_ZOOM}
+                  onClick={() => {
+                    changeCanvasZoom(canvasZoom + CANVAS_ZOOM_STEP);
+                    setContextMenu(null);
+                  }}
+                  className="flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 py-2 font-bold hover:bg-slate-100 disabled:opacity-50 dark:hover:bg-slate-800"
+                >
+                  <Plus className="h-4 w-4" /> Aumentar zoom
+                </button>
+              </div>
+              <p className={`px-3 py-1 text-[11px] font-bold ${dark ? 'text-slate-400' : 'text-slate-500'}`}>Zoom atual: {formatCanvasZoom(canvasZoom)}</p>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  restoreDemonstration();
+                  setContextMenu(null);
+                }}
+                className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-950"
+              >
+                <RotateCcw className="h-4 w-4" /> Restaurar demonstração
+              </button>
+            </div>
+          )}
+
+          {contextMenu.type === 'card' && contextMenu.itemId && itemsById.get(contextMenu.itemId) && (
+            <div className="grid gap-1">
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  setSelectedCardId(contextMenu.itemId ?? null);
+                  setContextMenu(null);
+                }}
+                className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-indigo-100 hover:text-indigo-800 dark:hover:bg-indigo-950"
+              >
+                Selecionar card
+              </button>
+              {(() => {
+                const item = itemsById.get(contextMenu.itemId);
+                if (!item) return null;
+                return (
+                  <>
+                    {!item.archived && (item.kind === 'sale' || item.kind === 'invoice-draft') && !item.hasPreInvoice && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          updateItem(item.id, (current) => ({ ...current, hasPreInvoice: true, status: 'review' }), 'Pré-nota visual adicionada sem valor fiscal. Nenhum documento fiscal foi criado ou emitido.');
+                          setContextMenu(null);
+                        }}
+                        className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-amber-100 hover:text-amber-800 dark:hover:bg-amber-950"
+                      >
+                        Preparar pré-nota visual
+                      </button>
+                    )}
+                    {!item.archived && ['sale', 'expense', 'invoice-draft', 'pre-invoice', 'accountant-package'].includes(item.kind) && !item.sentToAccountant && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          updateItem(item.id, (current) => ({ ...current, sentToAccountant: true }), 'Card separado localmente para o contador. Nenhum dado saiu do navegador.');
+                          setContextMenu(null);
+                        }}
+                        className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-violet-100 hover:text-violet-800 dark:hover:bg-violet-950"
+                      >
+                        Separar para contador
+                      </button>
+                    )}
+                    {item.parentFolderId && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          moveItemToScope(item.id, null);
+                          setContextMenu(null);
+                        }}
+                        className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-amber-100 hover:text-amber-800 dark:hover:bg-amber-950"
+                      >
+                        Mover para Mesa principal
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        updateItem(item.id, (current) => ({ ...current, archived: !current.archived }), item.archived ? 'Item desarquivado nesta demonstração.' : 'Item arquivado nesta demonstração.');
+                        setContextMenu(null);
+                      }}
+                      className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-950"
+                    >
+                      {item.archived ? 'Desarquivar' : 'Arquivar'}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setSelectedCardId(item.id);
+                        setFeedback('Painel do card aberto para ações locais.');
+                        setContextMenu(null);
+                      }}
+                      className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      Abrir painel do card
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+
+          {contextMenu.type === 'folder' && contextMenu.itemId && itemsById.get(contextMenu.itemId) && (
+            <div className="grid gap-1">
+              {(() => {
+                const item = itemsById.get(contextMenu.itemId);
+                if (!item || item.kind !== 'folder') return null;
+                return (
+                  <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        enterFolder(item.id);
+                        setContextMenu(null);
+                      }}
+                      className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-amber-100 hover:text-amber-800 dark:hover:bg-amber-950"
+                    >
+                      <Folder className="h-4 w-4" /> Abrir pasta
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setSelectedCardId(item.id);
+                        setRenamingFolderId(item.id);
+                        setFolderRenameValue(item.title);
+                        setContextMenu(null);
+                      }}
+                      className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      Renomear pasta
+                    </button>
+                    {item.parentFolderId && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          moveItemToScope(item.id, null);
+                          setContextMenu(null);
+                        }}
+                        className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-amber-100 hover:text-amber-800 dark:hover:bg-amber-950"
+                      >
+                        Mover para Mesa principal
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        updateItem(item.id, (current) => ({ ...current, archived: !current.archived }), item.archived ? 'Item desarquivado nesta demonstração.' : 'Item arquivado nesta demonstração.');
+                        setContextMenu(null);
+                      }}
+                      className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-950"
+                    >
+                      {item.archived ? 'Desarquivar pasta' : 'Arquivar pasta'}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setSelectedCardId(item.id);
+                        setFeedback('Painel da pasta aberto para ações locais.');
+                        setContextMenu(null);
+                      }}
+                      className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+                    >
+                      Ver painel da pasta
+                    </button>
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

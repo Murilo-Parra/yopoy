@@ -1,4 +1,4 @@
-import { useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   Boxes,
   Camera,
@@ -20,8 +20,11 @@ interface SmartCardProps {
   item: SmartCardItem;
   theme: 'light' | 'dark';
   isSelected?: boolean;
+  isDropTarget?: boolean;
   folderItemsCount?: number;
+  folderFoldersCount?: number;
   onSelect?: (id: string) => void;
+  onContextMenu?: (event: ReactMouseEvent<HTMLElement>, id: string) => void;
   onDragPointerDown?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
   onDragPointerMove?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
   onDragPointerUp?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
@@ -32,17 +35,139 @@ interface SmartCardProps {
 }
 
 const KIND_LABELS: Record<SmartCardKind, string> = {
-  capture: 'Captura',
-  sale: 'Venda',
-  payment: 'Pagamento',
+  capture: 'Captura / anotação',
+  sale: 'Comanda / venda',
+  payment: 'Pagamento / comprovante',
   expense: 'Despesa',
-  stock: 'Produto / estoque',
-  'invoice-draft': 'Rascunho sem valor fiscal',
+  stock: 'Estoque / rascunho',
+  'invoice-draft': 'Pré-nota visual',
   'pre-invoice': 'Pré-nota visual',
   'accountant-package': 'Pacote do contador',
-  folder: 'Pasta',
+  folder: 'Pasta / submesa',
   pending: 'Pendência',
-  'ai-alert': 'Alerta de IA',
+  'ai-alert': 'Alerta local',
+};
+
+const KIND_VISUALS: Record<SmartCardKind, {
+  badge: string;
+  frameLight: string;
+  frameDark: string;
+  badgeLight: string;
+  badgeDark: string;
+  amountLight: string;
+  amountDark: string;
+  hint: string;
+}> = {
+  sale: {
+    badge: 'COMANDA / VENDA',
+    frameLight: 'border-blue-200 bg-blue-50/70',
+    frameDark: 'border-blue-700/50 bg-blue-950/20',
+    badgeLight: 'bg-blue-100 text-blue-800',
+    badgeDark: 'bg-blue-950 text-blue-200',
+    amountLight: 'text-blue-800',
+    amountDark: 'text-blue-300',
+    hint: 'Itens e total da comanda',
+  },
+  payment: {
+    badge: 'PAGAMENTO / COMPROVANTE',
+    frameLight: 'border-emerald-200 bg-emerald-50/70',
+    frameDark: 'border-emerald-700/50 bg-emerald-950/20',
+    badgeLight: 'bg-emerald-100 text-emerald-800',
+    badgeDark: 'bg-emerald-950 text-emerald-200',
+    amountLight: 'text-emerald-800',
+    amountDark: 'text-emerald-300',
+    hint: 'Forma de pagamento e valor',
+  },
+  expense: {
+    badge: 'DESPESA',
+    frameLight: 'border-orange-200 bg-orange-50/70',
+    frameDark: 'border-orange-700/50 bg-orange-950/20',
+    badgeLight: 'bg-orange-100 text-orange-800',
+    badgeDark: 'bg-orange-950 text-orange-200',
+    amountLight: 'text-orange-800',
+    amountDark: 'text-orange-300',
+    hint: 'Fornecedor, saída ou categoria',
+  },
+  'pre-invoice': {
+    badge: 'PRÉ-NOTA VISUAL',
+    frameLight: 'border-purple-200 bg-purple-50/70',
+    frameDark: 'border-purple-700/50 bg-purple-950/20',
+    badgeLight: 'bg-purple-100 text-purple-800',
+    badgeDark: 'bg-purple-950 text-purple-200',
+    amountLight: 'text-purple-800',
+    amountDark: 'text-purple-300',
+    hint: 'Sem valor fiscal',
+  },
+  'invoice-draft': {
+    badge: 'PRÉ-NOTA VISUAL',
+    frameLight: 'border-amber-200 bg-amber-50/70',
+    frameDark: 'border-amber-700/50 bg-amber-950/20',
+    badgeLight: 'bg-amber-100 text-amber-800',
+    badgeDark: 'bg-amber-950 text-amber-200',
+    amountLight: 'text-amber-800',
+    amountDark: 'text-amber-300',
+    hint: 'Rascunho visual sem valor fiscal',
+  },
+  capture: {
+    badge: 'CAPTURA / ANOTAÇÃO',
+    frameLight: 'border-sky-200 bg-sky-50/70',
+    frameDark: 'border-sky-700/50 bg-sky-950/20',
+    badgeLight: 'bg-sky-100 text-sky-800',
+    badgeDark: 'bg-sky-950 text-sky-200',
+    amountLight: 'text-sky-800',
+    amountDark: 'text-sky-300',
+    hint: 'Organizar depois',
+  },
+  folder: {
+    badge: 'PASTA / SUBMESA',
+    frameLight: 'border-amber-300 bg-amber-50/80',
+    frameDark: 'border-amber-600/60 bg-amber-950/30',
+    badgeLight: 'bg-amber-100 text-amber-800',
+    badgeDark: 'bg-amber-950 text-amber-200',
+    amountLight: 'text-amber-800',
+    amountDark: 'text-amber-300',
+    hint: 'Container local da Mesa',
+  },
+  pending: {
+    badge: 'PENDÊNCIA',
+    frameLight: 'border-yellow-200 bg-yellow-50/70',
+    frameDark: 'border-yellow-700/50 bg-yellow-950/20',
+    badgeLight: 'bg-yellow-100 text-yellow-800',
+    badgeDark: 'bg-yellow-950 text-yellow-200',
+    amountLight: 'text-yellow-800',
+    amountDark: 'text-yellow-300',
+    hint: 'Revisão manual',
+  },
+  stock: {
+    badge: 'ESTOQUE / RASCUNHO',
+    frameLight: 'border-teal-200 bg-teal-50/70',
+    frameDark: 'border-teal-700/50 bg-teal-950/20',
+    badgeLight: 'bg-teal-100 text-teal-800',
+    badgeDark: 'bg-teal-950 text-teal-200',
+    amountLight: 'text-teal-800',
+    amountDark: 'text-teal-300',
+    hint: 'Produto ou conferência de estoque',
+  },
+  'ai-alert': {
+    badge: 'ALERTA LOCAL',
+    frameLight: 'border-violet-200 bg-violet-50/70',
+    frameDark: 'border-violet-700/50 bg-violet-950/20',
+    badgeLight: 'bg-violet-100 text-violet-800',
+    badgeDark: 'bg-violet-950 text-violet-200',
+    amountLight: 'text-violet-800',
+    amountDark: 'text-violet-300',
+    hint: 'Sugestão para conferência',
+  },
+  'accountant-package': {
+    badge: 'PACOTE LOCAL',
+    frameLight: 'border-slate-200 bg-slate-50/80',
+    frameDark: 'border-slate-700/60 bg-slate-900/70',
+    badgeLight: 'bg-slate-100 text-slate-700',
+    badgeDark: 'bg-slate-800 text-slate-200',
+    amountLight: 'text-slate-800',
+    amountDark: 'text-slate-300',
+    hint: 'Separação manual para contador',
+  },
 };
 
 const STATUS_LABELS = {
@@ -74,8 +199,11 @@ export function SmartCard({
   item,
   theme,
   isSelected = false,
+  isDropTarget = false,
   folderItemsCount,
+  folderFoldersCount,
   onSelect,
+  onContextMenu,
   onDragPointerDown,
   onDragPointerMove,
   onDragPointerUp,
@@ -87,6 +215,7 @@ export function SmartCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const dark = theme === 'dark';
   const isFolder = item.kind === 'folder';
+  const visual = KIND_VISUALS[item.kind];
   const actionClass = `inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-center text-xs font-bold transition-colors sm:min-h-9 sm:w-auto sm:rounded-lg sm:px-2.5 sm:py-1.5 sm:text-[11px] ${
     dark
       ? 'border-slate-700 bg-slate-900 text-slate-200 hover:border-indigo-500 hover:text-white'
@@ -115,13 +244,12 @@ export function SmartCard({
       onPointerMove={(event) => onDragPointerMove?.(event, item.id)}
       onPointerUp={(event) => onDragPointerUp?.(event, item.id)}
       onPointerCancel={(event) => onDragPointerUp?.(event, item.id)}
+      onContextMenu={(event) => onContextMenu?.(event, item.id)}
       className={`relative h-full select-none rounded-2xl border p-4 shadow-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
       isSelected
         ? dark ? 'border-indigo-400 bg-[#151522] ring-2 ring-indigo-500/60' : 'border-indigo-500 bg-indigo-50/70 ring-2 ring-indigo-200'
-        : isFolder
-          ? dark ? 'border-amber-700/50 bg-amber-950/20' : 'border-amber-200 bg-amber-50/70'
-          : dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'
-    } ${item.archived ? 'opacity-70' : ''} ${onDragPointerDown ? 'cursor-grab active:cursor-grabbing' : ''}`}
+        : dark ? visual.frameDark : visual.frameLight
+    } ${isDropTarget ? 'ring-4 ring-emerald-400 ring-offset-2 ring-offset-transparent' : ''} ${item.archived ? 'opacity-70' : ''} ${onDragPointerDown ? 'cursor-grab active:cursor-grabbing' : ''}`}
     >
       {onConnectionEnd && (
         <button
@@ -183,15 +311,14 @@ export function SmartCard({
                 Selecionado
               </span>
             )}
-            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-wide ${
-              item.kind === 'folder'
-                ? 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'
-                : item.kind === 'ai-alert'
-                ? 'bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300'
-                : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300'
-            }`}>
+            {isDropTarget && (
+              <span className="rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-black uppercase tracking-wide text-white">
+                Soltar aqui
+              </span>
+            )}
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black uppercase tracking-wide ${dark ? visual.badgeDark : visual.badgeLight}`}>
               <KindIcon kind={item.kind} />
-              {KIND_LABELS[item.kind]}
+              {visual.badge}
             </span>
             <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
               {item.archived ? 'Arquivado' : STATUS_LABELS[item.status]}
@@ -201,18 +328,18 @@ export function SmartCard({
             {item.title}
           </h3>
           <p className={`mt-1 text-[11px] font-semibold ${dark ? 'text-slate-500' : 'text-slate-500'}`}>
-            {isFolder ? 'Submesa local' : 'Ficha operacional'} · {item.timeLabel}
+            {visual.hint} · {item.timeLabel}
           </p>
         </div>
         {!isFolder && item.amount !== undefined && (
-          <strong className={`shrink-0 text-base sm:text-sm ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>
+          <strong className={`shrink-0 text-base sm:text-sm ${dark ? visual.amountDark : visual.amountLight}`}>
             {item.amount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
           </strong>
         )}
       </div>
 
       <p className={`mt-2 text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-600'}`}>
-        {isFolder ? `${folderItemsCount ?? 0} card(s) nesta pasta. Abrir pasta pelo painel contextual.` : item.description}
+        {isFolder ? `${folderItemsCount ?? 0} item(ns) e ${folderFoldersCount ?? 0} subpasta(s). Abra ou mova itens para esta pasta.` : item.description}
       </p>
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -225,7 +352,8 @@ export function SmartCard({
         {item.hasPreInvoice && <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Pré-nota visual</span>}
         {item.sentToAccountant && <span className="rounded-md bg-violet-100 px-2 py-1 text-[10px] text-violet-700 dark:bg-violet-950 dark:text-violet-300">Separado para contador</span>}
         {item.linked && <span className="rounded-md bg-emerald-100 px-2 py-1 text-[10px] text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">Conciliável</span>}
-        {isFolder && <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Submesa local</span>}
+        {isFolder && <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Container local</span>}
+        {(item.kind === 'pre-invoice' || item.kind === 'invoice-draft') && <span className="rounded-md bg-purple-100 px-2 py-1 text-[10px] text-purple-700 dark:bg-purple-950 dark:text-purple-300">Sem valor fiscal</span>}
         <span className={`basis-full pt-1 text-[10px] sm:ml-auto sm:basis-auto sm:pt-0 ${dark ? 'text-slate-500' : 'text-slate-400'}`}>{item.timeLabel}</span>
       </div>
 

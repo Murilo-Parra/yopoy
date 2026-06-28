@@ -55,10 +55,35 @@ describe('SmartCard', () => {
     expect(screen.getByText(/separado para contador/i)).toBeTruthy();
     expect(screen.getByText(/vínculo visual/i)).toBeTruthy();
     expect(screen.getByText(/selecionado/i)).toBeTruthy();
+    expect(screen.getByText(/comanda \/ venda/i)).toBeTruthy();
     expect(screen.queryByText(/ações alternativas/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /preparar pré-nota/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /separar contador/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /^arquivar$/i })).toBeNull();
+  });
+
+  it('mostra pasta como container visual com contagens e estado de drop', () => {
+    renderCard({
+      item: {
+        ...ITEM,
+        id: 'folder-test',
+        kind: 'folder',
+        title: 'Pedidos',
+        description: 'Pasta local da Mesa Visual.',
+        amount: undefined,
+        tags: ['Pasta local'],
+      },
+      folderItemsCount: 2,
+      folderFoldersCount: 1,
+      isDropTarget: true,
+    });
+
+    expect(screen.getByText(/pasta \/ submesa/i)).toBeTruthy();
+    expect(screen.getByRole('heading', { name: /pedidos/i })).toBeTruthy();
+    expect(screen.getByText(/2 item\(ns\) e 1 subpasta\(s\)/i)).toBeTruthy();
+    expect(screen.getAllByText(/container local/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/soltar aqui/i)).toBeTruthy();
+    expect(screen.queryByText(/R\$/i)).toBeNull();
   });
 
   it('seleciona pelo corpo do card sem remover o fallback de drag', () => {

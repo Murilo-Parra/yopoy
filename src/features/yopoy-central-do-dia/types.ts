@@ -43,6 +43,7 @@ export interface SmartCardItem {
   hasPreInvoice: boolean;
   sentToAccountant?: boolean;
   sentToPreInvoices?: boolean;
+  sourceDate?: string;
   parentFolderId?: string | null;
   sourceCardIds?: string[];
   preInvoiceLines?: Array<{

@@ -42,6 +42,121 @@ import {
 import { Transaction, Employee, TransactionCategory, Product, isTransactionRevenue } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportTransactionsCSV, exportTransactionsPDF } from '../utils/exportUtils';
+import {
+  readTaskCanvasSnapshot,
+  subscribeTaskCanvasUpdates,
+  writeTaskCanvasSnapshot,
+  type TaskCanvasSnapshot,
+} from '../features/yopoy-central-do-dia/taskCanvasStorage';
+import type { SmartCardItem, SmartCardKind } from '../features/yopoy-central-do-dia/types';
+
+const DESK_FINANCE_KINDS: SmartCardKind[] = ['payment', 'expense'];
+
+function isDeskSmartCardItem(value: unknown): value is SmartCardItem {
+  return typeof value === 'object' && value !== null
+    && typeof (value as Record<string, unknown>).id === 'string'
+    && typeof (value as Record<string, unknown>).kind === 'string'
+    && typeof (value as Record<string, unknown>).status === 'string'
+    && typeof (value as Record<string, unknown>).title === 'string'
+    && typeof (value as Record<string, unknown>).description === 'string';
+}
+
+function getDeskFallbackDate(snapshot: TaskCanvasSnapshot | null) {
+  return snapshot?.updatedAt?.slice(0, 10) ?? new Date().toISOString().slice(0, 10);
+}
+
+function getDeskTransactionCategory(item: SmartCardItem): TransactionCategory {
+  if (item.tags.some((tag) => tag === 'Funcionários' || tag === 'Serviços' || tag === 'Tecnologia')) {
+    const category = item.tags.find((tag): tag is TransactionCategory => (
+      tag === 'Suprimentos'
+      || tag === 'Logística'
+      || tag === 'Serviços'
+      || tag === 'Funcionários'
+      || tag === 'Impostos'
+      || tag === 'Alimentação'
+      || tag === 'Tecnologia'
+      || tag === 'Faturamento Misto'
+      || tag === 'Outros'
+    ));
+
+    if (category) return category;
+  }
+
+  return item.kind === 'expense' ? 'Suprimentos' : 'Outros';
+}
+
+function deskCardToTransaction(item: SmartCardItem, fallbackDate: string): Transaction | null {
+  if (item.archived || !DESK_FINANCE_KINDS.includes(item.kind)) {
+    return null;
+  }
+
+  const amount = typeof item.amount === 'number' && Number.isFinite(item.amount) ? item.amount : 0;
+
+  return {
+    id: item.id,
+    establishmentName: item.title,
+    amount,
+    date: item.sourceDate ?? fallbackDate,
+    category: getDeskTransactionCategory(item),
+    status: item.status === 'resolved' ? 'Confirmado' : 'Pendente',
+    notes: item.description,
+    type: item.kind === 'expense' ? 'Despesa' : 'Receita',
+  };
+}
+
+function createDeskCardFromTransaction(transaction: Transaction, kind: SmartCardKind, sourceDate?: string): SmartCardItem {
+  return {
+    id: transaction.id,
+    kind,
+    title: transaction.establishmentName,
+    description: transaction.notes || transaction.establishmentName,
+    amount: transaction.amount,
+    timeLabel: transaction.date,
+    status: transaction.status === 'Confirmado' ? 'ready' : 'pending',
+    archived: false,
+    linked: false,
+    hasPreInvoice: false,
+    sourceDate: sourceDate ?? transaction.date,
+    tags: [
+      kind === 'payment' ? 'Recebimento local' : kind === 'expense' ? 'Despesa local' : 'Registro local',
+      transaction.category,
+    ],
+  };
+}
+
+function writeDeskCardFromTransaction(transaction: Transaction, kind: SmartCardKind, sourceDate?: string) {
+  const currentSnapshot = readTaskCanvasSnapshot();
+  const nextSnapshot: TaskCanvasSnapshot = {
+    ...(currentSnapshot ?? {
+      version: 1,
+      items: [],
+      connections: [],
+      positions: {},
+      activeFilter: 'all',
+    }),
+    updatedAt: new Date().toISOString(),
+    items: [
+      ...((currentSnapshot?.items as SmartCardItem[] | undefined) ?? []).filter((item) => !isDeskSmartCardItem(item) || item.id !== transaction.id),
+      createDeskCardFromTransaction(transaction, kind, sourceDate),
+    ],
+  };
+
+  writeTaskCanvasSnapshot(nextSnapshot);
+}
+
+function removeDeskCardById(cardId: string) {
+  const currentSnapshot = readTaskCanvasSnapshot();
+  if (!currentSnapshot || !Array.isArray(currentSnapshot.items)) return;
+
+  const nextItems = currentSnapshot.items.filter((item) => !isDeskSmartCardItem(item) || item.id !== cardId);
+  if (nextItems.length === currentSnapshot.items.length) return;
+
+  writeTaskCanvasSnapshot({
+    ...currentSnapshot,
+    items: nextItems,
+    updatedAt: new Date().toISOString(),
+  });
+}
 
 interface FinanceToolProps {
   transactions: Transaction[];
@@ -124,11 +239,21 @@ export default function FinanceTool({
   // Estados de Controle de Edição do Saldo Inicial de Caixa
   const [isEditingBalance, setIsEditingBalance] = useState(false);
   const [tempBalance, setTempBalance] = useState(cashBalance.toString());
+  const [deskSnapshot, setDeskSnapshot] = useState<TaskCanvasSnapshot | null>(() => readTaskCanvasSnapshot());
 
   // Manter tempBalance sincronizado com cashBalance externo
   useEffect(() => {
     setTempBalance(cashBalance.toString());
   }, [cashBalance]);
+
+  useEffect(() => {
+    const refreshDeskSnapshot = () => {
+      setDeskSnapshot(readTaskCanvasSnapshot());
+    };
+
+    refreshDeskSnapshot();
+    return subscribeTaskCanvasUpdates(refreshDeskSnapshot);
+  }, []);
 
   const handleSaveStartingBalance = () => {
     const val = parseFloat(tempBalance);
@@ -192,13 +317,26 @@ export default function FinanceTool({
 
   // Helper para identificar se uma transação constitui Entrada / Recebimento
   const isRevenue = isTransactionRevenue;
+  const financeSourceTransactions = useMemo(() => {
+    if (deskSnapshot !== null) {
+      const fallbackDate = getDeskFallbackDate(deskSnapshot);
+      return Array.isArray(deskSnapshot.items)
+        ? deskSnapshot.items
+            .filter(isDeskSmartCardItem)
+            .map((item) => deskCardToTransaction(item, fallbackDate))
+            .filter((item): item is Transaction => item !== null)
+        : [];
+    }
+
+    return transactions;
+  }, [deskSnapshot, transactions]);
 
   // Cálculos de Caixa baseados no Helper IsRevenue
-  const totalRevenues = transactions
+  const totalRevenues = financeSourceTransactions
     .filter(isRevenue)
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpenses = transactions
+  const totalExpenses = financeSourceTransactions
     .filter(t => !isRevenue(t))
     .reduce((sum, t) => sum + t.amount, 0);
 
@@ -213,14 +351,14 @@ export default function FinanceTool({
     } else {
       const netMarginBeforeTaxes = totalRevenues - totalExpenses;
       const irpjCSLLReal = netMarginBeforeTaxes > 0 ? netMarginBeforeTaxes * 0.24 : 0;
-      const servicesAmount = transactions
+      const servicesAmount = financeSourceTransactions
         .filter(t => t.category === 'Serviços' || t.category === 'Tecnologia')
         .reduce((sum, t) => sum + t.amount, 0);
       const estimatedIssTaxOnServices = servicesAmount * 0.05;
       const pisCofinsReal = totalRevenues * 0.0450;
       return irpjCSLLReal + pisCofinsReal + estimatedIssTaxOnServices;
     }
-  }, [taxRegime, simplesRate, totalRevenues, totalExpenses, transactions]);
+  }, [taxRegime, simplesRate, totalRevenues, totalExpenses, financeSourceTransactions]);
 
   // Receita Líquida (Gross Revenues minus active regime sales taxes)
   const totalNetRevenue = totalRevenues - estimatedActiveTax;
@@ -232,9 +370,11 @@ export default function FinanceTool({
 
     const parsedAmount = parseFloat(manualAmount);
     if (isNaN(parsedAmount)) return;
+    const transactionKind: SmartCardKind = manualType === 'Receita' ? 'payment' : 'expense';
+    const transactionId = 'desk_fin_' + Date.now();
 
     const newTrans: Transaction = {
-      id: 'trans_' + Date.now(),
+      id: transactionId,
       establishmentName: manualName,
       amount: parsedAmount,
       date: manualDate,
@@ -246,6 +386,7 @@ export default function FinanceTool({
 
     // Atualizar transações e saldo
     setTransactions(prev => [newTrans, ...prev]);
+    writeDeskCardFromTransaction(newTrans, transactionKind, manualDate);
 
     // Reset formulário
     setManualName('');
@@ -264,25 +405,24 @@ export default function FinanceTool({
 
     if (editingTransactionId) {
       // Editar transação existente
-      setTransactions(prev => prev.map(t => {
-        if (t.id === editingTransactionId) {
-          return {
-            ...t,
-            establishmentName: calFormName,
-            amount: parsedAmount,
-            date: selectedDateFilter,
-            category: calFormCategory,
-            type: calFormType,
-            notes: calFormNotes
-          };
-        }
-        return t;
-      }));
+      const updatedTransaction: Transaction = {
+        id: editingTransactionId,
+        establishmentName: calFormName,
+        amount: parsedAmount,
+        date: selectedDateFilter,
+        category: calFormCategory,
+        type: calFormType,
+        notes: calFormNotes,
+        status: 'Confirmado',
+      };
+      setTransactions(prev => prev.map(t => (t.id === editingTransactionId ? updatedTransaction : t)));
+      writeDeskCardFromTransaction(updatedTransaction, calFormType === 'Receita' ? 'payment' : 'expense', selectedDateFilter);
       setEditingTransactionId(null);
     } else {
       // Adicionar nova transação
+      const newId = 'desk_fin_' + Date.now();
       const newTrans: Transaction = {
-        id: 'trans_cal_' + Date.now(),
+        id: newId,
         establishmentName: calFormName,
         amount: parsedAmount,
         date: selectedDateFilter,
@@ -292,6 +432,7 @@ export default function FinanceTool({
         type: calFormType
       };
       setTransactions(prev => [newTrans, ...prev]);
+      writeDeskCardFromTransaction(newTrans, calFormType === 'Receita' ? 'payment' : 'expense', selectedDateFilter);
     }
 
     // Reset dos campos do formulário
@@ -302,6 +443,7 @@ export default function FinanceTool({
 
   const handleDeleteCalendarTransaction = (id: string) => {
     setTransactions(prev => prev.filter(t => t.id !== id));
+    removeDeskCardById(id);
     if (editingTransactionId === id) {
       setEditingTransactionId(null);
       setCalFormName('');
@@ -383,6 +525,7 @@ export default function FinanceTool({
     };
 
     setTransactions(prev => [newTrans, ...prev]);
+    writeDeskCardFromTransaction(newTrans, 'expense', aiResult.date || '2026-05-31');
 
     // Reset e fechamento
     setAiResult(null);
@@ -394,6 +537,7 @@ export default function FinanceTool({
   // Excluir Lançamento
   const handleDeleteTransaction = (id: string, amount: number, isRevenue: boolean) => {
     setTransactions(prev => prev.filter(t => t.id !== id));
+    removeDeskCardById(id);
   };
 
   // Registrar Funcionário
@@ -450,11 +594,12 @@ export default function FinanceTool({
     };
 
     setTransactions(prev => [payTrans, ...prev]);
+    writeDeskCardFromTransaction(payTrans, 'expense', '2026-05-31');
     
     alert(`Sucesso! Pagamento de salário no valor de R$ ${employee.salary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para ${employee.name} foi faturado com sucesso no fluxo de caixa.`);
   };
 
-  const filteredTransactions = transactions.filter(t => {
+  const filteredTransactions = financeSourceTransactions.filter(t => {
     // 1. Filtro do Calendário por Data
     if (selectedDateFilter && t.date !== selectedDateFilter) {
       return false;
@@ -804,7 +949,7 @@ export default function FinanceTool({
                     const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
                     
                     // Identifica transações desse dia específico
-                    const dayTx = transactions.filter(t => t.date === dateStr);
+                    const dayTx = financeSourceTransactions.filter(t => t.date === dateStr);
                     const hasRecebimento = dayTx.some(isRevenue);
                     const hasDebito = dayTx.some(t => !isRevenue(t));
                     
@@ -849,7 +994,7 @@ export default function FinanceTool({
               <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl space-y-2 mt-4 text-xs">
                 {selectedDateFilter ? (
                   (() => {
-                    const matched = transactions.filter(t => t.date === selectedDateFilter);
+                    const matched = financeSourceTransactions.filter(t => t.date === selectedDateFilter);
                     const receiptsSum = matched.filter(isRevenue).reduce((sum, t) => sum + t.amount, 0);
                     const debitsSum = matched.filter(t => !isRevenue(t)).reduce((sum, t) => sum + t.amount, 0);
 
@@ -925,7 +1070,7 @@ export default function FinanceTool({
                   }`}
                 >
                   <ClipboardList className="w-3.5 h-3.5" />
-                  Livro-Caixa Geral ({transactions.length})
+                  Livro-Caixa Geral ({financeSourceTransactions.length})
                 </button>
                 <button
                   onClick={() => setSelectedTableTab('recebimentos')}
@@ -936,7 +1081,7 @@ export default function FinanceTool({
                   }`}
                 >
                   <TrendingUp className="w-3.5 h-3.5" />
-                  Recebimentos ({transactions.filter(isRevenue).length})
+                  Recebimentos ({financeSourceTransactions.filter(isRevenue).length})
                 </button>
                 <button
                   onClick={() => setSelectedTableTab('debitos')}
@@ -947,7 +1092,7 @@ export default function FinanceTool({
                   }`}
                 >
                   <TrendingDown className="w-3.5 h-3.5" />
-                  Débitos / Contas ({transactions.filter(t => !isRevenue(t)).length})
+                  Débitos / Contas ({financeSourceTransactions.filter(t => !isRevenue(t)).length})
                 </button>
                 <button
                   onClick={() => setSelectedTableTab('categorias_todas')}
@@ -1744,13 +1889,13 @@ export default function FinanceTool({
               {/* Left Column: List of existing transactions on this day */}
               <div className="p-5 space-y-4">
                 <h5 className="font-bold text-xs uppercase text-gray-500 tracking-wider flex items-center justify-between">
-                  <span>Lançamentos Registrados ({transactions.filter(t => t.date === selectedDateFilter).length})</span>
+                  <span>Lançamentos Registrados ({financeSourceTransactions.filter(t => t.date === selectedDateFilter).length})</span>
                   <span className="font-mono text-xs text-gray-400">Ativos no dia</span>
                 </h5>
 
                 <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
                   {(() => {
-                    const matched = transactions.filter(t => t.date === selectedDateFilter);
+                    const matched = financeSourceTransactions.filter(t => t.date === selectedDateFilter);
                     if (matched.length === 0) {
                       return (
                         <div className="text-center py-12 border-2 border-dashed border-gray-100 rounded-xl px-4">
@@ -2073,7 +2218,7 @@ export default function FinanceTool({
             const totalStaffCostWithTaxes = totalActiveSalaries + computedInssCost + computedFgtsCost;
 
             // Faturamento de Serviços da Categoria Serviços/Tecnologia para ISS
-            const servicesAmount = transactions
+            const servicesAmount = financeSourceTransactions
               .filter(t => t.category === 'Serviços' || t.category === 'Tecnologia')
               .reduce((sum, t) => sum + t.amount, 0);
             const estimatedIssTaxOnServices = servicesAmount * 0.05; // ISS fixado em 5%

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
+import {
   DollarSign, 
   TrendingUp, 
   TrendingDown, 
@@ -473,8 +473,6 @@ export default function FinanceTool({
 
   return (
     <div id="finance-module-root" className="space-y-6">
-      
-
       {/* Tab Navegation interna */}
       <div className="flex border-b border-gray-200 overflow-x-auto whitespace-nowrap scrollbar-none">
         <button

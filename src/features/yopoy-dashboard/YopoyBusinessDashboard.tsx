@@ -13,9 +13,9 @@ import {
 import {
   formatCurrencyBRL,
   readTaskCanvasSummary,
-  TASK_CANVAS_STORAGE_KEY,
   type TaskCanvasSummary,
 } from './taskCanvasSummary';
+import { subscribeTaskCanvasUpdates } from '../yopoy-central-do-dia/taskCanvasStorage';
 
 interface YopoyBusinessDashboardProps {
   theme: 'light' | 'dark';
@@ -70,18 +70,8 @@ export function YopoyBusinessDashboard({ theme, onOpenTaskBoard }: YopoyBusiness
 
   useEffect(() => {
     const refreshSummary = () => setSummary(readTaskCanvasSummary());
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === TASK_CANVAS_STORAGE_KEY || event.key === null) refreshSummary();
-    };
-
     refreshSummary();
-    window.addEventListener('focus', refreshSummary);
-    window.addEventListener('storage', handleStorage);
-
-    return () => {
-      window.removeEventListener('focus', refreshSummary);
-      window.removeEventListener('storage', handleStorage);
-    };
+    return subscribeTaskCanvasUpdates(refreshSummary);
   }, []);
 
   return (

@@ -352,7 +352,7 @@ export function SmartCard({
         }`}>
           <p className="font-black uppercase tracking-wide">Pré-nota visual</p>
           <p className="mt-1">
-            {item.preInvoiceSummary?.itemCount ?? item.sourceCardIds?.length ?? 0} card(s) de origem
+            {item.preInvoiceLines?.length ?? item.preInvoiceSummary?.itemCount ?? item.sourceCardIds?.length ?? 0} linha(s) copiadas
             {typeof item.preInvoiceSummary?.totalAmount === 'number' && Number.isFinite(item.preInvoiceSummary.totalAmount)
               ? ` · Total visual ${item.preInvoiceSummary.totalAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
               : ''}

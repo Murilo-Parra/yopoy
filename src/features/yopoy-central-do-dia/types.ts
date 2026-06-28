@@ -45,6 +45,16 @@ export interface SmartCardItem {
   sentToPreInvoices?: boolean;
   parentFolderId?: string | null;
   sourceCardIds?: string[];
+  preInvoiceLines?: Array<{
+    sourceCardId?: string;
+    title: string;
+    description?: string;
+    kind: SmartCardKind;
+    amount?: number;
+    tags?: string[];
+    status?: SmartCardStatus;
+    capturedAt: string;
+  }>;
   preInvoiceSummary?: {
     totalAmount?: number;
     itemCount: number;

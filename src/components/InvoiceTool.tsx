@@ -9,17 +9,14 @@ import {
   Sparkles,
   X,
 } from 'lucide-react';
-import { formatCurrencyBRL, TASK_CANVAS_STORAGE_KEY } from '../features/yopoy-dashboard/taskCanvasSummary';
+import { formatCurrencyBRL } from '../features/yopoy-dashboard/taskCanvasSummary';
+import {
+  readTaskCanvasSnapshot,
+  subscribeTaskCanvasUpdates,
+  writeTaskCanvasSnapshot,
+  type TaskCanvasSnapshot,
+} from '../features/yopoy-central-do-dia/taskCanvasStorage';
 import type { SmartCardItem } from '../features/yopoy-central-do-dia/types';
-
-interface StoredTaskCanvasSnapshot {
-  version: 1;
-  items?: unknown;
-  connections?: unknown;
-  positions?: unknown;
-  activeFilter?: unknown;
-  updatedAt?: string;
-}
 
 interface InvoiceToolProps {
   theme?: 'light' | 'dark';
@@ -46,19 +43,6 @@ function isSmartCardItem(value: unknown): value is SmartCardItem {
     && typeof value.hasPreInvoice === 'boolean';
 }
 
-function readSnapshot(): StoredTaskCanvasSnapshot | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    const raw = window.localStorage.getItem(TASK_CANVAS_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!isRecord(parsed) || parsed.version !== 1) return null;
-    return parsed as unknown as StoredTaskCanvasSnapshot;
-  } catch {
-    return null;
-  }
-}
-
 function readWorkspaceName() {
   if (typeof window === 'undefined') return 'Dados não informados';
   return window.localStorage.getItem('cfg_trade_name')
@@ -66,7 +50,7 @@ function readWorkspaceName() {
     ?? 'Dados não informados';
 }
 
-function readPreInvoiceItems(snapshot: StoredTaskCanvasSnapshot | null) {
+function readPreInvoiceItems(snapshot: TaskCanvasSnapshot | null) {
   if (!snapshot || !Array.isArray(snapshot.items)) return [];
   return snapshot.items.filter(isSmartCardItem).filter((item) => item.kind === 'pre-invoice' || item.kind === 'invoice-draft');
 }
@@ -86,21 +70,9 @@ function formatGeneratedAt(item: SmartCardItem) {
   return item.timeLabel;
 }
 
-function saveSnapshot(snapshot: StoredTaskCanvasSnapshot) {
-  if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.setItem(TASK_CANVAS_STORAGE_KEY, JSON.stringify({
-      ...snapshot,
-      updatedAt: new Date().toISOString(),
-    }));
-  } catch {
-    // A visão continua funcional quando o navegador bloqueia storage.
-  }
-}
-
 export default function InvoiceTool({ theme = 'dark' }: InvoiceToolProps) {
   const dark = theme === 'dark';
-  const [snapshot, setSnapshot] = useState<StoredTaskCanvasSnapshot | null>(() => readSnapshot());
+  const [snapshot, setSnapshot] = useState<TaskCanvasSnapshot | null>(() => readTaskCanvasSnapshot());
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState('');
 
@@ -114,23 +86,25 @@ export default function InvoiceTool({ theme = 'dark' }: InvoiceToolProps) {
   }, [preInvoiceItems, previewId]);
 
   useEffect(() => {
-    const refresh = () => setSnapshot(readSnapshot());
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === TASK_CANVAS_STORAGE_KEY || event.key === null) refresh();
-    };
-
+    const refresh = () => setSnapshot(readTaskCanvasSnapshot());
     refresh();
-    window.addEventListener('focus', refresh);
-    window.addEventListener('storage', handleStorage);
-
-    return () => {
-      window.removeEventListener('focus', refresh);
-      window.removeEventListener('storage', handleStorage);
-    };
+    return subscribeTaskCanvasUpdates(refresh);
   }, []);
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closePreview();
+      }
+    };
+
+    if (!selectedPreInvoice) return undefined;
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPreInvoice]);
+
   const toggleAccountantFlag = (itemId: string) => {
-    const currentSnapshot = readSnapshot();
+    const currentSnapshot = readTaskCanvasSnapshot();
     if (!currentSnapshot || !Array.isArray(currentSnapshot.items)) return;
 
     const nextItems = currentSnapshot.items.map((item) => {
@@ -138,8 +112,8 @@ export default function InvoiceTool({ theme = 'dark' }: InvoiceToolProps) {
       return { ...item, sentToAccountant: !item.sentToAccountant };
     });
 
-    saveSnapshot({ ...currentSnapshot, items: nextItems });
-    setSnapshot(readSnapshot());
+    writeTaskCanvasSnapshot({ ...currentSnapshot, items: nextItems, updatedAt: new Date().toISOString() });
+    setSnapshot(readTaskCanvasSnapshot());
     setFeedback('Pré-nota marcada localmente para o contador. Nenhum dado foi enviado.');
   };
 
@@ -161,8 +135,21 @@ export default function InvoiceTool({ theme = 'dark' }: InvoiceToolProps) {
 
   const previewSourceRows = useMemo(() => {
     if (!selectedPreInvoice) return [];
+    const copiedLines = selectedPreInvoice.preInvoiceLines ?? [];
     const sourceIds = selectedPreInvoice.sourceCardIds ?? [];
     const sourceTitles = selectedPreInvoice.preInvoiceSummary?.sourceTitles ?? [];
+
+    if (copiedLines.length > 0) {
+      return copiedLines.map((line, index) => ({
+        code: line.sourceCardId ?? `LINE-${index + 1}`,
+        title: line.title,
+        origin: `Card ${line.kind}`,
+        quantity: 1,
+        unitValue: typeof line.amount === 'number' && Number.isFinite(line.amount) ? line.amount : undefined,
+        totalValue: typeof line.amount === 'number' && Number.isFinite(line.amount) ? line.amount : undefined,
+        description: line.description ?? 'Linha copiada da Mesa.',
+      }));
+    }
 
     if (sourceIds.length === 0 && sourceTitles.length === 0) {
       return [{
@@ -261,7 +248,7 @@ export default function InvoiceTool({ theme = 'dark' }: InvoiceToolProps) {
         <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
           {preInvoiceItems.map((item) => {
             const amount = getDisplayAmount(item);
-            const sourceCount = item.preInvoiceSummary?.itemCount ?? item.sourceCardIds?.length ?? 0;
+            const sourceCount = item.preInvoiceLines?.length ?? item.preInvoiceSummary?.itemCount ?? item.sourceCardIds?.length ?? 0;
             return (
               <article
                 key={item.id}
@@ -357,7 +344,7 @@ export default function InvoiceTool({ theme = 'dark' }: InvoiceToolProps) {
           </div>
         </div>
         <p className={`mt-4 text-xs ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-          Dados locais da Mesa. Sem transmissão, sem autorização fiscal e sem valor fiscal.
+          Pré-notas derivadas da Mesa. Sem transmissão, sem autorização fiscal e sem valor fiscal.
         </p>
       </section>
 

@@ -21,10 +21,10 @@ import {
   Folder,
   Link2,
   Maximize2,
+  Minimize2,
   Minus,
   MousePointer2,
   MoreHorizontal,
-  PackageCheck,
   PackageOpen,
   Plus,
   Printer,
@@ -35,6 +35,11 @@ import {
 } from 'lucide-react';
 import { MOCK_SMART_CARDS } from './mockData';
 import { SmartCard } from './SmartCard';
+import {
+  clearTaskCanvasSnapshot,
+  TASK_CANVAS_STORAGE_KEY,
+  writeTaskCanvasSnapshot,
+} from './taskCanvasStorage';
 import {
   SMART_CARD_STATUS_FLOW,
   type CanvasCardConnection,
@@ -105,34 +110,11 @@ const CANVAS_EXPANSION_PADDING = 480;
 const MIN_CANVAS_ZOOM = 0.5;
 const MAX_CANVAS_ZOOM = 1.75;
 const CANVAS_ZOOM_STEP = 0.25;
-const TASK_CANVAS_STORAGE_KEY = 'yopoy:task-canvas:v1';
 const TASK_CANVAS_STORAGE_VERSION = 1;
 const CONNECTION_STATUS_LABELS = {
   visual: 'visual',
   reconciled: 'conciliado',
 } as const;
-
-const PACKAGE_KIND_LABELS: Record<SmartCardKind, string> = {
-  capture: 'Captura',
-  sale: 'Venda interna',
-  payment: 'Recebimento',
-  expense: 'Despesa',
-  stock: 'Produto / estoque',
-  'invoice-draft': 'Rascunho sem valor fiscal',
-  'pre-invoice': 'Pré-nota interna',
-  'accountant-package': 'Pacote do contador',
-  folder: 'Pasta local',
-  pending: 'Pendência',
-  'ai-alert': 'Alerta de IA',
-};
-
-const PACKAGE_STATUS_LABELS: Record<SmartCardStatus, string> = {
-  new: 'Novo',
-  pending: 'Pendente',
-  review: 'Em revisão',
-  ready: 'Pronto',
-  resolved: 'Resolvido',
-};
 
 const CARD_KIND_LABELS: Record<SmartCardKind, string> = {
   capture: 'Captura',
@@ -142,7 +124,7 @@ const CARD_KIND_LABELS: Record<SmartCardKind, string> = {
   stock: 'Produto / estoque',
   'invoice-draft': 'Rascunho sem valor fiscal',
   'pre-invoice': 'Pré-nota visual',
-  'accountant-package': 'Pacote do contador',
+  'accountant-package': 'Documento local',
   folder: 'Pasta',
   pending: 'Pendência',
   'ai-alert': 'Alerta de IA',
@@ -280,7 +262,16 @@ function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(Math.max(value, minimum), maximum);
 }
 
-function createDefaultCanvasState(): CanvasState {
+function createEmptyCanvasState(): CanvasState {
+  return {
+    items: [],
+    positions: {},
+    connections: [],
+    activeFilter: 'all',
+  };
+}
+
+function createDemoCanvasState(): CanvasState {
   const items = cloneMockItems();
   return {
     items,
@@ -344,29 +335,45 @@ function readParentFolderId(value: unknown, fallback?: string | null) {
   return fallback ?? null;
 }
 
-function normalizeItem(value: unknown, fallback?: SmartCardItem): SmartCardItem | null {
-  if (!isRecord(value)) return fallback ? { ...fallback, tags: [...fallback.tags] } : null;
+function normalizeItem(value: unknown): SmartCardItem | null {
+  if (!isRecord(value)) return null;
 
-  const id = readString(value.id, fallback?.id ?? '');
+  const id = readString(value.id, '');
   if (!id) return null;
+  const demoItem = MOCK_SMART_CARDS.find((candidate) => candidate.id === id);
+  const demoKind = demoItem?.kind;
+  const demoTitle = demoItem?.title;
+  const demoDescription = demoItem?.description;
+  const demoAmount = demoItem?.amount;
+  const demoTimeLabel = demoItem?.timeLabel;
+  const demoStatus = demoItem?.status;
+  const demoArchived = demoItem?.archived;
+  const demoLinked = demoItem?.linked;
+  const demoHasPreInvoice = demoItem?.hasPreInvoice;
+  const demoSentToAccountant = demoItem?.sentToAccountant;
+  const demoSentToPreInvoices = demoItem?.sentToPreInvoices;
+  const demoParentFolderId = demoItem?.parentFolderId ?? null;
+  const demoSourceCardIds = demoItem?.sourceCardIds ?? [];
+  const demoPreInvoiceSummary = demoItem?.preInvoiceSummary;
+  const demoTags = demoItem?.tags;
 
   return {
     id,
-    kind: isSmartCardKind(value.kind) ? value.kind : fallback?.kind ?? 'pending',
-    title: readString(value.title, fallback?.title ?? 'Card de demonstração'),
-    description: readString(value.description, fallback?.description ?? 'Registro local de demonstração.'),
-    amount: readOptionalNumber(value.amount, fallback?.amount),
-    timeLabel: readString(value.timeLabel, fallback?.timeLabel ?? 'agora'),
-    status: isSmartCardStatus(value.status) ? value.status : fallback?.status ?? 'pending',
-    archived: readBoolean(value.archived, fallback?.archived ?? false),
-    linked: readBoolean(value.linked, fallback?.linked ?? false),
-    hasPreInvoice: readBoolean(value.hasPreInvoice, fallback?.hasPreInvoice ?? false),
-    sentToAccountant: readBoolean(value.sentToAccountant, fallback?.sentToAccountant ?? false),
-    sentToPreInvoices: readBoolean(value.sentToPreInvoices, fallback?.sentToPreInvoices ?? false),
-    parentFolderId: readParentFolderId(value.parentFolderId, fallback?.parentFolderId),
-    sourceCardIds: readStringArray(value.sourceCardIds, fallback?.sourceCardIds ?? []),
-    preInvoiceSummary: readPreInvoiceSummary(value.preInvoiceSummary, fallback?.preInvoiceSummary),
-    tags: readTags(value.tags, fallback?.tags ?? ['Demonstração']),
+    kind: isSmartCardKind(value.kind) ? value.kind : (demoKind ?? 'pending'),
+    title: readString(value.title, demoTitle ?? 'Card de demonstração'),
+    description: readString(value.description, demoDescription ?? 'Registro local de demonstração.'),
+    amount: readOptionalNumber(value.amount, demoAmount),
+    timeLabel: readString(value.timeLabel, demoTimeLabel ?? 'agora'),
+    status: isSmartCardStatus(value.status) ? value.status : (demoStatus ?? 'pending'),
+    archived: readBoolean(value.archived, demoArchived ?? false),
+    linked: readBoolean(value.linked, demoLinked ?? false),
+    hasPreInvoice: readBoolean(value.hasPreInvoice, demoHasPreInvoice ?? false),
+    sentToAccountant: readBoolean(value.sentToAccountant, demoSentToAccountant ?? false),
+    sentToPreInvoices: readBoolean(value.sentToPreInvoices, demoSentToPreInvoices ?? false),
+    parentFolderId: readParentFolderId(value.parentFolderId, demoParentFolderId),
+    sourceCardIds: readStringArray(value.sourceCardIds, demoSourceCardIds),
+    preInvoiceSummary: readPreInvoiceSummary(value.preInvoiceSummary) ?? demoPreInvoiceSummary,
+    tags: readTags(value.tags, demoTags ?? ['Demonstração']),
   };
 }
 
@@ -481,25 +488,20 @@ function isDescendantFolder(folderId: string, possibleAncestorId: string, itemsB
 function normalizeCanvasState(value: unknown): CanvasState | null {
   if (!isRecord(value) || value.version !== TASK_CANVAS_STORAGE_VERSION || !Array.isArray(value.items)) return null;
 
-  const defaultState = createDefaultCanvasState();
-  const fallbackById = new Map(defaultState.items.map((item) => [item.id, item]));
   const savedItemsById = new Map<string, SmartCardItem>();
 
   value.items.forEach((rawItem) => {
     const rawId = isRecord(rawItem) && typeof rawItem.id === 'string' ? rawItem.id : '';
-    const item = normalizeItem(rawItem, fallbackById.get(rawId));
+    const item = normalizeItem(rawItem);
     if (item) savedItemsById.set(item.id, item);
   });
 
-  const items = [
-    ...savedItemsById.values(),
-    ...defaultState.items.filter((item) => !savedItemsById.has(item.id)),
-  ];
+  const items = [...savedItemsById.values()];
   const itemIds = new Set(items.map((item) => item.id));
   const rawPositions = isRecord(value.positions) ? value.positions : {};
   const positions = Object.fromEntries(items.map((item) => [
     item.id,
-    normalizePosition(rawPositions[item.id], defaultState.positions[item.id] ?? { x: 44, y: 44 }),
+    normalizePosition(rawPositions[item.id], { x: 44, y: 44 }),
   ]));
   const connections = Array.isArray(value.connections)
     ? value.connections
@@ -519,14 +521,15 @@ function normalizeCanvasState(value: unknown): CanvasState | null {
 }
 
 function loadCanvasState(): CanvasState {
-  if (typeof window === 'undefined') return createDefaultCanvasState();
+  if (typeof window === 'undefined') return createDemoCanvasState();
 
   try {
     const stored = window.localStorage.getItem(TASK_CANVAS_STORAGE_KEY);
-    if (!stored) return createDefaultCanvasState();
-    return normalizeCanvasState(JSON.parse(stored)) ?? createDefaultCanvasState();
+    if (!stored) return createDemoCanvasState();
+    const parsed: unknown = JSON.parse(stored);
+    return normalizeCanvasState(parsed) ?? createDemoCanvasState();
   } catch {
-    return createDefaultCanvasState();
+    return createDemoCanvasState();
   }
 }
 
@@ -542,21 +545,13 @@ function saveCanvasState(state: CanvasState) {
     updatedAt: new Date().toISOString(),
   };
 
-  try {
-    window.localStorage.setItem(TASK_CANVAS_STORAGE_KEY, JSON.stringify(snapshot));
-  } catch {
-    // A Mesa continua funcional mesmo quando o navegador bloqueia storage.
-  }
+  writeTaskCanvasSnapshot(snapshot);
 }
 
 function clearCanvasState() {
   if (typeof window === 'undefined') return;
 
-  try {
-    window.localStorage.removeItem(TASK_CANVAS_STORAGE_KEY);
-  } catch {
-    // Sem storage disponível, basta restaurar o estado em memória.
-  }
+  clearTaskCanvasSnapshot();
 }
 
 function getQuickRegistrationOption(type: QuickRegistrationType) {
@@ -583,61 +578,6 @@ function formatCurrencyBRL(value: number) {
   return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function getAccountantPackageItems(items: SmartCardItem[]) {
-  return items.filter((item) => item.sentToAccountant === true || item.kind === 'accountant-package');
-}
-
-function getPackageConnectionLabel(item: SmartCardItem, connections: CanvasCardConnection[]) {
-  const itemConnections = connections.filter((connection) => connection.fromId === item.id || connection.toId === item.id);
-  if (itemConnections.some((connection) => connection.status === 'reconciled')) return 'Vínculo visual conciliado';
-  if (itemConnections.length > 0 || item.linked) return 'Vínculo visual';
-  return 'Sem vínculo visual';
-}
-
-function formatAccountantPackageText(items: SmartCardItem[], connections: CanvasCardConnection[]) {
-  const packageItems = getAccountantPackageItems(items);
-  const totals = packageItems.reduce((current, item) => ({
-    sales: current.sales + (item.kind === 'sale' ? 1 : 0),
-    expenses: current.expenses + (item.kind === 'expense' ? 1 : 0),
-    payments: current.payments + (item.kind === 'payment' ? 1 : 0),
-    preInvoices: current.preInvoices + (item.kind === 'pre-invoice' || item.kind === 'invoice-draft' || item.hasPreInvoice ? 1 : 0),
-    amount: current.amount + (typeof item.amount === 'number' && Number.isFinite(item.amount) ? item.amount : 0),
-  }), { sales: 0, expenses: 0, payments: 0, preInvoices: 0, amount: 0 });
-
-  const lines = [
-    'Pacote local para contador',
-    'Separado neste navegador. Sem envio automático. Sem valor fiscal.',
-    'Revise antes de compartilhar manualmente com o contador.',
-    '',
-    `Total de cards separados: ${packageItems.length}`,
-    `Vendas internas separadas: ${totals.sales}`,
-    `Despesas separadas: ${totals.expenses}`,
-    `Recebimentos separados: ${totals.payments}`,
-    `Pré-notas internas separadas: ${totals.preInvoices}`,
-    `Total visual de valores: ${formatCurrencyBRL(totals.amount)}`,
-    '',
-    'Cards:',
-  ];
-
-  if (packageItems.length === 0) {
-    return [...lines, '- Nenhum card separado para contador ainda.'].join('\n');
-  }
-
-  return [
-    ...lines,
-    ...packageItems.map((item) => {
-      const amount = typeof item.amount === 'number' && Number.isFinite(item.amount)
-        ? ` | Valor: ${formatCurrencyBRL(item.amount)}`
-        : '';
-      const preInvoice = item.hasPreInvoice || item.kind === 'pre-invoice' || item.kind === 'invoice-draft'
-        ? 'Tem pré-nota visual'
-        : 'Sem pré-nota visual';
-      const tags = item.tags.length > 0 ? item.tags.join(', ') : 'Sem tags';
-      return `- ${item.title} | Tipo: ${PACKAGE_KIND_LABELS[item.kind]}${amount} | Status: ${PACKAGE_STATUS_LABELS[item.status]} | ${preInvoice} | ${getPackageConnectionLabel(item, connections)} | Tags: ${tags}`;
-    }),
-  ].join('\n');
-}
-
 function getNextStatus(status: SmartCardStatus) {
   const currentIndex = SMART_CARD_STATUS_FLOW.indexOf(status);
   return SMART_CARD_STATUS_FLOW[Math.min(currentIndex + 1, SMART_CARD_STATUS_FLOW.length - 1)];
@@ -659,6 +599,30 @@ function getCanvasSize(positions: Record<string, CanvasCardPosition>) {
 
 function formatCanvasZoom(zoom: number) {
   return `${Math.round(zoom * 100)}%`;
+}
+
+function getInitialKindAnchor(kind: SmartCardKind) {
+  switch (kind) {
+    case 'sale':
+      return { x: 80, y: 80 };
+    case 'payment':
+      return { x: 420, y: 80 };
+    case 'expense':
+      return { x: 760, y: 80 };
+    case 'pre-invoice':
+    case 'invoice-draft':
+      return { x: 420, y: 420 };
+    case 'capture':
+    case 'pending':
+      return { x: 80, y: 420 };
+    case 'stock':
+    case 'ai-alert':
+    case 'accountant-package':
+      return { x: 760, y: 420 };
+    case 'folder':
+    default:
+      return { x: 80, y: 80 };
+  }
 }
 
 export function YopoyCentralDashboard({ theme }: Props) {
@@ -688,6 +652,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
   const [openPreInvoiceId, setOpenPreInvoiceId] = useState<string | null>(null);
   const [canvasZoom, setCanvasZoom] = useState(1);
+  const [isDeskExpanded, setIsDeskExpanded] = useState(false);
   const [isCanvasPanning, setIsCanvasPanning] = useState(false);
   const [feedback, setFeedback] = useState('Mesa local pronta: arraste os cards e conecte os pontos laterais. As alterações ficam salvas neste navegador, sem sincronização externa.');
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -702,6 +667,14 @@ export function YopoyCentralDashboard({ theme }: Props) {
   useEffect(() => () => {
     document.body.style.userSelect = '';
   }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return undefined;
+    document.body.style.overflow = isDeskExpanded ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isDeskExpanded]);
 
   useEffect(() => {
     if (!contextMenu) return undefined;
@@ -764,14 +737,19 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setQuickFormError('');
   };
 
-  const createCardPosition = () => {
+  const createCardPosition = (kind: SmartCardKind) => {
     const viewport = viewportRef.current;
-    const localCardsCount = items.filter((item) => item.id.startsWith('local-')).length;
-    const baseX = viewport ? viewport.scrollLeft / canvasZoom + 24 : 44;
-    const baseY = viewport ? viewport.scrollTop / canvasZoom + 24 : 44;
+    const anchor = getInitialKindAnchor(kind);
+    const scopeId = activeFolderId ?? null;
+    const sameScopeCards = items.filter((item) => (item.parentFolderId ?? null) === scopeId);
+    const sameZoneCount = sameScopeCards.filter((item) => getInitialKindAnchor(item.kind).x === anchor.x && getInitialKindAnchor(item.kind).y === anchor.y).length;
+    const offsetColumn = sameZoneCount % 3;
+    const offsetRow = Math.floor(sameZoneCount / 3);
+    const baseX = viewport ? viewport.scrollLeft / canvasZoom : 0;
+    const baseY = viewport ? viewport.scrollTop / canvasZoom : 0;
     return {
-      x: Math.max(baseX + (localCardsCount % 3) * 28, 16),
-      y: Math.max(baseY + (localCardsCount % 3) * 36, 16),
+      x: Math.max(baseX + anchor.x + offsetColumn * 28, 16),
+      y: Math.max(baseY + anchor.y + offsetRow * 36, 16),
     };
   };
 
@@ -809,7 +787,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
       tags: parseQuickTags(quickTags, option.tags),
     };
 
-    const position = createCardPosition();
+    const position = createCardPosition(option.kind);
     setItems((current) => [item, ...current]);
     setPositions((current) => ({ ...current, [item.id]: position }));
     setActiveFilter('all');
@@ -1069,18 +1047,6 @@ export function YopoyCentralDashboard({ theme }: Props) {
     width: canvasSize.width * canvasZoom,
     height: canvasSize.height * canvasZoom,
   }), [canvasSize.height, canvasSize.width, canvasZoom]);
-  const accountantPackageItems = useMemo(() => getAccountantPackageItems(items), [items]);
-  const accountantPackageSummaryText = useMemo(
-    () => formatAccountantPackageText(items, connections),
-    [connections, items],
-  );
-  const accountantPackageTotals = useMemo(() => accountantPackageItems.reduce((current, item) => ({
-    sales: current.sales + (item.kind === 'sale' ? 1 : 0),
-    expenses: current.expenses + (item.kind === 'expense' ? 1 : 0),
-    payments: current.payments + (item.kind === 'payment' ? 1 : 0),
-    preInvoices: current.preInvoices + (item.kind === 'pre-invoice' || item.kind === 'invoice-draft' || item.hasPreInvoice ? 1 : 0),
-    amount: current.amount + (typeof item.amount === 'number' && Number.isFinite(item.amount) ? item.amount : 0),
-  }), { sales: 0, expenses: 0, payments: 0, preInvoices: 0, amount: 0 }), [accountantPackageItems]);
 
   const selectedPreInvoiceSources = useMemo(
     () => selectedItems.filter(canUseAsPreInvoiceSource),
@@ -1122,6 +1088,16 @@ export function YopoyCentralDashboard({ theme }: Props) {
     const totalAmountLabel = formatCurrencyBRL(totalAmount);
     const sourceTitles = operationalSources.map((item) => item.title);
     const itemCount = operationalSources.length;
+    const preInvoiceLines = operationalSources.map((item) => ({
+      sourceCardId: item.id,
+      title: item.title,
+      description: item.description,
+      kind: item.kind,
+      amount: typeof item.amount === 'number' && Number.isFinite(item.amount) ? item.amount : undefined,
+      tags: [...item.tags],
+      status: item.status,
+      capturedAt: generatedAt,
+    }));
     const preInvoiceId = createLocalCardId();
     const preInvoiceItem: SmartCardItem = {
       id: preInvoiceId,
@@ -1138,6 +1114,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
       sentToPreInvoices: true,
       parentFolderId: activeFolderId,
       sourceCardIds,
+      preInvoiceLines,
       preInvoiceSummary: {
         totalAmount,
         itemCount,
@@ -1151,7 +1128,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
       const sourcePositions = operationalSources
         .map((item) => positions[item.id])
         .filter((position): position is CanvasCardPosition => position !== undefined);
-      if (sourcePositions.length === 0) return createCardPosition();
+      if (sourcePositions.length === 0) return createCardPosition('pre-invoice');
       const averageX = sourcePositions.reduce((current, position) => current + position.x, 0) / sourcePositions.length;
       const averageY = sourcePositions.reduce((current, position) => current + position.y, 0) / sourcePositions.length;
       return {
@@ -1205,11 +1182,29 @@ export function YopoyCentralDashboard({ theme }: Props) {
   );
   const selectedPreviewTotal = typeof selectedPreviewData?.preInvoiceSummary?.totalAmount === 'number'
     ? selectedPreviewData.preInvoiceSummary.totalAmount
-    : selectedPreviewSourceItems.reduce((current, item) => current + (typeof item.amount === 'number' && Number.isFinite(item.amount) ? item.amount : 0), 0);
+    : (selectedPreviewData?.preInvoiceLines ?? selectedPreviewSourceItems).reduce((current, item) => {
+      const amount = typeof (item as { amount?: number }).amount === 'number' && Number.isFinite((item as { amount?: number }).amount)
+        ? (item as { amount?: number }).amount ?? 0
+        : 0;
+      return current + amount;
+    }, 0);
   const selectedPreviewDocumentRows = useMemo(() => {
     if (!selectedPreviewData) return [];
+    const copiedLines = selectedPreviewData.preInvoiceLines ?? [];
     const sourceIds = selectedPreviewData.sourceCardIds ?? [];
     const sourceTitles = selectedPreviewData.preInvoiceSummary?.sourceTitles ?? [];
+
+    if (copiedLines.length > 0) {
+      return copiedLines.map((line, index) => ({
+        code: line.sourceCardId ?? `LINE-${index + 1}`,
+        title: line.title,
+        origin: `Card ${CARD_KIND_LABELS[line.kind]}`,
+        quantity: 1,
+        unitValue: typeof line.amount === 'number' && Number.isFinite(line.amount) ? line.amount : undefined,
+        totalValue: typeof line.amount === 'number' && Number.isFinite(line.amount) ? line.amount : undefined,
+        description: line.description ?? 'Linha copiada da Mesa.',
+      }));
+    }
 
     if (sourceIds.length === 0 && sourceTitles.length === 0) {
       return [{
@@ -1243,6 +1238,19 @@ export function YopoyCentralDashboard({ theme }: Props) {
       setOpenPreInvoiceId(null);
     }
   }, [itemsById, openPreInvoiceId]);
+
+  useEffect(() => {
+    if (!selectedPreviewData || selectedPreviewData.kind !== 'pre-invoice') return undefined;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closePreInvoicePreview();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPreviewData]);
 
   useEffect(() => {
     const firstVisibleItem = visibleItems[0];
@@ -1380,7 +1388,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
       type: 'canvas',
       x: left,
       y: top,
-      canvasPosition: createCardPosition(),
+      canvasPosition: createCardPosition('pending'),
     });
   };
 
@@ -1545,7 +1553,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const sourcePosition = connectionSourceId ? positions[connectionSourceId] : undefined;
 
   const restoreDemonstration = () => {
-    const defaultState = createDefaultCanvasState();
+    const defaultState = createDemoCanvasState();
     clearCanvasState();
     skipNextSaveRef.current = true;
     setItems(defaultState.items);
@@ -1563,33 +1571,20 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setPendingDeleteItemId(null);
     setOpenPreInvoiceId(null);
     setCanvasZoom(1);
+    setIsDeskExpanded(false);
     setFeedback('Demonstração restaurada. Os dados locais da Mesa foram limpos.');
-  };
-
-  const copyAccountantPackageSummary = async () => {
-    if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
-      setFeedback('Não foi possível copiar automaticamente. O resumo está visível para seleção manual.');
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(accountantPackageSummaryText);
-      setFeedback('Resumo local copiado. Revise antes de compartilhar manualmente com o contador.');
-    } catch {
-      setFeedback('Não foi possível copiar automaticamente. O resumo está visível para seleção manual.');
-    }
-  };
-
-  const clearAccountantPackage = () => {
-    setItems((currentItems) => currentItems.map((item) => {
-      if (item.kind === 'accountant-package') return item;
-      return item.sentToAccountant ? { ...item, sentToAccountant: false } : item;
-    }));
-    setFeedback('Pacote local limpo. Os cards continuam na Mesa.');
   };
 
   const changeCanvasZoom = (nextZoom: number) => {
     setCanvasZoom(clamp(nextZoom, MIN_CANVAS_ZOOM, MAX_CANVAS_ZOOM));
+  };
+
+  const toggleDeskExpanded = () => {
+    setIsDeskExpanded((current) => {
+      const next = !current;
+      setFeedback(next ? 'Mesa expandida para foco na organização local.' : 'Mesa voltou ao modo normal.');
+      return next;
+    });
   };
 
   const fitCanvasToContent = () => {
@@ -1636,8 +1631,12 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setFeedback('Visão ajustada ao conteúdo visível da Mesa.');
   };
 
+  const deskRootClass = isDeskExpanded
+    ? `fixed inset-0 z-50 flex flex-col overflow-auto p-3 sm:p-4 ${dark ? 'bg-[#09090d] text-white' : 'bg-slate-50 text-slate-900'}`
+    : `mx-auto w-full max-w-[1800px] space-y-5 ${dark ? 'text-white' : 'text-slate-900'}`;
+
   return (
-    <div className={`mx-auto w-full max-w-[1800px] space-y-5 ${dark ? 'text-white' : 'text-slate-900'}`}>
+    <div className={deskRootClass}>
       <header className={`overflow-hidden rounded-3xl border p-4 sm:p-7 ${
         dark
           ? 'border-indigo-500/20 bg-gradient-to-br from-indigo-950/60 via-[#121218] to-emerald-950/30'
@@ -1755,6 +1754,16 @@ export function YopoyCentralDashboard({ theme }: Props) {
                 <Trash2 className="h-3 w-3" /> Limpar conexões
               </button>
             )}
+            <button
+              type="button"
+              onClick={toggleDeskExpanded}
+              className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-bold ${
+                dark ? 'border-slate-700 text-slate-300 hover:border-indigo-500' : 'border-slate-200 text-slate-600 hover:border-indigo-300'
+              }`}
+            >
+              {isDeskExpanded ? <Minimize2 className="h-3 w-3" /> : <Maximize2 className="h-3 w-3" />}
+              {isDeskExpanded ? 'Sair da tela cheia da Mesa' : 'Expandir Mesa'}
+            </button>
           </div>
         </div>
         {connections.length > 0 && (
@@ -2334,121 +2343,6 @@ export function YopoyCentralDashboard({ theme }: Props) {
         {feedback}
       </div>
 
-      <section
-        aria-label="Pacote local para contador"
-        className={`rounded-2xl border p-3 sm:p-4 ${dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'}`}
-      >
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-          <div className="min-w-0">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
-              dark ? 'bg-violet-950 text-violet-300' : 'bg-violet-100 text-violet-700'
-            }`}>
-              <PackageCheck className="h-3.5 w-3.5" /> Separado neste navegador
-            </span>
-            <h2 className={`mt-2 text-base font-black ${dark ? 'text-slate-100' : 'text-slate-900'}`}>Pacote local para contador</h2>
-            <p className={`mt-1 text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-              Sem envio automático. Sem valor fiscal. Revise antes de compartilhar manualmente com o contador.
-              <span className="hidden sm:inline"> Organização interna local: não substitui contador, não é documento fiscal, não emite nota, não valida tributo e não sincroniza fora do navegador.</span>
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3 lg:min-w-[360px]">
-            <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
-              <span className={dark ? 'text-slate-400' : 'text-slate-500'}>Cards</span>
-              <strong className="block text-lg">{accountantPackageItems.length}</strong>
-            </div>
-            <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
-              <span className={dark ? 'text-slate-400' : 'text-slate-500'}>Vendas</span>
-              <strong className="block text-lg">{accountantPackageTotals.sales}</strong>
-            </div>
-            <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
-              <span className={dark ? 'text-slate-400' : 'text-slate-500'}>Visual</span>
-              <strong className="block text-sm">{formatCurrencyBRL(accountantPackageTotals.amount)}</strong>
-            </div>
-          </div>
-        </div>
-
-        {accountantPackageItems.length === 0 ? (
-          <div className={`mt-3 rounded-xl border border-dashed p-4 text-sm ${dark ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'}`}>
-            <p className="font-bold">Nenhum card separado para contador ainda.</p>
-            <p className="mt-1 text-xs">Use a ação ‘Separar contador’ em um card da Mesa.</p>
-          </div>
-        ) : (
-          <details className={`group mt-3 rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/50' : 'border-slate-200 bg-slate-50'}`}>
-            <summary className="flex cursor-pointer list-none flex-col gap-2 rounded-lg sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden">
-              <span className={`text-sm font-extrabold ${dark ? 'text-slate-100' : 'text-slate-900'}`}>Resumo local visível e cards separados</span>
-              <span className={`w-fit rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
-                dark ? 'bg-slate-800 text-slate-300' : 'bg-white text-slate-600'
-              }`}>
-                <span className="group-open:hidden">Expandir pacote</span>
-                <span className="hidden group-open:inline">Recolher pacote</span>
-              </span>
-            </summary>
-            <div className="mt-3 grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                {accountantPackageItems.map((item) => (
-                  <article
-                    key={item.id}
-                    data-testid={`accountant-package-item-${item.id}`}
-                    className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-[#121218]' : 'border-slate-200 bg-white'}`}
-                  >
-                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <h3 className={`break-words text-sm font-extrabold ${dark ? 'text-slate-100' : 'text-slate-900'}`}>{item.title}</h3>
-                        <p className={`mt-1 text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-                          {PACKAGE_KIND_LABELS[item.kind]} · {PACKAGE_STATUS_LABELS[item.status]}
-                        </p>
-                      </div>
-                      {typeof item.amount === 'number' && Number.isFinite(item.amount) && (
-                        <strong className={`text-sm ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>{formatCurrencyBRL(item.amount)}</strong>
-                      )}
-                    </div>
-                    <p className={`mt-2 text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-                      {(item.hasPreInvoice || item.kind === 'pre-invoice' || item.kind === 'invoice-draft') ? 'Tem pré-nota visual' : 'Sem pré-nota visual'} · {getPackageConnectionLabel(item, connections)}
-                    </p>
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {item.tags.map((tag) => (
-                        <span key={tag} className={`rounded-md px-2 py-1 text-[10px] ${dark ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-500'}`}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                ))}
-              </div>
-              <label className={`text-xs font-bold ${dark ? 'text-slate-300' : 'text-slate-700'}`}>
-                Resumo local visível
-                <textarea
-                  readOnly
-                  value={accountantPackageSummaryText}
-                  className={`mt-1 min-h-36 w-full resize-y rounded-xl border p-3 font-mono text-[11px] leading-relaxed sm:min-h-48 ${
-                    dark ? 'border-slate-700 bg-slate-950 text-slate-200' : 'border-slate-200 bg-white text-slate-700'
-                  }`}
-                />
-              </label>
-            </div>
-          </details>
-        )}
-
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
-          <button
-            type="button"
-            onClick={copyAccountantPackageSummary}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-black text-white transition-colors hover:bg-indigo-700"
-          >
-            <Clipboard className="h-3.5 w-3.5" /> Copiar resumo
-          </button>
-          <button
-            type="button"
-            onClick={clearAccountantPackage}
-            className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-4 py-2 text-xs font-bold ${
-              dark ? 'border-slate-700 text-slate-300 hover:border-violet-500' : 'border-slate-200 text-slate-600 hover:border-violet-300'
-            }`}
-          >
-            <Trash2 className="h-3.5 w-3.5" /> Limpar pacote local
-          </button>
-        </div>
-      </section>
-
       <div
         ref={viewportRef}
         data-testid="task-canvas-viewport"
@@ -2702,6 +2596,18 @@ export function YopoyCentralDashboard({ theme }: Props) {
                 className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-950"
               >
                 <RotateCcw className="h-4 w-4" /> Restaurar demonstração
+              </button>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  toggleDeskExpanded();
+                  setContextMenu(null);
+                }}
+                className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-indigo-100 hover:text-indigo-800 dark:hover:bg-indigo-950"
+              >
+                {isDeskExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                {isDeskExpanded ? 'Sair da tela cheia da Mesa' : 'Expandir Mesa'}
               </button>
             </div>
           )}

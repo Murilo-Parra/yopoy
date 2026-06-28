@@ -42,6 +42,14 @@ export interface SmartCardItem {
   linked: boolean;
   hasPreInvoice: boolean;
   sentToAccountant?: boolean;
+  sentToPreInvoices?: boolean;
   parentFolderId?: string | null;
+  sourceCardIds?: string[];
+  preInvoiceSummary?: {
+    totalAmount?: number;
+    itemCount: number;
+    generatedAt: string;
+    sourceTitles: string[];
+  };
   tags: string[];
 }

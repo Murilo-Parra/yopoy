@@ -370,6 +370,7 @@ export function SmartCard({
         {item.linked && <span className="rounded-md bg-sky-100 px-2 py-1 text-[10px] text-sky-700 dark:bg-sky-950 dark:text-sky-300">Vínculo visual</span>}
         {item.hasPreInvoice && <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Pré-nota visual</span>}
         {item.sentToAccountant && <span className="rounded-md bg-violet-100 px-2 py-1 text-[10px] text-violet-700 dark:bg-violet-950 dark:text-violet-300">Separado para contador</span>}
+        {item.sentToPreInvoices && <span className="rounded-md bg-fuchsia-100 px-2 py-1 text-[10px] text-fuchsia-700 dark:bg-fuchsia-950 dark:text-fuchsia-300">Pré-notas</span>}
         {item.linked && <span className="rounded-md bg-emerald-100 px-2 py-1 text-[10px] text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">Conciliável</span>}
         {isFolder && <span className="rounded-md bg-amber-100 px-2 py-1 text-[10px] text-amber-700 dark:bg-amber-950 dark:text-amber-300">Container local</span>}
         {(item.kind === 'pre-invoice' || item.kind === 'invoice-draft') && <span className="rounded-md bg-purple-100 px-2 py-1 text-[10px] text-purple-700 dark:bg-purple-950 dark:text-purple-300">Sem valor fiscal</span>}

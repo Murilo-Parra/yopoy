@@ -101,6 +101,10 @@ function connectCaptureToPayment() {
   fireEvent.pointerUp(target, { pointerId: 9, clientX: 434, clientY: 682 });
 }
 
+function openCardContextMenu(card: HTMLElement, clientX = 420, clientY = 180) {
+  fireEvent.contextMenu(card, { clientX, clientY });
+}
+
 function writeSnapshotWithAccountantPackageMockAsPending(partialSnapshot: Partial<StoredTaskCanvasSnapshot> = {}) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify({
     version: 1,
@@ -242,10 +246,7 @@ describe('YopoyCentralDashboard', () => {
   it('abre menu contextual de card e de pasta com ações úteis', () => {
     render(<YopoyCentralDashboard theme="light" />);
 
-    fireEvent.contextMenu(screen.getByRole('heading', { name: /comanda mesa 1/i }).closest('article') as HTMLElement, {
-      clientX: 420,
-      clientY: 180,
-    });
+    openCardContextMenu(screen.getByRole('heading', { name: /comanda mesa 1/i }).closest('article') as HTMLElement);
     expect(screen.getByRole('menu', { name: /menu contextual do card/i })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: /selecionar card/i })).toBeTruthy();
     expect(screen.getByRole('menuitem', { name: /preparar pré-nota visual/i })).toBeTruthy();
@@ -280,6 +281,88 @@ describe('YopoyCentralDashboard', () => {
     expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
   });
 
+  it('exclui card comum e pré-nota pelo menu contextual', async () => {
+    render(<YopoyCentralDashboard theme="light" />);
+
+    openCardContextMenu(getCaptureCard());
+    expect(screen.getByRole('menuitem', { name: /excluir card/i })).toBeTruthy();
+    fireEvent.click(screen.getByRole('menuitem', { name: /excluir card/i }));
+    expect(screen.getByText(/clique novamente para confirmar a exclusão do card/i)).toBeTruthy();
+    openCardContextMenu(getCaptureCard());
+    fireEvent.click(screen.getByRole('menuitem', { name: /confirmar exclusão/i }));
+    expect(screen.queryByRole('heading', { name: /foto de comprovante pix/i })).toBeNull();
+
+    openQuickRegistration();
+    fireEvent.change(screen.getByLabelText(/^tipo$/i), { target: { value: 'pre-invoice' } });
+    fillQuickRegistration({ title: 'Pré-nota local', description: 'Documento interno', amount: '35,00' });
+    fireEvent.click(screen.getByRole('button', { name: /criar card/i }));
+
+    const preInvoiceCard = screen.getAllByRole('heading', { name: /pré-nota local/i })
+      .map((heading) => heading.closest('article') as HTMLElement | null)
+      .find((article) => article?.dataset.cardId?.startsWith('local-')) as HTMLElement;
+    openCardContextMenu(preInvoiceCard);
+    fireEvent.click(screen.getByRole('menuitem', { name: /excluir pré-nota/i }));
+    openCardContextMenu(preInvoiceCard);
+    fireEvent.click(screen.getByRole('menuitem', { name: /confirmar exclusão/i }));
+    expect(screen.queryByRole('heading', { name: /pré-nota local/i })).toBeNull();
+  });
+
+  it('bloqueia exclusão de pasta com itens e permite excluir pasta vazia', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1771771778000);
+    vi.spyOn(Math, 'random').mockReturnValue(0.891234);
+    render(<YopoyCentralDashboard theme="light" />);
+
+    createFolder('Arquivos');
+    const folderCard = getFolderCard(/^arquivos$/i);
+    expect(within(folderCard).getByText(/0 item\(ns\) e 0 subpasta\(s\)/i)).toBeTruthy();
+
+    selectCard(screen.getByRole('heading', { name: /foto de comprovante pix/i }).closest('article') as HTMLElement);
+    fireEvent.click(screen.getByRole('button', { name: /mover para pasta/i }));
+
+    selectCard(getFolderCard(/^arquivos$/i));
+    openCardContextMenu(getFolderCard(/^arquivos$/i));
+    fireEvent.click(screen.getByRole('menuitem', { name: /excluir pasta/i }));
+    expect(screen.getByText(/clique novamente para confirmar a exclusão da pasta/i)).toBeTruthy();
+    openCardContextMenu(getFolderCard(/^arquivos$/i));
+    fireEvent.click(screen.getByRole('menuitem', { name: /confirmar exclusão da pasta/i }));
+    expect(screen.getByText(/esvazie a pasta antes de excluir/i)).toBeTruthy();
+    expect(screen.getAllByRole('heading', { name: /^arquivos$/i }).length).toBeGreaterThan(0);
+
+    vi.spyOn(Date, 'now').mockReturnValue(1771771779000);
+    vi.spyOn(Math, 'random').mockReturnValue(0.912345);
+    createFolder('Arquivo vazio', 300, 240);
+    const emptyFolder = getFolderCard(/^arquivo vazio$/i);
+    openCardContextMenu(emptyFolder);
+    fireEvent.click(screen.getByRole('menuitem', { name: /excluir pasta/i }));
+    openCardContextMenu(emptyFolder);
+    fireEvent.click(screen.getByRole('menuitem', { name: /confirmar exclusão da pasta/i }));
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      expect(snapshot.items.some((item) => item.title === 'Arquivo vazio')).toBe(false);
+    });
+  });
+
+  it('permite pan da Mesa pela área vazia sem interferir no drag de card', () => {
+    render(<YopoyCentralDashboard theme="light" />);
+    const viewport = screen.getByTestId('task-canvas-viewport');
+    Object.defineProperty(viewport, 'scrollLeft', { configurable: true, writable: true, value: 200 });
+    Object.defineProperty(viewport, 'scrollTop', { configurable: true, writable: true, value: 120 });
+    const canvas = screen.getByTestId('task-canvas');
+
+    fireEvent.pointerDown(canvas, { pointerId: 42, button: 0, clientX: 300, clientY: 200 });
+    fireEvent.pointerMove(canvas, { pointerId: 42, clientX: 240, clientY: 150 });
+    expect(viewport.scrollLeft).toBe(260);
+    expect(viewport.scrollTop).toBe(170);
+    fireEvent.pointerUp(canvas, { pointerId: 42, clientX: 240, clientY: 150 });
+
+    const captureCard = getCaptureCard();
+    const initialLeft = screen.getByTestId('canvas-node-mock-capture-01').style.left;
+    fireEvent.pointerDown(captureCard, { pointerId: 43, button: 0, clientX: 100, clientY: 100 });
+    fireEvent.pointerMove(captureCard, { pointerId: 43, clientX: 180, clientY: 140 });
+    fireEvent.pointerUp(captureCard, { pointerId: 43, clientX: 180, clientY: 140 });
+    expect(screen.getByTestId('canvas-node-mock-capture-01').style.left).not.toBe(initialLeft);
+  });
+
   it('cria pré-nota visual da seleção, ignora pastas e abre preview imprimível', async () => {
     const printSpy = vi.fn();
     Object.defineProperty(window, 'print', { configurable: true, value: printSpy });
@@ -311,8 +394,16 @@ describe('YopoyCentralDashboard', () => {
     const dialog = screen.getByRole('dialog', { name: /pré-nota visual interna/i });
     expect(within(dialog).getAllByText(/sem valor fiscal/i).length).toBeGreaterThan(0);
     expect(within(dialog).getByText(/não é nf-e, nfc-e ou nfs-e/i)).toBeTruthy();
-    expect(within(dialog).getByText(/2 card\(s\) de origem/i)).toBeTruthy();
-    expect(within(dialog).getByText(/use a opção salvar como pdf do navegador/i)).toBeTruthy();
+    expect(within(dialog).getByText(/yopoy/i)).toBeTruthy();
+    expect(within(dialog).getByText(/cabeçalho/i)).toBeTruthy();
+    expect(within(dialog).getByText(/emitente/i)).toBeTruthy();
+    expect(within(dialog).getByText(/destinatário/i)).toBeTruthy();
+    expect(within(dialog).getByText(/^Itens$/i)).toBeTruthy();
+    expect(within(dialog).getByText(/^Totais$/i)).toBeTruthy();
+    expect(within(dialog).getByText(/^Observações$/i)).toBeTruthy();
+    expect(within(dialog).getByText(/pré-nota visual — 2 itens/i)).toBeTruthy();
+    expect(within(dialog).getByText(/^2 item\(ns\)$/i)).toBeTruthy();
+    expect(within(dialog).getByText(/salvar como pdf do navegador/i)).toBeTruthy();
 
     fireEvent.click(within(dialog).getByRole('button', { name: /imprimir \/ salvar pdf/i }));
     expect(printSpy).toHaveBeenCalled();

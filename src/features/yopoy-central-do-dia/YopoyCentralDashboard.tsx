@@ -70,6 +70,15 @@ interface DragState {
   offsetY: number;
 }
 
+interface PanState {
+  pointerId: number;
+  startClientX: number;
+  startClientY: number;
+  startScrollLeft: number;
+  startScrollTop: number;
+  moved: boolean;
+}
+
 interface ContextMenuState {
   type: 'canvas' | 'card' | 'folder';
   x: number;
@@ -353,6 +362,7 @@ function normalizeItem(value: unknown, fallback?: SmartCardItem): SmartCardItem 
     linked: readBoolean(value.linked, fallback?.linked ?? false),
     hasPreInvoice: readBoolean(value.hasPreInvoice, fallback?.hasPreInvoice ?? false),
     sentToAccountant: readBoolean(value.sentToAccountant, fallback?.sentToAccountant ?? false),
+    sentToPreInvoices: readBoolean(value.sentToPreInvoices, fallback?.sentToPreInvoices ?? false),
     parentFolderId: readParentFolderId(value.parentFolderId, fallback?.parentFolderId),
     sourceCardIds: readStringArray(value.sourceCardIds, fallback?.sourceCardIds ?? []),
     preInvoiceSummary: readPreInvoiceSummary(value.preInvoiceSummary, fallback?.preInvoiceSummary),
@@ -675,12 +685,15 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
   const [folderRenameValue, setFolderRenameValue] = useState('');
+  const [pendingDeleteItemId, setPendingDeleteItemId] = useState<string | null>(null);
   const [openPreInvoiceId, setOpenPreInvoiceId] = useState<string | null>(null);
   const [canvasZoom, setCanvasZoom] = useState(1);
+  const [isCanvasPanning, setIsCanvasPanning] = useState(false);
   const [feedback, setFeedback] = useState('Mesa local pronta: arraste os cards e conecte os pontos laterais. As alterações ficam salvas neste navegador, sem sincronização externa.');
   const canvasRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<DragState | null>(null);
+  const panRef = useRef<PanState | null>(null);
   const connectionSourceRef = useRef<string | null>(null);
   const hasHydratedRef = useRef(false);
   const skipNextSaveRef = useRef(false);
@@ -791,6 +804,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
       linked: false,
       hasPreInvoice: option.id === 'pre-invoice',
       sentToAccountant: false,
+      sentToPreInvoices: option.id === 'pre-invoice',
       parentFolderId: activeFolderId,
       tags: parseQuickTags(quickTags, option.tags),
     };
@@ -818,6 +832,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
       linked: false,
       hasPreInvoice: false,
       sentToAccountant: false,
+      sentToPreInvoices: false,
       parentFolderId: activeFolderId,
       tags: ['Pasta local'],
     };
@@ -841,6 +856,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setActiveFolderId(folderId);
     setSelectedCardId(null);
     setSelectedItemIds([]);
+    setPendingDeleteItemId(null);
     setCanvasZoom(1);
     if (typeof viewportRef.current?.scrollTo === 'function') {
       viewportRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
@@ -853,6 +869,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setActiveFolderId(parentFolderId);
     setSelectedCardId(null);
     setSelectedItemIds([]);
+    setPendingDeleteItemId(null);
     setCanvasZoom(1);
     if (typeof viewportRef.current?.scrollTo === 'function') {
       viewportRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
@@ -864,6 +881,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setActiveFolderId(null);
     setSelectedCardId(null);
     setSelectedItemIds([]);
+    setPendingDeleteItemId(null);
     setCanvasZoom(1);
     if (typeof viewportRef.current?.scrollTo === 'function') {
       viewportRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
@@ -909,6 +927,53 @@ export function YopoyCentralDashboard({ theme }: Props) {
       return;
     }
     setFeedback(item.kind === 'folder' ? 'Pasta movida para dentro de outra pasta local.' : 'Card movido para a pasta local.');
+  };
+
+  const deleteItem = (itemId: string) => {
+    const item = itemsById.get(itemId);
+    if (!item) return;
+
+    if (item.kind === 'folder') {
+      const childCounts = getFolderChildCounts(items, itemId);
+      if (childCounts.cards > 0 || childCounts.folders > 0) {
+        setPendingDeleteItemId(null);
+        setFeedback('Esvazie a pasta antes de excluir.');
+        return;
+      }
+    }
+
+    setItems((currentItems) => currentItems.filter((currentItem) => currentItem.id !== itemId));
+    setPositions((currentPositions) => {
+      const nextPositions = { ...currentPositions };
+      delete nextPositions[itemId];
+      return nextPositions;
+    });
+    setConnections((currentConnections) => currentConnections.filter((connection) => connection.fromId !== itemId && connection.toId !== itemId));
+    setSelectedItemIds((currentSelection) => currentSelection.filter((id) => id !== itemId));
+    setSelectedCardId((currentSelected) => (currentSelected === itemId ? null : currentSelected));
+    setOpenPreInvoiceId((currentOpen) => (currentOpen === itemId ? null : currentOpen));
+    setPendingDeleteItemId(null);
+    setDropTargetFolderId(null);
+    setFeedback(item.kind === 'folder'
+      ? 'Pasta excluída localmente.'
+      : item.kind === 'pre-invoice' || item.kind === 'invoice-draft'
+        ? 'Pré-nota excluída localmente.'
+        : 'Card excluído localmente.');
+  };
+
+  const handleDeleteRequest = (itemId: string) => {
+    const item = itemsById.get(itemId);
+    if (!item) return;
+    if (pendingDeleteItemId === itemId) {
+      deleteItem(itemId);
+      return;
+    }
+    setPendingDeleteItemId(itemId);
+    setFeedback(item.kind === 'folder'
+      ? 'Clique novamente para confirmar a exclusão da pasta.'
+      : item.kind === 'pre-invoice' || item.kind === 'invoice-draft'
+        ? 'Clique novamente para confirmar a exclusão da pré-nota.'
+        : 'Clique novamente para confirmar a exclusão do card.');
   };
 
   const renameFolder = (folderId: string) => {
@@ -1070,6 +1135,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
       linked: false,
       hasPreInvoice: true,
       sentToAccountant: false,
+      sentToPreInvoices: true,
       parentFolderId: activeFolderId,
       sourceCardIds,
       preInvoiceSummary: {
@@ -1114,6 +1180,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setSelectedCardId(preInvoiceId);
     setSelectedItemIds([preInvoiceId]);
     setOpenPreInvoiceId(preInvoiceId);
+    setPendingDeleteItemId(null);
     setFeedback(itemCount > 1
       ? `Pré-nota visual criada com ${itemCount} itens e salva neste navegador.`
       : 'Pré-nota visual criada com 1 item e salva neste navegador.');
@@ -1139,6 +1206,37 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const selectedPreviewTotal = typeof selectedPreviewData?.preInvoiceSummary?.totalAmount === 'number'
     ? selectedPreviewData.preInvoiceSummary.totalAmount
     : selectedPreviewSourceItems.reduce((current, item) => current + (typeof item.amount === 'number' && Number.isFinite(item.amount) ? item.amount : 0), 0);
+  const selectedPreviewDocumentRows = useMemo(() => {
+    if (!selectedPreviewData) return [];
+    const sourceIds = selectedPreviewData.sourceCardIds ?? [];
+    const sourceTitles = selectedPreviewData.preInvoiceSummary?.sourceTitles ?? [];
+
+    if (sourceIds.length === 0 && sourceTitles.length === 0) {
+      return [{
+        code: 'ITEM-01',
+        title: selectedPreviewData.title,
+        origin: 'Pré-nota gerada localmente',
+        quantity: 1,
+        unitValue: selectedPreviewTotal || undefined,
+        totalValue: selectedPreviewTotal || undefined,
+        description: selectedPreviewData.description,
+      }];
+    }
+
+    return (sourceIds.length > 0 ? sourceIds : sourceTitles.map((_, index) => `removed-${index + 1}`)).map((sourceId, index) => {
+      const sourceItem = itemsById.get(sourceId);
+      const amount = sourceItem && typeof sourceItem.amount === 'number' && Number.isFinite(sourceItem.amount) ? sourceItem.amount : 0;
+      return {
+        code: sourceItem?.id ?? `REM-${index + 1}`,
+        title: sourceItem?.title ?? sourceTitles[index] ?? 'Card removido localmente',
+        origin: sourceItem ? `Card ${CARD_KIND_LABELS[sourceItem.kind]}` : 'Card removido localmente',
+        quantity: 1,
+        unitValue: amount > 0 ? amount : undefined,
+        totalValue: amount > 0 ? amount : undefined,
+        description: sourceItem?.description ?? 'Card removido localmente da Mesa.',
+      };
+    });
+  }, [itemsById, selectedPreviewData, selectedPreviewTotal]);
 
   useEffect(() => {
     if (openPreInvoiceId && !itemsById.has(openPreInvoiceId)) {
@@ -1167,6 +1265,87 @@ export function YopoyCentralDashboard({ theme }: Props) {
     };
   };
 
+  const isCanvasPanTarget = (target: EventTarget | null) => {
+    const element = target instanceof HTMLElement ? target : null;
+    if (!element) return false;
+    return Boolean(element.closest([
+      '[data-card-id]',
+      '[data-no-card-drag]',
+      '[data-no-card-pan]',
+      '[data-connector]',
+      'button',
+      'a',
+      'input',
+      'textarea',
+      'select',
+      'label',
+      'summary',
+      '[role="menu"]',
+      '[role="menuitem"]',
+    ].join(',')));
+  };
+
+  const beginCanvasPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0 || connectionSourceRef.current || isCanvasPanTarget(event.target)) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+    panRef.current = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startScrollLeft: viewport.scrollLeft,
+      startScrollTop: viewport.scrollTop,
+      moved: false,
+    };
+    setIsCanvasPanning(true);
+    document.body.style.userSelect = 'none';
+  };
+
+  const moveCanvasPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (connectionSourceRef.current) {
+      setConnectionPointer(canvasPoint(event.clientX, event.clientY));
+    }
+
+    const pan = panRef.current;
+    if (!pan || pan.pointerId !== event.pointerId) return;
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    const deltaX = event.clientX - pan.startClientX;
+    const deltaY = event.clientY - pan.startClientY;
+    if (!pan.moved && Math.abs(deltaX) + Math.abs(deltaY) > 4) {
+      pan.moved = true;
+    }
+    viewport.scrollLeft = Math.max(pan.startScrollLeft - deltaX, 0);
+    viewport.scrollTop = Math.max(pan.startScrollTop - deltaY, 0);
+  };
+
+  const finishCanvasPan = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const pan = panRef.current;
+    if (!pan || pan.pointerId !== event.pointerId) {
+      if (connectionSourceRef.current) finishConnectionAtPointer(event);
+      return;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    panRef.current = null;
+    setIsCanvasPanning(false);
+    document.body.style.userSelect = '';
+
+    if (connectionSourceRef.current) {
+      finishConnectionAtPointer(event);
+      return;
+    }
+
+    if (!pan.moved) {
+      setFeedback('Mesa pronta para navegar. Arraste a área vazia para mover a visão.');
+    }
+  };
+
   const getFolderAtPoint = (point: CanvasCardPosition, draggedItemId?: string) => {
     return visibleItems.find((item) => {
       if (item.kind !== 'folder' || item.archived || item.id === draggedItemId) return false;
@@ -1183,6 +1362,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const openCanvasContextMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if ((event.target as HTMLElement).closest('[data-card-id]')) return;
     event.preventDefault();
+    setPendingDeleteItemId(null);
     setContextMenu({
       type: 'canvas',
       x: event.clientX,
@@ -1195,6 +1375,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     const viewport = viewportRef.current;
     const left = viewport ? viewport.getBoundingClientRect().left + 16 : 24;
     const top = viewport ? viewport.getBoundingClientRect().top + 16 : 24;
+    setPendingDeleteItemId(null);
     setContextMenu({
       type: 'canvas',
       x: left,
@@ -1207,6 +1388,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     event.preventDefault();
     event.stopPropagation();
     const item = itemsById.get(itemId);
+    if (pendingDeleteItemId !== itemId) setPendingDeleteItemId(null);
     setSelectedCardId(itemId);
     setContextMenu({
       type: item?.kind === 'folder' ? 'folder' : 'card',
@@ -1378,6 +1560,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setDropTargetFolderId(null);
     setRenamingFolderId(null);
     setFolderRenameValue('');
+    setPendingDeleteItemId(null);
     setOpenPreInvoiceId(null);
     setCanvasZoom(1);
     setFeedback('Demonstração restaurada. Os dados locais da Mesa foram limpos.');
@@ -2300,17 +2483,11 @@ export function YopoyCentralDashboard({ theme }: Props) {
             ref={canvasRef}
             data-testid="task-canvas"
             onContextMenu={openCanvasContextMenu}
-            onPointerMove={(event) => {
-              if (connectionSourceRef.current) setConnectionPointer(canvasPoint(event.clientX, event.clientY));
-            }}
-            onPointerUp={finishConnectionAtPointer}
-            onPointerCancel={() => {
-              if (connectionSourceRef.current) {
-                setFeedback('Conexão cancelada. Tente novamente a partir do ponto direito do card.');
-                cancelConnection();
-              }
-            }}
-            className={`relative touch-pan-x touch-pan-y ${
+            onPointerDown={beginCanvasPan}
+            onPointerMove={moveCanvasPan}
+            onPointerUp={finishCanvasPan}
+            onPointerCancel={finishCanvasPan}
+            className={`relative ${isCanvasPanning ? 'cursor-grabbing' : 'cursor-grab'} ${
               dark
                 ? 'bg-[radial-gradient(circle,_#30303a_1px,_transparent_1px)]'
                 : 'bg-[radial-gradient(circle,_#cbd5e1_1px,_transparent_1px)]'
@@ -2320,6 +2497,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
               height: canvasSize.height,
               transform: `scale(${canvasZoom})`,
               transformOrigin: 'top left',
+              touchAction: 'none',
             }}
           >
             <svg
@@ -2580,6 +2758,17 @@ export function YopoyCentralDashboard({ theme }: Props) {
                         <button
                           type="button"
                           role="menuitem"
+                          onClick={() => {
+                            updateItem(item.id, (current) => ({ ...current, sentToPreInvoices: true }), 'Esta pré-nota já aparece na aba Pré-notas.');
+                            setContextMenu(null);
+                          }}
+                          className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-fuchsia-100 hover:text-fuchsia-800 dark:hover:bg-fuchsia-950"
+                        >
+                          Mostrar em Pré-notas
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
                           onClick={() => openPreInvoicePreview(item.id)}
                           className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-purple-100 hover:text-purple-800 dark:hover:bg-purple-950"
                         >
@@ -2658,9 +2847,28 @@ export function YopoyCentralDashboard({ theme }: Props) {
                         setFeedback('Painel do card aberto para ações locais.');
                         setContextMenu(null);
                       }}
-                      className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+                        className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        Abrir painel do card
+                      </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        handleDeleteRequest(item.id);
+                        if (pendingDeleteItemId === item.id) setContextMenu(null);
+                      }}
+                      className={`flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold ${
+                        pendingDeleteItemId === item.id
+                          ? 'bg-red-600 text-white hover:bg-red-700'
+                          : 'hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-950'
+                      }`}
                     >
-                      Abrir painel do card
+                      {pendingDeleteItemId === item.id
+                        ? `Confirmar exclusão${item.kind === 'pre-invoice' || item.kind === 'invoice-draft' ? ' da pré-nota' : ''}`
+                        : item.kind === 'pre-invoice' || item.kind === 'invoice-draft'
+                          ? 'Excluir pré-nota'
+                          : 'Excluir card'}
                     </button>
                   </>
                 );
@@ -2735,6 +2943,21 @@ export function YopoyCentralDashboard({ theme }: Props) {
                     >
                       Ver painel da pasta
                     </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        handleDeleteRequest(item.id);
+                        if (pendingDeleteItemId === item.id) setContextMenu(null);
+                      }}
+                      className={`flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold ${
+                        pendingDeleteItemId === item.id
+                          ? 'bg-red-600 text-white hover:bg-red-700'
+                          : 'hover:bg-red-100 hover:text-red-800 dark:hover:bg-red-950'
+                      }`}
+                    >
+                      {pendingDeleteItemId === item.id ? 'Confirmar exclusão da pasta' : 'Excluir pasta'}
+                    </button>
                   </>
                 );
               })()}
@@ -2762,12 +2985,19 @@ export function YopoyCentralDashboard({ theme }: Props) {
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
                   dark ? 'bg-purple-950 text-purple-200' : 'bg-purple-100 text-purple-800'
                 }`}>
-                  <FileClock className="h-3.5 w-3.5" /> PRÉ-NOTA VISUAL
+                  <FileClock className="h-3.5 w-3.5" /> PRÉ-NOTA VISUAL INTERNA
                 </span>
                 <h2 className="mt-2 text-2xl font-black">Pré-nota visual interna</h2>
-                <p className={`mt-1 text-xs font-bold ${dark ? 'text-purple-200' : 'text-purple-800'}`}>Sem valor fiscal</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+                    SEM VALOR FISCAL
+                  </span>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                    NÃO É NF-e, NFC-e OU NFS-e
+                  </span>
+                </div>
                 <p className={`mt-2 text-xs ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
-                  Gerado localmente a partir da Mesa Visual. Não é NF-e, NFC-e ou NFS-e.
+                  Documento interno de organização. Não substitui nota fiscal.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -2800,58 +3030,84 @@ export function YopoyCentralDashboard({ theme }: Props) {
 
             <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
               <div className="space-y-3">
-                <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-100 bg-slate-50'}`}>
-                  <p className="text-xs font-black uppercase tracking-wide text-purple-500">Origem</p>
-                  <p className="mt-1 text-sm font-bold">{selectedPreviewData.preInvoiceSummary?.itemCount ?? selectedPreviewSourceItems.length} card(s) de origem</p>
-                  <p className={`mt-1 text-xs ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
-                    {selectedPreviewData.preInvoiceSummary?.generatedAt
-                      ? new Date(selectedPreviewData.preInvoiceSummary.generatedAt).toLocaleString('pt-BR')
-                      : selectedPreviewData.timeLabel}
-                  </p>
-                  <p className={`mt-2 text-xs leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
-                    Este documento é um rascunho interno de organização. Não substitui nota fiscal, contador ou validação tributária.
-                  </p>
-                </div>
+                <section className={`rounded-xl border p-4 ${dark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-100 bg-slate-50'}`}>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wide text-purple-500">Cabeçalho</p>
+                      <p className="mt-1 text-sm font-black">Yopoy</p>
+                      <p className="text-xs">{selectedPreviewData.title}</p>
+                      <p className="mt-1 text-xs text-slate-500">Número interno local: {selectedPreviewData.id}</p>
+                      <p className="mt-1 text-xs text-slate-500">Gerado em: {selectedPreviewData.preInvoiceSummary?.generatedAt ? new Date(selectedPreviewData.preInvoiceSummary.generatedAt).toLocaleString('pt-BR') : selectedPreviewData.timeLabel}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wide text-purple-500">Emitente</p>
+                      <p className="mt-1 text-sm font-bold">Dados não informados</p>
+                      <p className="mt-1 text-xs text-slate-500">Nenhum cadastro fiscal foi inventado nesta visualização.</p>
+                    </div>
+                  </div>
+                </section>
 
-                <div className="space-y-2">
-                  {selectedPreviewSourceItems.map((item) => (
-                    <article
-                      key={item.id}
-                      className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-[#171720]' : 'border-slate-200 bg-white'}`}
-                    >
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="min-w-0">
-                          <h3 className="break-words text-sm font-extrabold">{item.title}</h3>
-                          <p className={`mt-1 text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {CARD_KIND_LABELS[item.kind]} · {CARD_STATUS_LABELS[item.archived ? 'resolved' : item.status]}
-                          </p>
-                        </div>
-                        {typeof item.amount === 'number' && Number.isFinite(item.amount) && (
-                          <strong className={`text-sm ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>{formatCurrencyBRL(item.amount)}</strong>
-                        )}
-                      </div>
-                      <p className={`mt-2 text-xs ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{item.description}</p>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        {item.tags.slice(0, 4).map((tag) => (
-                          <span key={tag} className={`rounded-md px-2 py-1 text-[10px] ${dark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-500'}`}>
-                            {tag}
-                          </span>
+                <section className={`rounded-xl border p-4 ${dark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-100 bg-slate-50'}`}>
+                  <p className="text-[10px] font-black uppercase tracking-wide text-purple-500">Destinatário</p>
+                  <p className="mt-1 text-sm font-bold">Cliente não informado</p>
+                  <p className="mt-1 text-xs text-slate-500">Nenhum dado de cliente foi associado a esta pré-nota.</p>
+                </section>
+
+                <section className={`rounded-xl border p-4 ${dark ? 'border-slate-800 bg-[#171720]' : 'border-slate-100 bg-white'}`}>
+                  <p className="text-[10px] font-black uppercase tracking-wide text-purple-500">Itens</p>
+                  <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                    <table className="w-full text-left text-xs">
+                      <thead className={dark ? 'bg-slate-900 text-slate-300' : 'bg-slate-50 text-slate-600'}>
+                        <tr>
+                          <th className="px-3 py-2">Código</th>
+                          <th className="px-3 py-2">Descrição</th>
+                          <th className="px-3 py-2">Origem</th>
+                          <th className="px-3 py-2 text-right">Qtd.</th>
+                          <th className="px-3 py-2 text-right">Unit.</th>
+                          <th className="px-3 py-2 text-right">Total visual</th>
+                        </tr>
+                      </thead>
+                      <tbody className={dark ? 'bg-[#121218] text-slate-200' : 'bg-white text-slate-700'}>
+                        {selectedPreviewDocumentRows.map((row) => (
+                          <tr key={row.code} className="border-t border-slate-200/80 dark:border-slate-800">
+                            <td className="px-3 py-2 font-mono text-[10px]">{row.code}</td>
+                            <td className="px-3 py-2">
+                              <div className="font-bold">{row.title}</div>
+                              <div className="mt-1 text-[10px] text-slate-500">{row.description}</div>
+                            </td>
+                            <td className="px-3 py-2 text-[10px] text-slate-500">{row.origin}</td>
+                            <td className="px-3 py-2 text-right">{row.quantity}</td>
+                            <td className="px-3 py-2 text-right">{typeof row.unitValue === 'number' ? formatCurrencyBRL(row.unitValue) : '-'}</td>
+                            <td className="px-3 py-2 text-right font-black">{typeof row.totalValue === 'number' ? formatCurrencyBRL(row.totalValue) : '-'}</td>
+                          </tr>
                         ))}
-                      </div>
-                    </article>
-                  ))}
-                </div>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section className={`rounded-xl border p-4 ${dark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-100 bg-slate-50'}`}>
+                  <p className="text-[10px] font-black uppercase tracking-wide text-purple-500">Observações</p>
+                  <ul className="mt-2 space-y-1 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                    <li>Documento interno de organização.</li>
+                    <li>Não substitui nota fiscal.</li>
+                    <li>Não foi transmitido à SEFAZ.</li>
+                    <li>Não possui chave de acesso.</li>
+                    <li>Não possui protocolo fiscal.</li>
+                    <li>Use Salvar como PDF do navegador, se quiser guardar uma cópia.</li>
+                  </ul>
+                </section>
               </div>
 
               <aside className={`rounded-xl border p-4 ${dark ? 'border-purple-800 bg-purple-950/20' : 'border-purple-200 bg-purple-50'}`}>
-                <p className="text-xs font-black uppercase tracking-wide text-purple-500">Resumo visual</p>
-                <p className="mt-2 text-2xl font-black">{selectedPreviewData.preInvoiceSummary?.itemCount ?? selectedPreviewSourceItems.length} itens</p>
-                <p className="mt-1 text-lg font-black">{formatCurrencyBRL(selectedPreviewTotal)}</p>
+                <p className="text-xs font-black uppercase tracking-wide text-purple-500">Totais</p>
+                <p className="mt-2 text-2xl font-black">{formatCurrencyBRL(selectedPreviewTotal)}</p>
+                <p className="mt-1 text-lg font-black">{selectedPreviewDocumentRows.length} item(ns)</p>
                 <p className={`mt-3 text-xs leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
-                  Use a opção Salvar como PDF do navegador, se quiser guardar uma cópia.
+                  Total visual derivado localmente da Mesa Visual.
                 </p>
                 <p className={`mt-3 text-xs leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
-                  Gerado localmente a partir da Mesa Visual.
+                  Esta visualização pode ser salva como PDF pelo navegador.
                 </p>
               </aside>
             </div>

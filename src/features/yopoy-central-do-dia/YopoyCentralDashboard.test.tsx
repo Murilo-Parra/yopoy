@@ -263,6 +263,71 @@ describe('YopoyCentralDashboard', () => {
     expect(screen.getByRole('menuitem', { name: /ver painel da pasta/i })).toBeTruthy();
   });
 
+  it('permite seleção múltipla local e limpar seleção sem persistir', async () => {
+    render(<YopoyCentralDashboard theme="light" />);
+
+    selectCard(getCaptureCard());
+    fireEvent.contextMenu(getPaymentCard(), { clientX: 540, clientY: 220 });
+    fireEvent.click(screen.getByRole('menuitem', { name: /adicionar à seleção/i }));
+
+    expect(screen.getByText(/2 item\(ns\) selecionado\(s\)/i)).toBeTruthy();
+    fireEvent.contextMenu(getPaymentCard(), { clientX: 540, clientY: 220 });
+    fireEvent.click(screen.getByRole('menuitem', { name: /remover da seleção/i }));
+    expect(screen.getByText(/1 item\(ns\) selecionado\(s\)/i)).toBeTruthy();
+
+    fireEvent.click(screen.getAllByRole('button', { name: /limpar seleção/i })[0]);
+    expect(screen.getByText(/nenhum card selecionado/i)).toBeTruthy();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('cria pré-nota visual da seleção, ignora pastas e abre preview imprimível', async () => {
+    const printSpy = vi.fn();
+    Object.defineProperty(window, 'print', { configurable: true, value: printSpy });
+    render(<YopoyCentralDashboard theme="light" />);
+
+    createFolder('Anexo');
+    selectCard(getCaptureCard());
+    fireEvent.contextMenu(getPaymentCard(), { clientX: 540, clientY: 220 });
+    fireEvent.click(screen.getByRole('menuitem', { name: /adicionar à seleção/i }));
+    fireEvent.pointerDown(getFolderCard(/^anexo$/i), {
+      pointerId: 74,
+      button: 0,
+      clientX: 320,
+      clientY: 220,
+      ctrlKey: true,
+    });
+    fireEvent.pointerUp(getFolderCard(/^anexo$/i), {
+      pointerId: 74,
+      clientX: 320,
+      clientY: 220,
+      ctrlKey: true,
+    });
+
+    expect(screen.getByText(/3 item\(ns\) selecionado\(s\)/i)).toBeTruthy();
+    expect(screen.getByText(/pastas não entram na pré-nota/i)).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: /criar pré-nota visual/i }));
+
+    const dialog = screen.getByRole('dialog', { name: /pré-nota visual interna/i });
+    expect(within(dialog).getAllByText(/sem valor fiscal/i).length).toBeGreaterThan(0);
+    expect(within(dialog).getByText(/não é nf-e, nfc-e ou nfs-e/i)).toBeTruthy();
+    expect(within(dialog).getByText(/2 card\(s\) de origem/i)).toBeTruthy();
+    expect(within(dialog).getByText(/use a opção salvar como pdf do navegador/i)).toBeTruthy();
+
+    fireEvent.click(within(dialog).getByRole('button', { name: /imprimir \/ salvar pdf/i }));
+    expect(printSpy).toHaveBeenCalled();
+
+    await waitFor(() => {
+      const snapshot = readStoredSnapshot();
+      const created = snapshot.items.find((item) => item.kind === 'pre-invoice' && item.title.includes('2 itens'));
+      expect(created?.sourceCardIds).toEqual(expect.arrayContaining(['mock-capture-01', 'mock-payment-01']));
+      expect(created?.sourceCardIds).not.toContain(expect.stringMatching(/^folder-/));
+      expect(created?.preInvoiceSummary?.itemCount).toBe(2);
+      expect(created?.preInvoiceSummary?.sourceTitles).toEqual(expect.arrayContaining(['Foto de comprovante Pix — R$ 45,00', 'Comprovante Pix — R$ 45,00']));
+      expect(snapshot.connections.some((connection) => connection.toId === created?.id)).toBe(true);
+    });
+  });
+
   it('cria pasta local, salva no snapshot e abre submesa vazia pelo painel', async () => {
     vi.spyOn(Date, 'now').mockReturnValue(1771771773000);
     vi.spyOn(Math, 'random').mockReturnValue(0.345678);

@@ -92,7 +92,7 @@ describe('SmartCard', () => {
 
     fireEvent.pointerDown(card, { pointerId: 1, button: 0, clientX: 10, clientY: 10 });
 
-    expect(handlers.onSelect).toHaveBeenCalledWith(ITEM.id);
+    expect(handlers.onSelect).toHaveBeenCalledWith(ITEM.id, expect.any(Object));
     expect(handlers.onDragPointerDown).toHaveBeenCalledWith(expect.any(Object), ITEM.id);
     expect(document.querySelector('[draggable="true"]')).toBeNull();
   });

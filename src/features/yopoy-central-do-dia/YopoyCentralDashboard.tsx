@@ -4,6 +4,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type KeyboardEvent as ReactKeyboardEvent,
   type FormEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -15,6 +16,7 @@ import {
   Check,
   ChevronRight,
   Clipboard,
+  FileClock,
   FolderCheck,
   Folder,
   Link2,
@@ -25,6 +27,7 @@ import {
   PackageCheck,
   PackageOpen,
   Plus,
+  Printer,
   RotateCcw,
   Sparkles,
   Trash2,
@@ -168,6 +171,17 @@ const SMART_CARD_KINDS: ReadonlyArray<SmartCardKind> = [
   'ai-alert',
 ];
 
+const PRE_INVOICE_SOURCE_KINDS = new Set<SmartCardKind>([
+  'sale',
+  'payment',
+  'expense',
+  'capture',
+  'pending',
+  'invoice-draft',
+  'pre-invoice',
+  'stock',
+]);
+
 const QUICK_REGISTRATION_OPTIONS: ReadonlyArray<QuickRegistrationOption> = [
   {
     id: 'sale',
@@ -285,6 +299,36 @@ function readTags(value: unknown, fallback: string[]) {
   return tags.length > 0 ? tags : [...fallback];
 }
 
+function readStringArray(value: unknown, fallback: string[] = []) {
+  if (!Array.isArray(value)) return [...fallback];
+  const items = value.filter((entry): entry is string => typeof entry === 'string' && entry.trim().length > 0);
+  return items.length > 0 ? items : [...fallback];
+}
+
+function readPreInvoiceSummary(value: unknown, fallback?: SmartCardItem['preInvoiceSummary']) {
+  if (!isRecord(value)) return fallback;
+  const itemCount = typeof value.itemCount === 'number' && Number.isFinite(value.itemCount) && value.itemCount > 0
+    ? Math.floor(value.itemCount)
+    : fallback?.itemCount;
+  const generatedAt = typeof value.generatedAt === 'string' && value.generatedAt.trim().length > 0
+    ? value.generatedAt
+    : fallback?.generatedAt;
+  if (!generatedAt || !itemCount) return fallback;
+  const sourceTitles = readStringArray(value.sourceTitles, fallback?.sourceTitles ?? []);
+  const totalAmount = typeof value.totalAmount === 'number' && Number.isFinite(value.totalAmount)
+    ? value.totalAmount
+    : fallback?.totalAmount;
+  const summary: SmartCardItem['preInvoiceSummary'] = {
+    itemCount,
+    generatedAt,
+    sourceTitles,
+  };
+  if (typeof totalAmount === 'number' && Number.isFinite(totalAmount)) {
+    summary.totalAmount = totalAmount;
+  }
+  return summary;
+}
+
 function readParentFolderId(value: unknown, fallback?: string | null) {
   if (value === null) return null;
   if (typeof value === 'string' && value.trim().length > 0) return value;
@@ -310,6 +354,8 @@ function normalizeItem(value: unknown, fallback?: SmartCardItem): SmartCardItem 
     hasPreInvoice: readBoolean(value.hasPreInvoice, fallback?.hasPreInvoice ?? false),
     sentToAccountant: readBoolean(value.sentToAccountant, fallback?.sentToAccountant ?? false),
     parentFolderId: readParentFolderId(value.parentFolderId, fallback?.parentFolderId),
+    sourceCardIds: readStringArray(value.sourceCardIds, fallback?.sourceCardIds ?? []),
+    preInvoiceSummary: readPreInvoiceSummary(value.preInvoiceSummary, fallback?.preInvoiceSummary),
     tags: readTags(value.tags, fallback?.tags ?? ['Demonstração']),
   };
 }
@@ -380,6 +426,17 @@ function getFolderChildCounts(items: SmartCardItem[], folderId: string) {
     if (item.kind === 'folder') return { ...current, folders: current.folders + 1 };
     return { ...current, cards: current.cards + 1 };
   }, { cards: 0, folders: 0 });
+}
+
+function canUseAsPreInvoiceSource(item: SmartCardItem) {
+  return item.kind !== 'folder' && !item.archived && PRE_INVOICE_SOURCE_KINDS.has(item.kind);
+}
+
+function formatPreInvoiceSourceTitles(items: SmartCardItem[]) {
+  if (items.length === 0) return 'sem itens';
+  if (items.length === 1) return items[0].title;
+  if (items.length === 2) return `${items[0].title} e ${items[1].title}`;
+  return `${items[0].title}, ${items[1].title} e mais ${items.length - 2}`;
 }
 
 function getFolderPath(folderId: string | null, itemsById: Map<string, SmartCardItem>) {
@@ -611,12 +668,14 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const [connectionSourceId, setConnectionSourceId] = useState<string | null>(null);
   const [connectionPointer, setConnectionPointer] = useState<CanvasCardPosition | null>(null);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
   const [selectedMoveFolderId, setSelectedMoveFolderId] = useState('');
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [dropTargetFolderId, setDropTargetFolderId] = useState<string | null>(null);
   const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
   const [folderRenameValue, setFolderRenameValue] = useState('');
+  const [openPreInvoiceId, setOpenPreInvoiceId] = useState<string | null>(null);
   const [canvasZoom, setCanvasZoom] = useState(1);
   const [feedback, setFeedback] = useState('Mesa local pronta: arraste os cards e conecte os pontos laterais. As alterações ficam salvas neste navegador, sem sincronização externa.');
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -741,6 +800,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setPositions((current) => ({ ...current, [item.id]: position }));
     setActiveFilter('all');
     setSelectedCardId(item.id);
+    setSelectedItemIds([item.id]);
     resetQuickRegistrationForm();
     setQuickRegistrationOpen(false);
     setFeedback(activeFolderId ? 'Card criado dentro desta pasta local.' : 'Card criado e salvo neste navegador.');
@@ -771,6 +831,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     }));
     setActiveFilter('all');
     setSelectedCardId(item.id);
+    setSelectedItemIds([item.id]);
     setFeedback('Pasta criada localmente nesta posição.');
   };
 
@@ -779,6 +840,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     if (!folder || folder.kind !== 'folder') return;
     setActiveFolderId(folderId);
     setSelectedCardId(null);
+    setSelectedItemIds([]);
     setCanvasZoom(1);
     if (typeof viewportRef.current?.scrollTo === 'function') {
       viewportRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
@@ -790,6 +852,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
     const parentFolderId = activeFolder?.parentFolderId ?? null;
     setActiveFolderId(parentFolderId);
     setSelectedCardId(null);
+    setSelectedItemIds([]);
     setCanvasZoom(1);
     if (typeof viewportRef.current?.scrollTo === 'function') {
       viewportRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
@@ -800,6 +863,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
   const leaveFolder = () => {
     setActiveFolderId(null);
     setSelectedCardId(null);
+    setSelectedItemIds([]);
     setCanvasZoom(1);
     if (typeof viewportRef.current?.scrollTo === 'function') {
       viewportRef.current.scrollTo({ left: 0, top: 0, behavior: 'smooth' });
@@ -839,6 +903,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
       return syncLinkedCards(updatedItems, keepScopedConnections(updatedItems, connections));
     });
     setSelectedCardId(null);
+    setSelectedItemIds([]);
     if (!parentFolderId) {
       setFeedback(item.kind === 'folder' ? 'Pasta voltou para a Mesa principal.' : 'Card voltou para a Mesa principal.');
       return;
@@ -857,9 +922,61 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setFolderRenameValue('');
   };
 
+  const clearSelection = () => {
+    setSelectedCardId(null);
+    setSelectedItemIds([]);
+  };
+
+  const selectOnlyItem = (itemId: string) => {
+    setSelectedCardId(itemId);
+    setSelectedItemIds([itemId]);
+  };
+
+  const handleItemSelect = (
+    itemId: string,
+    event?: ReactMouseEvent<HTMLElement> | ReactPointerEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement>,
+  ) => {
+    if (event && ('metaKey' in event || 'ctrlKey' in event) && (event.metaKey || event.ctrlKey)) {
+      setSelectedCardId(itemId);
+      setSelectedItemIds((current) => {
+        if (current.includes(itemId)) {
+          const next = current.filter((id) => id !== itemId);
+          setSelectedCardId(next[0] ?? null);
+          return next;
+        }
+        return [...current, itemId];
+      });
+      return;
+    }
+    selectOnlyItem(itemId);
+  };
+
+  const addItemToSelection = (itemId: string) => {
+    setSelectedCardId(itemId);
+    setSelectedItemIds((current) => current.includes(itemId) ? current : [...current, itemId]);
+  };
+
+  const removeItemFromSelection = (itemId: string) => {
+    setSelectedItemIds((current) => {
+      const next = current.filter((id) => id !== itemId);
+      setSelectedCardId(next[0] ?? null);
+      return next;
+    });
+  };
+
   const itemsById = useMemo(() => new Map(items.map((item) => [item.id, item])), [items]);
+  useEffect(() => {
+    setSelectedItemIds((current) => current.filter((id) => itemsById.has(id)));
+    setSelectedCardId((current) => (current && itemsById.has(current) ? current : null));
+  }, [itemsById]);
   const activeFolder = activeFolderId ? itemsById.get(activeFolderId) ?? null : null;
   const folderPath = useMemo(() => getFolderPath(activeFolderId, itemsById), [activeFolderId, itemsById]);
+  const selectedItems = useMemo(
+    () => selectedItemIds.map((id) => itemsById.get(id)).filter((item): item is SmartCardItem => item !== undefined),
+    [itemsById, selectedItemIds],
+  );
+  const selectedSelectionCount = selectedItems.length;
+  const selectedPrimaryItem = selectedCardId ? itemsById.get(selectedCardId) ?? null : null;
   const availableFoldersInScope = useMemo(
     () => items.filter((item) => item.kind === 'folder' && (item.parentFolderId ?? null) === activeFolderId && !item.archived),
     [activeFolderId, items],
@@ -872,10 +989,15 @@ export function YopoyCentralDashboard({ theme }: Props) {
     return !item.archived && item.status === activeFilter;
   }), [activeFilter, activeFolderId, items]);
   const visibleItemIds = useMemo(() => new Set(visibleItems.map((item) => item.id)), [visibleItems]);
-  const selectedCard = selectedCardId ? itemsById.get(selectedCardId) ?? null : null;
+  const selectedCard = selectedPrimaryItem;
   const selectedCardConnections = useMemo(
     () => selectedCardId ? getCardConnections(selectedCardId, connections) : [],
     [connections, selectedCardId],
+  );
+  const selectedSelectionIds = selectedItemIds.filter((id) => itemsById.has(id));
+  const selectedSelectionItems = useMemo(
+    () => selectedSelectionIds.map((id) => itemsById.get(id)).filter((item): item is SmartCardItem => item !== undefined),
+    [itemsById, selectedSelectionIds],
   );
   const canvasSize = useMemo(() => getCanvasSize(positions), [positions]);
   const scaledCanvasSize = useMemo(() => ({
@@ -894,6 +1016,135 @@ export function YopoyCentralDashboard({ theme }: Props) {
     preInvoices: current.preInvoices + (item.kind === 'pre-invoice' || item.kind === 'invoice-draft' || item.hasPreInvoice ? 1 : 0),
     amount: current.amount + (typeof item.amount === 'number' && Number.isFinite(item.amount) ? item.amount : 0),
   }), { sales: 0, expenses: 0, payments: 0, preInvoices: 0, amount: 0 }), [accountantPackageItems]);
+
+  const selectedPreInvoiceSources = useMemo(
+    () => selectedItems.filter(canUseAsPreInvoiceSource),
+    [selectedItems],
+  );
+
+  const selectedSelectionPreviewHasFolder = useMemo(
+    () => selectedItemIds.some((id) => itemsById.get(id)?.kind === 'folder'),
+    [itemsById, selectedItemIds],
+  );
+
+  const selectedSelectionPreviewCanGenerate = selectedPreInvoiceSources.length > 0;
+
+  const openPreInvoicePreview = (preInvoiceId: string) => {
+    setOpenPreInvoiceId(preInvoiceId);
+    setSelectedCardId(preInvoiceId);
+    setSelectedItemIds([preInvoiceId]);
+  };
+
+  const closePreInvoicePreview = () => {
+    setOpenPreInvoiceId(null);
+  };
+
+  const focusSelectionItem = (itemId: string) => {
+    setSelectedCardId(itemId);
+    setSelectedItemIds((current) => (current.includes(itemId) ? current : [...current, itemId]));
+  };
+
+  const generatePreInvoiceFromItems = (sourceItems: SmartCardItem[]) => {
+    const operationalSources = sourceItems.filter(canUseAsPreInvoiceSource);
+    if (operationalSources.length === 0) {
+      setFeedback('Pastas não entram na pré-nota. Selecione cards operacionais.');
+      return;
+    }
+
+    const sourceCardIds = operationalSources.map((item) => item.id);
+    const totalAmount = operationalSources.reduce((current, item) => current + (typeof item.amount === 'number' && Number.isFinite(item.amount) ? item.amount : 0), 0);
+    const generatedAt = new Date().toISOString();
+    const totalAmountLabel = formatCurrencyBRL(totalAmount);
+    const sourceTitles = operationalSources.map((item) => item.title);
+    const itemCount = operationalSources.length;
+    const preInvoiceId = createLocalCardId();
+    const preInvoiceItem: SmartCardItem = {
+      id: preInvoiceId,
+      kind: 'pre-invoice',
+      title: itemCount === 1 ? `PRÉ-NOTA VISUAL — ${operationalSources[0].title}` : `PRÉ-NOTA VISUAL — ${itemCount} itens`,
+      description: `Pré-nota visual interna com ${itemCount} card(s): ${formatPreInvoiceSourceTitles(operationalSources)}. Total visual ${totalAmountLabel}. Sem valor fiscal.`,
+      amount: totalAmount > 0 ? totalAmount : undefined,
+      timeLabel: 'agora',
+      status: 'review',
+      archived: false,
+      linked: false,
+      hasPreInvoice: true,
+      sentToAccountant: false,
+      parentFolderId: activeFolderId,
+      sourceCardIds,
+      preInvoiceSummary: {
+        totalAmount,
+        itemCount,
+        generatedAt,
+        sourceTitles,
+      },
+      tags: ['Pré-nota visual', 'Sem valor fiscal', 'Local'],
+    };
+
+    const position = (() => {
+      const sourcePositions = operationalSources
+        .map((item) => positions[item.id])
+        .filter((position): position is CanvasCardPosition => position !== undefined);
+      if (sourcePositions.length === 0) return createCardPosition();
+      const averageX = sourcePositions.reduce((current, position) => current + position.x, 0) / sourcePositions.length;
+      const averageY = sourcePositions.reduce((current, position) => current + position.y, 0) / sourcePositions.length;
+      return {
+        x: Math.max(averageX + 120, 16),
+        y: Math.max(averageY + 120, 16),
+      };
+    })();
+
+    const previewConnections = operationalSources.map((item) => ({
+      id: `${item.id}->${preInvoiceId}`,
+      fromId: item.id,
+      toId: preInvoiceId,
+      status: 'visual' as const,
+    }));
+
+    setItems((currentItems) => {
+      const updatedItems = [preInvoiceItem, ...currentItems];
+      setConnections((currentConnections) => {
+        const updatedConnections = keepScopedConnections(updatedItems, [...currentConnections, ...previewConnections]);
+        return updatedConnections;
+      });
+      return syncLinkedCards(updatedItems, keepScopedConnections(updatedItems, [...connections, ...previewConnections]));
+    });
+    setPositions((currentPositions) => ({ ...currentPositions, [preInvoiceId]: position }));
+    setActiveFilter('all');
+    setSelectedCardId(preInvoiceId);
+    setSelectedItemIds([preInvoiceId]);
+    setOpenPreInvoiceId(preInvoiceId);
+    setFeedback(itemCount > 1
+      ? `Pré-nota visual criada com ${itemCount} itens e salva neste navegador.`
+      : 'Pré-nota visual criada com 1 item e salva neste navegador.');
+  };
+
+  const createPreInvoiceFromSelection = () => {
+    generatePreInvoiceFromItems(selectedSelectionItems);
+  };
+
+  const createPreInvoiceFromCard = (itemId: string) => {
+    const item = itemsById.get(itemId);
+    if (!item) return;
+    generatePreInvoiceFromItems([item]);
+  };
+
+  const selectedPreviewData = openPreInvoiceId ? itemsById.get(openPreInvoiceId) ?? null : null;
+  const selectedPreviewSourceItems = useMemo(
+    () => selectedPreviewData?.sourceCardIds
+      ? selectedPreviewData.sourceCardIds.map((id) => itemsById.get(id)).filter((item): item is SmartCardItem => item !== undefined)
+      : [],
+    [itemsById, selectedPreviewData],
+  );
+  const selectedPreviewTotal = typeof selectedPreviewData?.preInvoiceSummary?.totalAmount === 'number'
+    ? selectedPreviewData.preInvoiceSummary.totalAmount
+    : selectedPreviewSourceItems.reduce((current, item) => current + (typeof item.amount === 'number' && Number.isFinite(item.amount) ? item.amount : 0), 0);
+
+  useEffect(() => {
+    if (openPreInvoiceId && !itemsById.has(openPreInvoiceId)) {
+      setOpenPreInvoiceId(null);
+    }
+  }, [itemsById, openPreInvoiceId]);
 
   useEffect(() => {
     const firstVisibleItem = visibleItems[0];
@@ -1120,12 +1371,14 @@ export function YopoyCentralDashboard({ theme }: Props) {
     setConnections(defaultState.connections);
     setActiveFilter(defaultState.activeFilter);
     setSelectedCardId(null);
+    setSelectedItemIds([]);
     setActiveFolderId(null);
     setSelectedMoveFolderId('');
     setContextMenu(null);
     setDropTargetFolderId(null);
     setRenamingFolderId(null);
     setFolderRenameValue('');
+    setOpenPreInvoiceId(null);
     setCanvasZoom(1);
     setFeedback('Demonstração restaurada. Os dados locais da Mesa foram limpos.');
   };
@@ -1542,6 +1795,53 @@ export function YopoyCentralDashboard({ theme }: Props) {
         {selectedCard ? (
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,460px)]">
             <div className="min-w-0">
+              {selectedSelectionCount > 0 && (
+                <div className={`mb-4 rounded-xl border p-3 text-xs ${
+                  dark ? 'border-slate-800 bg-slate-950/60 text-slate-300' : 'border-slate-200 bg-slate-50 text-slate-600'
+                }`}>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="font-black">{selectedSelectionCount} item(ns) selecionado(s)</p>
+                      <p className="mt-1">A seleção é temporária e fica só nesta sessão.</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearSelection}
+                      className={`inline-flex min-h-10 items-center justify-center rounded-lg border px-3 py-2 text-xs font-bold ${
+                        dark ? 'border-slate-700 text-slate-300 hover:border-red-500' : 'border-slate-200 text-slate-600 hover:border-red-300'
+                      }`}
+                    >
+                      Limpar seleção
+                    </button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {selectedSelectionItems.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => removeItemFromSelection(item.id)}
+                        className={`rounded-md px-2 py-1 text-[10px] font-bold ${
+                          dark ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {item.title} · remover
+                      </button>
+                    ))}
+                  </div>
+                  {selectedSelectionPreviewHasFolder && (
+                    <p className={`mt-2 font-bold ${dark ? 'text-amber-300' : 'text-amber-700'}`}>Pastas não entram na pré-nota. Selecione cards operacionais.</p>
+                  )}
+                  {selectedSelectionPreviewCanGenerate && (
+                    <button
+                      type="button"
+                      onClick={createPreInvoiceFromSelection}
+                      className="mt-3 inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-purple-700"
+                    >
+                      <FolderCheck className="h-3.5 w-3.5" /> Criar pré-nota visual
+                    </button>
+                  )}
+                </div>
+              )}
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
                   <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
@@ -1732,7 +2032,32 @@ export function YopoyCentralDashboard({ theme }: Props) {
                     }`}
                   >
                     <Link2 className="h-3.5 w-3.5" /> Simular vínculo visual
-                  </button>
+                    </button>
+                )}
+                {(selectedCard.kind === 'pre-invoice' || selectedCard.kind === 'invoice-draft') && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => openPreInvoicePreview(selectedCard.id)}
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-purple-700"
+                    >
+                      <FileClock className="h-3.5 w-3.5" /> Abrir pré-nota
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        openPreInvoicePreview(selectedCard.id);
+                        if (typeof window !== 'undefined' && typeof window.print === 'function') {
+                          window.print();
+                        }
+                      }}
+                      className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                        dark ? 'border-slate-700 text-slate-300 hover:border-purple-500' : 'border-slate-200 text-slate-600 hover:border-purple-300'
+                      }`}
+                    >
+                      Imprimir / Salvar PDF
+                    </button>
+                  </>
                 )}
                 {!selectedCard.archived && (
                   <div className={`rounded-lg border p-3 sm:col-span-2 xl:col-span-1 ${dark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-200 bg-white'}`}>
@@ -2054,7 +2379,7 @@ export function YopoyCentralDashboard({ theme }: Props) {
                     folderFoldersCount={item.kind === 'folder' ? getFolderChildCounts(items, item.id).folders : undefined}
                     isSelected={selectedCardId === item.id}
                     isDropTarget={dropTargetFolderId === item.id}
-                    onSelect={setSelectedCardId}
+                    onSelect={handleItemSelect}
                     onContextMenu={openItemContextMenu}
                     onDragPointerDown={handleCardPointerDown}
                     onDragPointerMove={handleCardPointerMove}
@@ -2089,6 +2414,34 @@ export function YopoyCentralDashboard({ theme }: Props) {
         >
           {contextMenu.type === 'canvas' && (
             <div className="grid gap-1">
+              {selectedSelectionCount > 0 && (
+                <>
+                  {selectedSelectionPreviewCanGenerate && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        createPreInvoiceFromSelection();
+                        setContextMenu(null);
+                      }}
+                      className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-purple-100 hover:text-purple-800 dark:hover:bg-purple-950"
+                    >
+                      <FileClock className="h-4 w-4" /> Criar pré-nota visual da seleção
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      clearSelection();
+                      setContextMenu(null);
+                    }}
+                    className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+                  >
+                    Limpar seleção
+                  </button>
+                </>
+              )}
               <button
                 type="button"
                 role="menuitem"
@@ -2191,8 +2544,62 @@ export function YopoyCentralDashboard({ theme }: Props) {
               {(() => {
                 const item = itemsById.get(contextMenu.itemId);
                 if (!item) return null;
+                const isSelected = selectedItemIds.includes(item.id);
                 return (
                   <>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        if (isSelected) {
+                          removeItemFromSelection(item.id);
+                        } else {
+                          addItemToSelection(item.id);
+                        }
+                        setContextMenu(null);
+                      }}
+                      className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-indigo-100 hover:text-indigo-800 dark:hover:bg-indigo-950"
+                    >
+                      {isSelected ? 'Remover da seleção' : 'Adicionar à seleção'}
+                    </button>
+                    {canUseAsPreInvoiceSource(item) && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          createPreInvoiceFromCard(item.id);
+                          setContextMenu(null);
+                        }}
+                        className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-purple-100 hover:text-purple-800 dark:hover:bg-purple-950"
+                      >
+                        <FileClock className="h-4 w-4" /> Criar pré-nota visual com este card
+                      </button>
+                    )}
+                    {(item.kind === 'pre-invoice' || item.kind === 'invoice-draft') && (
+                      <>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => openPreInvoicePreview(item.id)}
+                          className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-purple-100 hover:text-purple-800 dark:hover:bg-purple-950"
+                        >
+                          <FileClock className="h-4 w-4" /> Abrir pré-nota
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => {
+                            openPreInvoicePreview(item.id);
+                            if (typeof window !== 'undefined' && typeof window.print === 'function') {
+                              window.print();
+                            }
+                          }}
+                          className="flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-left font-bold hover:bg-slate-100 dark:hover:bg-slate-800"
+                        >
+                          <Printer className="h-4 w-4" /> Imprimir / Salvar PDF
+                        </button>
+                      </>
+                    )}
                     {!item.archived && (item.kind === 'sale' || item.kind === 'invoice-draft') && !item.hasPreInvoice && (
                       <button
                         type="button"
@@ -2333,6 +2740,122 @@ export function YopoyCentralDashboard({ theme }: Props) {
               })()}
             </div>
           )}
+        </div>
+      )}
+
+      {selectedPreviewData && selectedPreviewData.kind === 'pre-invoice' && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Pré-nota visual interna"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-3"
+          onClick={closePreInvoicePreview}
+        >
+          <section
+            className={`max-h-[88vh] w-full max-w-4xl overflow-auto rounded-2xl border p-4 shadow-2xl ${
+              dark ? 'border-purple-800 bg-[#121218] text-slate-100' : 'border-purple-200 bg-white text-slate-900'
+            }`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex flex-col gap-3 border-b border-dashed pb-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${
+                  dark ? 'bg-purple-950 text-purple-200' : 'bg-purple-100 text-purple-800'
+                }`}>
+                  <FileClock className="h-3.5 w-3.5" /> PRÉ-NOTA VISUAL
+                </span>
+                <h2 className="mt-2 text-2xl font-black">Pré-nota visual interna</h2>
+                <p className={`mt-1 text-xs font-bold ${dark ? 'text-purple-200' : 'text-purple-800'}`}>Sem valor fiscal</p>
+                <p className={`mt-2 text-xs ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  Gerado localmente a partir da Mesa Visual. Não é NF-e, NFC-e ou NFS-e.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && typeof window.print === 'function') {
+                      window.print();
+                      setFeedback('Use o navegador para salvar como PDF desta pré-nota visual.');
+                    }
+                  }}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-purple-600 px-3 py-2 text-xs font-black text-white transition-colors hover:bg-purple-700"
+                >
+                  <Printer className="h-4 w-4" /> Imprimir / Salvar PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    closePreInvoicePreview();
+                    setFeedback('Pré-nota visual fechada.');
+                  }}
+                  className={`inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${
+                    dark ? 'border-slate-700 text-slate-300 hover:border-purple-500' : 'border-slate-200 text-slate-600 hover:border-purple-300'
+                  }`}
+                >
+                  <X className="h-4 w-4" /> Fechar
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="space-y-3">
+                <div className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-slate-950/60' : 'border-slate-100 bg-slate-50'}`}>
+                  <p className="text-xs font-black uppercase tracking-wide text-purple-500">Origem</p>
+                  <p className="mt-1 text-sm font-bold">{selectedPreviewData.preInvoiceSummary?.itemCount ?? selectedPreviewSourceItems.length} card(s) de origem</p>
+                  <p className={`mt-1 text-xs ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
+                    {selectedPreviewData.preInvoiceSummary?.generatedAt
+                      ? new Date(selectedPreviewData.preInvoiceSummary.generatedAt).toLocaleString('pt-BR')
+                      : selectedPreviewData.timeLabel}
+                  </p>
+                  <p className={`mt-2 text-xs leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
+                    Este documento é um rascunho interno de organização. Não substitui nota fiscal, contador ou validação tributária.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  {selectedPreviewSourceItems.map((item) => (
+                    <article
+                      key={item.id}
+                      className={`rounded-xl border p-3 ${dark ? 'border-slate-800 bg-[#171720]' : 'border-slate-200 bg-white'}`}
+                    >
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0">
+                          <h3 className="break-words text-sm font-extrabold">{item.title}</h3>
+                          <p className={`mt-1 text-[11px] ${dark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            {CARD_KIND_LABELS[item.kind]} · {CARD_STATUS_LABELS[item.archived ? 'resolved' : item.status]}
+                          </p>
+                        </div>
+                        {typeof item.amount === 'number' && Number.isFinite(item.amount) && (
+                          <strong className={`text-sm ${dark ? 'text-emerald-400' : 'text-emerald-700'}`}>{formatCurrencyBRL(item.amount)}</strong>
+                        )}
+                      </div>
+                      <p className={`mt-2 text-xs ${dark ? 'text-slate-300' : 'text-slate-600'}`}>{item.description}</p>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {item.tags.slice(0, 4).map((tag) => (
+                          <span key={tag} className={`rounded-md px-2 py-1 text-[10px] ${dark ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-500'}`}>
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+
+              <aside className={`rounded-xl border p-4 ${dark ? 'border-purple-800 bg-purple-950/20' : 'border-purple-200 bg-purple-50'}`}>
+                <p className="text-xs font-black uppercase tracking-wide text-purple-500">Resumo visual</p>
+                <p className="mt-2 text-2xl font-black">{selectedPreviewData.preInvoiceSummary?.itemCount ?? selectedPreviewSourceItems.length} itens</p>
+                <p className="mt-1 text-lg font-black">{formatCurrencyBRL(selectedPreviewTotal)}</p>
+                <p className={`mt-3 text-xs leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  Use a opção Salvar como PDF do navegador, se quiser guardar uma cópia.
+                </p>
+                <p className={`mt-3 text-xs leading-relaxed ${dark ? 'text-slate-300' : 'text-slate-600'}`}>
+                  Gerado localmente a partir da Mesa Visual.
+                </p>
+              </aside>
+            </div>
+          </section>
         </div>
       )}
     </div>

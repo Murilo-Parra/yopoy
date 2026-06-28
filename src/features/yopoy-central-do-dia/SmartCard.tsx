@@ -1,4 +1,4 @@
-import { useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   Boxes,
   Camera,
@@ -23,7 +23,10 @@ interface SmartCardProps {
   isDropTarget?: boolean;
   folderItemsCount?: number;
   folderFoldersCount?: number;
-  onSelect?: (id: string) => void;
+  onSelect?: (
+    id: string,
+    event?: ReactMouseEvent<HTMLElement> | ReactPointerEvent<HTMLElement> | ReactKeyboardEvent<HTMLElement>,
+  ) => void;
   onContextMenu?: (event: ReactMouseEvent<HTMLElement>, id: string) => void;
   onDragPointerDown?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
   onDragPointerMove?: (event: ReactPointerEvent<HTMLElement>, id: string) => void;
@@ -215,6 +218,7 @@ export function SmartCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const dark = theme === 'dark';
   const isFolder = item.kind === 'folder';
+  const isPreInvoiceCard = item.kind === 'pre-invoice' || item.kind === 'invoice-draft';
   const visual = KIND_VISUALS[item.kind];
   const actionClass = `inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-center text-xs font-bold transition-colors sm:min-h-9 sm:w-auto sm:rounded-lg sm:px-2.5 sm:py-1.5 sm:text-[11px] ${
     dark
@@ -223,7 +227,7 @@ export function SmartCard({
   }`;
   const selectCard = (event: ReactPointerEvent<HTMLElement>) => {
     if ((event.target as HTMLElement).closest('[data-no-card-drag]')) return;
-    onSelect?.(item.id);
+    onSelect?.(item.id, event);
   };
 
   return (
@@ -235,7 +239,7 @@ export function SmartCard({
       onKeyDown={(event) => {
         if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
         event.preventDefault();
-        onSelect?.(item.id);
+        onSelect?.(item.id, event);
       }}
       onPointerDown={(event) => {
         selectCard(event);
@@ -341,6 +345,21 @@ export function SmartCard({
       <p className={`mt-2 text-xs leading-relaxed ${dark ? 'text-slate-400' : 'text-slate-600'}`}>
         {isFolder ? `${folderItemsCount ?? 0} item(ns) e ${folderFoldersCount ?? 0} subpasta(s). Abra ou mova itens para esta pasta.` : item.description}
       </p>
+
+      {isPreInvoiceCard && (
+        <div className={`mt-2 rounded-xl border px-3 py-2 text-[11px] leading-relaxed ${
+          dark ? 'border-purple-800 bg-purple-950/40 text-purple-200' : 'border-purple-200 bg-purple-50 text-purple-800'
+        }`}>
+          <p className="font-black uppercase tracking-wide">Pré-nota visual</p>
+          <p className="mt-1">
+            {item.preInvoiceSummary?.itemCount ?? item.sourceCardIds?.length ?? 0} card(s) de origem
+            {typeof item.preInvoiceSummary?.totalAmount === 'number' && Number.isFinite(item.preInvoiceSummary.totalAmount)
+              ? ` · Total visual ${item.preInvoiceSummary.totalAmount.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}`
+              : ''}
+          </p>
+          <p className="mt-1">Sem valor fiscal</p>
+        </div>
+      )}
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
         {item.tags.map((tag) => (

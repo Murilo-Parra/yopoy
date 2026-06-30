@@ -695,7 +695,7 @@ export default function SettingsTool({
           }`}
         >
           <Database className="w-3.5 h-3.5" />
-          Backup e Restauração
+          Backup local e restauração
         </button>
 
         <button
@@ -2090,7 +2090,7 @@ export default function SettingsTool({
             <div className="flex items-center gap-2 pb-3 border-b border-slate-200/10">
               <Database className="w-4.5 h-4.5 text-indigo-505" />
               <h3 className={`text-xs font-extrabold tracking-wider uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                Cópia de Segurança e Restauração de Dados (Snapshots)
+                Backup local e restauração de dados deste navegador
               </h3>
             </div>
 
@@ -2120,10 +2120,10 @@ export default function SettingsTool({
                   </div>
                   <div>
                     <h4 className={`text-sm font-extrabold ${theme === 'dark' ? 'text-gray-150' : 'text-slate-900'}`}>
-                      Exportar Base de Dados Local
+                      Exportar backup local
                     </h4>
                     <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                      Gera um arquivo físico compilado com todas as informações contábeis, logs cadastrais de equipe, controle de impostos e inventário ativo da sua distribuidora.
+                      Gera um arquivo local .json com dados demonstrativos salvos neste navegador. Não é backup em nuvem e não sincroniza com servidor.
                     </p>
                   </div>
                   <ul className="space-y-1.5 text-[11px] text-gray-500 pt-1">
@@ -2152,7 +2152,7 @@ export default function SettingsTool({
                     className="w-full bg-indigo-600 hover:bg-indigo-700 hover:scale-[1.01] active:scale-[0.99] text-white font-extrabold text-xs px-5 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all shadow-md"
                   >
                     <Download className="w-4 h-4" />
-                    Exportar Backup Digital (.json)
+                    Exportar backup local (.json)
                   </button>
                 </div>
               </div>
@@ -2167,10 +2167,10 @@ export default function SettingsTool({
                   </div>
                   <div>
                     <h4 className={`text-sm font-extrabold ${theme === 'dark' ? 'text-gray-150' : 'text-slate-900'}`}>
-                      Restaurar Base de Dados Local
+                      Importação local sensível
                     </h4>
                     <p className="text-xs text-slate-500 leading-relaxed mt-1">
-                      Envie um arquivo de snapshot (.json) previamente exportado para repopular os dados da empresa. Útil para troca de navegadores ou limpeza periódica.
+                      Envie um arquivo local .json previamente exportado. A restauração local substitui dados locais atuais antes de recarregar a página.
                     </p>
                   </div>
 
@@ -2212,10 +2212,10 @@ export default function SettingsTool({
                         <Upload className="w-4 h-4 text-slate-400" />
                       </div>
                       <p className={`text-xs font-bold ${theme === 'dark' ? 'text-gray-300' : 'text-slate-700'}`}>
-                        {isDragging ? 'Solte o arquivo de backup aqui' : 'Arraste ou clique para enviar backup .json'}
+                        {isDragging ? 'Solte o arquivo de backup local aqui' : 'Arraste ou clique para importar backup local .json'}
                       </p>
                       <p className="text-[10px] text-gray-500">
-                        Apenas arquivos .json gerados originalmente por este painel
+                        A importação local pode apagar dados locais atuais. Use com cuidado.
                       </p>
                     </label>
                   </div>
@@ -2226,7 +2226,7 @@ export default function SettingsTool({
                 }`}>
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
                   <span>
-                    <strong>Cuidado:</strong> A importação apagará as informações locais atuais de forma irreversível antes de carregar o snapshot.
+                    <strong>Ação sensível:</strong> a importação local substitui dados locais atuais de forma irreversível antes de carregar o snapshot.
                   </span>
                 </div>
               </div>
@@ -2241,7 +2241,7 @@ export default function SettingsTool({
             <div className="flex items-center gap-2 pb-3 border-b border-rose-500/10">
               <ShieldAlert className="w-4.5 h-4.5 text-rose-500" />
               <h3 className={`text-xs font-extrabold tracking-wider uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                Zona de Perigo - Resetar Plataforma para o Estado Original
+                Zona de perigo - reset local destrutivo
               </h3>
             </div>
 
@@ -2252,9 +2252,9 @@ export default function SettingsTool({
                 } flex items-start gap-4`}>
                   <AlertTriangle className="w-8 h-8 shrink-0 text-rose-500 animate-pulse mt-0.5" />
                   <div className="space-y-1">
-                    <strong className="text-sm font-extrabold block">Aviso Importante de Redefinição</strong>
+                    <strong className="text-sm font-extrabold block">Ação destrutiva sobre dados locais</strong>
                     <p className="text-xs leading-relaxed max-w-2xl opacity-90">
-                      Esta operação limpa toda a memória local armazenada no seu navegador (<strong className="font-mono">localStorage</strong>). Ao prosseguir, todos os dados customizados inseridos durante sua navegação ou demonstrados em reuniões anteriores serão restaurados para os dados padrão originais.
+                      Esta operação apaga dados locais armazenados no seu navegador (<strong className="font-mono">localStorage</strong>). Antes de resetar, exporte um backup local; dados apagados por reset local não são recuperados pelo servidor.
                     </p>
                   </div>
                 </div>
@@ -2295,14 +2295,14 @@ export default function SettingsTool({
                   theme === 'dark' ? 'bg-[#16161a] border-rose-500/10' : 'bg-slate-50 border-rose-300'
                 }`}>
                   <p className={`text-xs ${theme === 'dark' ? 'text-gray-450' : 'text-slate-600'}`}>
-                    Deseja prosseguir para a formatação do ambiente de demonstração?
+                    Deseja prosseguir com esta ação sensível e destrutiva no ambiente local de demonstração?
                   </p>
                   <button
                     onClick={handleSystemResetStep1}
                     className="mx-auto bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-extrabold text-xs px-6 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-all"
                   >
                     <Trash2 className="w-4 h-4 shrink-0" />
-                    Iniciar Procedimento de Reset
+                    Iniciar reset local
                   </button>
                 </div>
               </>
@@ -2318,7 +2318,7 @@ export default function SettingsTool({
                     CONFIRMAÇÃO EXTREMA REQUERIDA!
                   </h4>
                   <p className={`text-xs leading-relaxed ${theme === 'dark' ? 'text-amber-200/80' : 'text-amber-800'}`}>
-                    Você está prestes a limpar todos os registros locais deste navegador. Esta ação apagará dados locais, pré-notas, rascunhos e configurações de referência cadastradas.
+                    Você está prestes a limpar todos os registros locais deste navegador. Esta ação apaga dados locais, pré-notas, rascunhos e configurações de referência cadastradas.
                   </p>
                 </div>
 
@@ -2328,7 +2328,7 @@ export default function SettingsTool({
                     className="w-full sm:w-auto bg-red-650 hover:bg-red-750 text-white font-black text-xs px-6 py-3 rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-all"
                   >
                     <CheckCircle className="w-4 h-4" />
-                    Sim, Formatar Tudo Agora (Limpar)
+                    Sim, apagar dados locais agora
                   </button>
                   <button
                     onClick={handleCancelReset}

@@ -633,7 +633,7 @@ export default function SettingsTool({
           }`}
         >
           <Scale className="w-3.5 h-3.5" />
-          Regime Fiscal & Impostos
+          Referência fiscal local
         </button>
 
         <button
@@ -645,7 +645,7 @@ export default function SettingsTool({
           }`}
         >
           <KeyRound className="w-3.5 h-3.5" />
-          Certificado Digital A1
+          Referência fiscal futura
         </button>
 
         <button
@@ -1006,7 +1006,7 @@ export default function SettingsTool({
                     Preparação futura de dados fiscais
                   </h3>
                   <p className="text-[10px] text-gray-500 mt-0.5">
-                    Cadastro demonstrativo para dados internos. Não disponível no MVP para emissão real, XML fiscal ou transmissão fiscal.
+                    Cadastro demonstrativo para checklist local, não operacional no MVP, sem emissão real, XML fiscal ou transmissão fiscal.
                   </p>
                 </div>
               </div>
@@ -1187,7 +1187,7 @@ export default function SettingsTool({
                                         href="#download"
                                         onClick={(e) => {
                                           e.preventDefault();
-                                          alert(`Relatório de referência salvo para ${cert.alias}. Sem certificado operacional e sem transmissão fiscal no MVP.`);
+                                          alert(`Relatório de referência salvo para ${cert.alias}. Sem uso operacional de certificado e sem transmissão fiscal no MVP.`);
                                         }}
                                         title="Baixar Chave Pública"
                                         className={`p-1 rounded cursor-pointer ${theme === 'dark' ? 'bg-[#1b1b1f] hover:bg-slate-800' : 'bg-slate-100 hover:bg-slate-200'}`}
@@ -1244,13 +1244,13 @@ export default function SettingsTool({
                     <div className="flex items-center gap-1.5">
                       <ShieldAlert className="w-4 h-4 text-rose-500" />
                       <h4 className={`text-xs font-extrabold uppercase ${theme === 'dark' ? 'text-slate-300' : 'text-slate-800'}`}>
-                        Trilha de Auditoria Interna e Preparação para Contador
+                        Trilha local demonstrativa e preparação para contador
                       </h4>
                     </div>
-                    <span className="text-[10px] text-gray-500 font-mono">ISO/IEC 27001 Cryptography Check</span>
+                    <span className="text-[10px] text-gray-500 font-mono">Checklist local sem transmissão fiscal</span>
                   </div>
                   <p className="text-[10px] text-gray-500">
-                    O ERP registra alterações em dados internos usados para pré-nota interna, rascunho sem valor fiscal e preparação local para contador.
+                    Esta trilha local registra alterações demonstrativas usadas para pré-nota interna, rascunho sem valor fiscal e preparação local para contador.
                   </p>
                   
                   <div className="space-y-2 mt-4">
@@ -1476,7 +1476,7 @@ export default function SettingsTool({
                     type="submit"
                     className="px-4 py-2 text-xs font-bold bg-indigo-600 rounded-lg hover:bg-indigo-500 text-white shadow-sm transition-all cursor-pointer"
                   >
-                    Concluir Armazenamento Seguro
+                    Salvar referência local
                   </button>
                 </div>
               </form>
@@ -1811,7 +1811,7 @@ export default function SettingsTool({
                       />
                       <div>
                         <span className="text-xs font-bold block">Painel de Controle</span>
-                        <span className="text-[9px] text-gray-400 block">Visão geral do caixa, alertas e auditoria em tempo real</span>
+                        <span className="text-[9px] text-gray-400 block">Visão geral do caixa, alertas e trilhas locais demonstrativas</span>
                       </div>
                     </label>
 
@@ -2048,7 +2048,7 @@ export default function SettingsTool({
                                 if (tab === 'dashboard') tabLabel = 'Painel KPI';
                                 else if (tab === 'finance') tabLabel = 'Contábil';
                                 else if (tab === 'logistics') tabLabel = 'Estoque';
-                                else if (tab === 'invoice') tabLabel = 'Notas Fiscais';
+                                else if (tab === 'invoice') tabLabel = 'Pré-notas';
                                 else if (tab === 'hierarchy') tabLabel = 'Hierarquia';
                                 else if (tab === 'advisor') tabLabel = 'Advisor IA';
                                 else if (tab === 'settings') tabLabel = 'Configs';

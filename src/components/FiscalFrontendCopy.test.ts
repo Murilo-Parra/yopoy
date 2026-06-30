@@ -19,9 +19,14 @@ describe('coerência fiscal textual do frontend MVP', () => {
     const source = componentSource('SettingsTool.tsx');
 
     expect(source).not.toMatch(/Sincronizar SEFAZ|Testar Conectividade|envio SEFAZ|Simulador avançado de notas fiscais/i);
+    expect(source).not.toMatch(/emissão oficial|transmissão SEFAZ ativa|certificado operacional|DANFE oficial|cancelamento fiscal real|faturamento real automático/i);
+    expect(source).not.toMatch(/armazenamento seguro|auditoria em tempo real|ISO\/IEC 27001 Cryptography Check/i);
     expect(source).toMatch(/preparação futura/i);
     expect(source).toMatch(/não disponível no MVP/i);
+    expect(source).toMatch(/não operacional no MVP/i);
     expect(source).toMatch(/sem transmissão fiscal/i);
+    expect(source).toMatch(/sem valor fiscal/i);
+    expect(source).toMatch(/trilha local|checklist local/i);
     expect(source).toMatch(/somente dados internos|dados internos/i);
   });
 

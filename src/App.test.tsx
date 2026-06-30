@@ -82,7 +82,8 @@ describe('navegação principal do App', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: /dashboard de teste/i })).toBeTruthy());
     expect(screen.getAllByRole('button', { name: /mesa visual/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /organização local/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /estoque em rascunho|rascunhos/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /apoio de estoque/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /estoque em rascunho|rascunhos/i })).toBeNull();
     expect(screen.getAllByRole('button', { name: /apoio avançado/i }).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /hierarquia/i })).toBeNull();
     expect(screen.getAllByRole('button', { name: /orientação local|^ia$/i }).length).toBeGreaterThan(0);
@@ -127,7 +128,7 @@ describe('navegação principal do App', () => {
     await waitFor(() => expect(screen.getByRole('heading', { name: /dashboard de teste/i })).toBeTruthy());
     expect(screen.getAllByRole('button', { name: /mesa visual/i }).length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: /organização local/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /estoque em rascunho|rascunhos/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /apoio de estoque/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /ajustes locais|ajustes/i })).toBeNull();
   });
 
@@ -162,5 +163,35 @@ describe('navegação principal do App', () => {
     expect(hierarchyIndex).toBeGreaterThan(buttons.indexOf(logisticsButton as HTMLButtonElement));
     expect(hierarchyIndex).toBeGreaterThan(buttons.indexOf(invoiceButton as HTMLButtonElement));
     expect(hierarchyIndex).toBeGreaterThan(buttons.indexOf(settingsButton as HTMLButtonElement));
+  });
+
+  it('mantém o apoio de estoque depois dos módulos principais no menu lateral', async () => {
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: /dashboard de teste/i })).toBeTruthy());
+
+    const sidebar = document.getElementById('sidebar-main');
+    const dashboardButton = document.getElementById('sidebar-nav-dashboard');
+    const tasksButton = document.getElementById('sidebar-nav-tasks');
+    const financeButton = document.getElementById('sidebar-nav-finance');
+    const invoiceButton = document.getElementById('sidebar-nav-invoice');
+    const logisticsButton = document.getElementById('sidebar-nav-logistics');
+    const settingsButton = document.getElementById('sidebar-nav-settings-main');
+
+    expect(sidebar).not.toBeNull();
+    expect(dashboardButton).not.toBeNull();
+    expect(tasksButton).not.toBeNull();
+    expect(financeButton).not.toBeNull();
+    expect(invoiceButton).not.toBeNull();
+    expect(settingsButton).not.toBeNull();
+    expect(logisticsButton).not.toBeNull();
+
+    const buttons = Array.from(sidebar?.querySelectorAll('button') ?? []);
+    const logisticsIndex = buttons.indexOf(logisticsButton as HTMLButtonElement);
+    expect(logisticsIndex).toBeGreaterThan(buttons.indexOf(dashboardButton as HTMLButtonElement));
+    expect(logisticsIndex).toBeGreaterThan(buttons.indexOf(tasksButton as HTMLButtonElement));
+    expect(logisticsIndex).toBeGreaterThan(buttons.indexOf(financeButton as HTMLButtonElement));
+    expect(logisticsIndex).toBeGreaterThan(buttons.indexOf(invoiceButton as HTMLButtonElement));
+    expect(logisticsIndex).toBeGreaterThan(buttons.indexOf(settingsButton as HTMLButtonElement));
   });
 });

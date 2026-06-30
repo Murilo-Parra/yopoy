@@ -723,17 +723,6 @@ export default function App() {
                   </button>
                 )}
 
-                {isTabAllowed('logistics') && (
-                  <button
-                    id="sidebar-nav-logistics"
-                    onClick={() => handleTabChange('logistics')}
-                    className={getSidebarBtnClass('logistics')}
-                  >
-                    <Scan className="w-4 h-4 text-emerald-550" />
-                    Estoque em rascunho
-                  </button>
-                )}
-
                 {isTabAllowed('invoice') && (
                   <button
                     id="sidebar-nav-invoice"
@@ -764,6 +753,17 @@ export default function App() {
                   >
                     <Settings className="w-4 h-4 text-indigo-400" />
                     Ajustes locais
+                  </button>
+                )}
+
+                {isTabAllowed('logistics') && (
+                  <button
+                    id="sidebar-nav-logistics"
+                    onClick={() => handleTabChange('logistics')}
+                    className={`${getSidebarBtnClass('logistics')} opacity-80`}
+                  >
+                    <Scan className="w-4 h-4 text-slate-400" />
+                    Apoio de estoque
                   </button>
                 )}
 
@@ -1015,16 +1015,6 @@ export default function App() {
                   Organização local
                 </button>
               )}
-              {isTabAllowed('logistics') && (
-                <button
-                  onClick={() => handleTabChange('logistics')}
-                  className={`py-2 px-3 text-[11px] font-bold rounded-lg transition-colors whitespace-nowrap ${
-                    activeTab === 'logistics' ? 'bg-indigo-600 text-white' : 'text-[#94a3b8]'
-                  }`}
-                >
-                  Rascunhos
-                </button>
-              )}
               {isTabAllowed('invoice') && (
                 <button
                   onClick={() => handleTabChange('invoice')}
@@ -1053,6 +1043,16 @@ export default function App() {
                   }`}
                 >
                   Ajustes
+                </button>
+              )}
+              {isTabAllowed('logistics') && (
+                <button
+                  onClick={() => handleTabChange('logistics')}
+                  className={`py-2 px-3 text-[11px] font-bold rounded-lg transition-colors whitespace-nowrap opacity-80 ${
+                    activeTab === 'logistics' ? 'bg-indigo-600 text-white' : 'text-slate-400'
+                  }`}
+                >
+                  Apoio de estoque
                 </button>
               )}
               {isTabAllowed('hierarchy') && (

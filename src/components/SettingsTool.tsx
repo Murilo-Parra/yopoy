@@ -1815,7 +1815,7 @@ export default function SettingsTool({
                       </div>
                     </label>
 
-                    {/* MÓDULO CONTÁBIL */}
+                    {/* ORGANIZAÇÃO LOCAL */}
                     <label className={`p-3 rounded-xl border flex items-start gap-3 cursor-pointer select-none transition-all ${
                         newUserAllowedTabs.includes('finance')
                           ? 'border-indigo-500/40 bg-indigo-500/5'
@@ -1832,12 +1832,12 @@ export default function SettingsTool({
                         className="rounded mt-0.5 accent-indigo-600 cursor-pointer"
                       />
                       <div>
-                        <span className="text-xs font-bold block">Módulo Contábil</span>
+                        <span className="text-xs font-bold block">Organização local</span>
                         <span className="text-[9px] text-gray-400 block">Lançamento de transações, gráficos financeiros e conciliação</span>
                       </div>
                     </label>
 
-                    {/* LOGÍSTICA & ESTOQUE */}
+                    {/* APOIO DE ESTOQUE */}
                     <label className={`p-3 rounded-xl border flex items-start gap-3 select-none transition-all ${
                         newUserAllowedTabs.includes('logistics')
                           ? 'border-indigo-500/40 bg-indigo-500/5 cursor-pointer'
@@ -1854,7 +1854,7 @@ export default function SettingsTool({
                         className="rounded mt-0.5 accent-indigo-600 cursor-pointer"
                       />
                       <div>
-                        <span className="text-xs font-bold block flex items-center gap-1">Logística & Estoque</span>
+                        <span className="text-xs font-bold block flex items-center gap-1">Apoio de estoque</span>
                         <span className="text-[9px] text-gray-400 block">Gestão de produtos, movimentações e avarias de lotes</span>
                       </div>
                     </label>
@@ -1876,12 +1876,12 @@ export default function SettingsTool({
                         className="rounded mt-0.5 accent-indigo-600 cursor-pointer"
                       />
                       <div>
-                        <span className="text-xs font-bold block">Pré-nota / Contador</span>
+                        <span className="text-xs font-bold block">Pré-notas locais</span>
                         <span className="text-[9px] text-gray-400 block font-sans">Rascunho interno sem valor fiscal e preparação local para contador</span>
                       </div>
                     </label>
 
-                    {/* HIERARQUIA & TAREFAS */}
+                    {/* APOIO AVANÇADO */}
                     <label className={`p-3 rounded-xl border flex items-start gap-3 cursor-pointer select-none transition-all ${
                         newUserAllowedTabs.includes('hierarchy')
                           ? 'border-indigo-500/40 bg-indigo-500/5'
@@ -1898,12 +1898,12 @@ export default function SettingsTool({
                         className="rounded mt-0.5 accent-indigo-600 cursor-pointer"
                       />
                       <div>
-                        <span className="text-xs font-bold block">Hierarquia & Tarefas</span>
+                        <span className="text-xs font-bold block">Apoio avançado</span>
                         <span className="text-[9px] text-gray-400 block">Distribuição de afazeres, organogramas corporativos e status</span>
                       </div>
                     </label>
 
-                    {/* ORIENTAÇÃO IA */}
+                    {/* ORIENTAÇÃO LOCAL */}
                     <label className={`p-3 rounded-xl border flex items-start gap-3 select-none transition-all ${
                         selectedPlan === 'pequena' 
                           ? 'opacity-40 cursor-not-allowed border-dashed border-slate-800' 
@@ -1923,12 +1923,12 @@ export default function SettingsTool({
                         className="rounded mt-0.5 accent-indigo-600 cursor-pointer"
                       />
                       <div>
-                        <span className="text-xs font-bold block flex items-center gap-1">Orientação Inteligente IA {selectedPlan === 'pequena' && <span>🔒</span>}</span>
+                        <span className="text-xs font-bold block flex items-center gap-1">Orientação local {selectedPlan === 'pequena' && <span>🔒</span>}</span>
                         <span className="text-[9px] text-gray-400 block">{selectedPlan === 'pequena' ? 'Inclusão requer Plano Premium' : 'Consultoria estatística e análises de mercado guiadas por IA'}</span>
                       </div>
                     </label>
 
-                    {/* CONFIGURAÇÕES GLOBAIS */}
+                    {/* AJUSTES LOCAIS */}
                     <label className={`p-3 rounded-xl border flex items-start gap-3 cursor-pointer select-none transition-all ${
                         newUserAllowedTabs.includes('settings')
                           ? 'border-indigo-500/40 bg-indigo-500/5'
@@ -1945,7 +1945,7 @@ export default function SettingsTool({
                         className="rounded mt-0.5 accent-indigo-600 cursor-pointer"
                       />
                       <div>
-                        <span className="text-xs font-bold block">Configurações Globais</span>
+                        <span className="text-xs font-bold block">Ajustes locais</span>
                         <span className="text-[9px] text-gray-400 block">Acesso ao painel tributário, mudança cadastral exceto usuários</span>
                       </div>
                     </label>
@@ -2045,13 +2045,13 @@ export default function SettingsTool({
                             <div className="flex flex-wrap gap-1 max-w-md">
                               {user.allowedTabs.map((tab: string) => {
                                 let tabLabel = tab;
-                                if (tab === 'dashboard') tabLabel = 'Painel KPI';
-                                else if (tab === 'finance') tabLabel = 'Contábil';
-                                else if (tab === 'logistics') tabLabel = 'Estoque';
+                                if (tab === 'dashboard') tabLabel = 'Painel de Controle';
+                                else if (tab === 'finance') tabLabel = 'Organização local';
+                                else if (tab === 'logistics') tabLabel = 'Apoio de estoque';
                                 else if (tab === 'invoice') tabLabel = 'Pré-notas';
-                                else if (tab === 'hierarchy') tabLabel = 'Hierarquia';
-                                else if (tab === 'advisor') tabLabel = 'Advisor IA';
-                                else if (tab === 'settings') tabLabel = 'Configs';
+                                else if (tab === 'hierarchy') tabLabel = 'Apoio avançado';
+                                else if (tab === 'advisor') tabLabel = 'Orientação local';
+                                else if (tab === 'settings') tabLabel = 'Ajustes locais';
                                 return (
                                   <span key={tab} className="bg-indigo-500/10 text-indigo-400 border border-indigo-500/10 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider">
                                     {tabLabel}

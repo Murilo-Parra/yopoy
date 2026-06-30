@@ -60,3 +60,30 @@ describe('copy de usuários locais do SettingsTool', () => {
     expect(source).not.toMatch(/acesso seguro/i);
   });
 });
+
+describe('labels internos de permissões do SettingsTool', () => {
+  it('usa os nomes atuais do App para módulos e permissões locais', () => {
+    const source = settingsSource();
+
+    expect(source).toMatch(/Painel de Controle/i);
+    expect(source).toMatch(/Organização local/i);
+    expect(source).toMatch(/Apoio de estoque/i);
+    expect(source).toMatch(/Pré-notas/i);
+    expect(source).toMatch(/Apoio avançado/i);
+    expect(source).toMatch(/Orientação local/i);
+    expect(source).toMatch(/Ajustes locais/i);
+  });
+
+  it('não reutiliza labels antigos como nomes principais de permissões', () => {
+    const source = settingsSource();
+
+    expect(source).not.toMatch(/Módulo Contábil/i);
+    expect(source).not.toMatch(/Logística & Estoque/i);
+    expect(source).not.toMatch(/Hierarquia & Tarefas/i);
+    expect(source).not.toMatch(/Orientação Inteligente IA/i);
+    expect(source).not.toMatch(/Configurações Globais/i);
+    expect(source).not.toMatch(/Painel KPI/i);
+    expect(source).not.toMatch(/Advisor IA/i);
+    expect(source).not.toMatch(/Configs/i);
+  });
+});

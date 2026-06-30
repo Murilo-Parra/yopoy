@@ -47,7 +47,6 @@ import LogisticsTool from './components/LogisticsTool';
 import ChatAssistant from './components/ChatAssistant';
 import HierarchyTool from './components/HierarchyTool';
 import InvoiceTool from './components/InvoiceTool';
-import MonthlyFinanceChart from './components/MonthlyFinanceChart';
 import SettingsTool from './components/SettingsTool';
 import OnboardingTutorial from './components/OnboardingTutorial';
 import ElparrarLandingPage from './components/ElparrarLandingPage';
@@ -1745,12 +1744,6 @@ export default function App() {
           </motion.div>
         </div>
       )}
-
-      <OnboardingTutorial 
-        isOpen={showTutorial} 
-        onClose={() => setShowTutorial(false)} 
-        theme={theme} 
-      />
 
         </motion.div>
       )}

@@ -32,7 +32,11 @@ vi.mock('./frontend/auth/AuthContext', () => {
 });
 
 vi.mock('./components/ElparrarLandingPage', () => ({ default: () => <div>Página inicial</div> }));
-vi.mock('./components/OnboardingTutorial', () => ({ default: () => null }));
+vi.mock('./components/OnboardingTutorial', () => ({
+  default: ({ isOpen }: { isOpen: boolean }) => (
+    isOpen ? <div role="dialog" aria-label="Tutorial de onboarding">Tutorial de onboarding</div> : null
+  ),
+}));
 vi.mock('./components/FinanceTool', () => ({ default: () => <h1>Financeiro liberado</h1> }));
 vi.mock('./features/yopoy-dashboard', () => ({
   YopoyBusinessDashboard: ({ onOpenTaskBoard }: { onOpenTaskBoard: () => void }) => (
@@ -87,6 +91,15 @@ describe('navegação principal do App', () => {
     fireEvent.click(screen.getAllByRole('button', { name: /organização local/i })[0]);
     expect(screen.getByRole('heading', { name: /financeiro liberado/i })).toBeTruthy();
     expect(screen.queryByText(/acesso negado/i)).toBeNull();
+  });
+
+  it('renderiza no máximo uma instância do OnboardingTutorial quando o tutorial está visível', async () => {
+    localStorage.removeItem('biz_onboarding_tutorial_viewed');
+
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: /dashboard de teste/i })).toBeTruthy());
+    expect(screen.getAllByRole('dialog', { name: /tutorial de onboarding/i })).toHaveLength(1);
   });
 
   it('apresenta somente a área interna de pré-nota no menu principal', async () => {

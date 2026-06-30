@@ -59,6 +59,16 @@ describe('copy de usuários locais do SettingsTool', () => {
     expect(source).not.toMatch(/controle empresarial completo/i);
     expect(source).not.toMatch(/acesso seguro/i);
   });
+
+  it('oculta visualmente a senha local sem prometer proteção operacional', () => {
+    const source = settingsSource();
+
+    expect(source).toMatch(/Senha local demonstrativa[\s\S]*type="password"/i);
+    expect(source).toMatch(/Senha local demonstrativa ocultada visualmente/i);
+    expect(source).toMatch(/Dado local demonstrativo ocultado na tela/i);
+    expect(source).not.toMatch(/>\{user\.password\}<\/td>/i);
+    expect(source).not.toMatch(/senha protegida|credencial segura|autenticação real por usuário local/i);
+  });
 });
 
 describe('labels internos de permissões do SettingsTool', () => {

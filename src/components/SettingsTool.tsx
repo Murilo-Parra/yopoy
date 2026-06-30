@@ -1775,7 +1775,7 @@ export default function SettingsTool({
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">Senha local demonstrativa</label>
                     <input
-                      type="text"
+                      type="password"
                       required
                       placeholder="Ex: carlos123!"
                       value={newUserPass}
@@ -2040,7 +2040,10 @@ export default function SettingsTool({
                         <tr key={user.id} className="border-b last:border-0 border-slate-200/5 hover:bg-slate-50/5">
                           <td className="p-3.5 font-bold text-slate-200">{user.name}</td>
                           <td className="p-3.5 text-slate-400 font-mono text-[11px]">{user.login}</td>
-                          <td className="p-3.5 text-emerald-500 font-mono font-extrabold text-[11px]">{user.password}</td>
+                          <td className="p-3.5 text-slate-400 font-mono font-extrabold text-[11px]">
+                            <span aria-label="Senha local demonstrativa ocultada visualmente">••••••••</span>
+                            <span className="block text-[9px] font-medium normal-case text-slate-500">Dado local demonstrativo ocultado na tela</span>
+                          </td>
                           <td className="p-3.5">
                             <div className="flex flex-wrap gap-1 max-w-md">
                               {user.allowedTabs.map((tab: string) => {

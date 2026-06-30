@@ -33,3 +33,30 @@ describe('copy de backup e reset local do SettingsTool', () => {
     expect(source).not.toMatch(/backup seguro/i);
   });
 });
+
+describe('copy de usuários locais do SettingsTool', () => {
+  it('explica que usuários, senhas e permissões são locais e demonstrativos', () => {
+    const source = settingsSource();
+
+    expect(source).toMatch(/usuários locais/i);
+    expect(source).toMatch(/permissões locais/i);
+    expect(source).toMatch(/controle demonstrativo/i);
+    expect(source).toMatch(/dados são salvos neste navegador|salvos neste navegador/i);
+    expect(source).toMatch(/não substituem? autenticação real/i);
+    expect(source).toMatch(/não é segurança de produção|não.*segurança de produção/i);
+    expect(source).toMatch(/não usar senhas reais/i);
+    expect(source).toMatch(/senhas locais demonstrativas/i);
+    expect(source).toMatch(/perfis locais/i);
+  });
+
+  it('não promete IAM, credenciais seguras ou segurança de produção', () => {
+    const source = settingsSource();
+
+    expect(source).not.toMatch(/IAM empresarial/i);
+    expect(source).not.toMatch(/autenticação segura/i);
+    expect(source).not.toMatch(/senha protegida/i);
+    expect(source).not.toMatch(/credenciais seguras/i);
+    expect(source).not.toMatch(/controle empresarial completo/i);
+    expect(source).not.toMatch(/acesso seguro/i);
+  });
+});

@@ -682,7 +682,7 @@ export default function SettingsTool({
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            Gestão de Usuários {selectedPlan === 'micro' && '🔒'}
+            Usuários locais {selectedPlan === 'micro' && '🔒'}
           </button>
         )}
 
@@ -1672,16 +1672,16 @@ export default function SettingsTool({
                 Módulo Indisponível no Plano Básico
               </h3>
               <p className="text-xs text-slate-400">
-                A Gestão de Contas de Funcionários permite adicionar múltiplos logins subordinados vinculados ao e-mail principal, controlando as abas e dados contábeis que cada um pode gerenciar.
+                Os usuários locais são perfis demonstrativos do MVP para controlar navegação local. Não substitui autenticação real, gestão corporativa de identidade ou segurança de produção.
               </p>
             </div>
             
             <div className="p-4 bg-slate-500/5 rounded-2xl border border-slate-200/10 text-left space-y-3">
               <span className="text-[10px] font-black uppercase text-indigo-400 block tracking-wider">Recursos Inclusos no Upgrade:</span>
               <ul className="text-xs space-y-1.5 text-slate-300 list-none font-medium">
-                <li>✅ <strong>Plano Médio:</strong> Até 4 logins de funcionários além do principal</li>
-                <li>✅ <strong>Plano Premium:</strong> Quantidade ilimitada de funcionários com senhas individuais</li>
-                <li>✅ <strong>Acesso Personalizado:</strong> Defina quais ferramentas exatas (estoque, fiscal, financeiro) cada funcionário pode abrir</li>
+                <li>✅ <strong>Plano Médio:</strong> Até 4 perfis locais de funcionários além do principal</li>
+                <li>✅ <strong>Plano Premium:</strong> Perfis locais ilimitados com senhas locais demonstrativas</li>
+                <li>✅ <strong>Controle demonstrativo:</strong> Defina permissões locais de navegação para a simulação interna</li>
               </ul>
             </div>
 
@@ -1696,7 +1696,7 @@ export default function SettingsTool({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/5">
               <div>
                 <h3 className={`text-xs font-extrabold tracking-wider uppercase flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-slate-805'}`}>
-                  <span>Contas de Acesso de Funcionários / Colaboradores</span>
+                  <span>Usuários locais e permissões demonstrativas</span>
                   <span className={`text-[9px] px-2 py-0.5 rounded-full font-black uppercase ${
                     selectedPlan === 'media' 
                       ? 'bg-rose-500/10 text-rose-500 border border-rose-500/20' 
@@ -1706,7 +1706,7 @@ export default function SettingsTool({
                   </span>
                 </h3>
                 <p className="text-[11px] text-slate-400 mt-1">
-                  Crie acessos para funcionários usarem o e-mail unificado <strong>{parentEmail}</strong>. Cada funcionário entra com sua própria senha indicada abaixo e fica visualmente limitado às abas que você habilitar.
+                  Crie perfis locais para demonstração usando o e-mail unificado <strong>{parentEmail}</strong>. Os dados são salvos neste navegador, não substituem autenticação real e as permissões locais apenas limitam a navegação visual do MVP.
                 </p>
               </div>
 
@@ -1727,7 +1727,7 @@ export default function SettingsTool({
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-lg transition-all shrink-0"
               >
                 <Plus className="w-4 h-4" />
-                Adicionar Usuário
+                Adicionar usuário local
               </button>
             </div>
 
@@ -1750,7 +1750,7 @@ export default function SettingsTool({
               } space-y-4 animate-fade-in`}>
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100/5">
                   <h4 className="text-xs font-extrabold uppercase tracking-wider text-indigo-400">
-                    Novas Credenciais e Permissão de Abas
+                    Perfil local e permissões de navegação
                   </h4>
                   <button onClick={() => setIsAddingUser(false)} className="text-gray-400 hover:text-white text-xs font-bold cursor-pointer">
                     Fechar &times;
@@ -1773,7 +1773,7 @@ export default function SettingsTool({
                   </div>
 
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">Senha Própria (Diferencial)</label>
+                    <label className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">Senha local demonstrativa</label>
                     <input
                       type="text"
                       required
@@ -1784,13 +1784,13 @@ export default function SettingsTool({
                         theme === 'dark' ? 'bg-[#111114] border-slate-800 text-white' : 'bg-white border text-slate-800'
                       }`}
                     />
-                    <span className="text-[9px] text-slate-400 block">Este colaborador entrará escrevendo <strong>{parentEmail}</strong> no login e sua senha própria.</span>
+                    <span className="text-[9px] text-slate-400 block">Use apenas para simulação interna: não usar senhas reais. Este controle local não é segurança de produção.</span>
                   </div>
                 </div>
 
                 {/* ABA DE SELEÇÃO DE MAIOR DESIGN */}
                 <div className="space-y-2 pt-2">
-                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-450 block">Assinalar Permissões de Controle de Abas</label>
+                  <label className="text-[10px] font-black uppercase tracking-wider text-gray-450 block">Permissões locais de navegação</label>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     {/* DASHBOARD */}
@@ -1964,7 +1964,7 @@ export default function SettingsTool({
                     type="button"
                     onClick={() => {
                       if (!newUserName.trim() || !newUserPass.trim()) {
-                        setUserAdminError('⚠️ Por favor, assinale o Nome e a Senha para o funcionário.');
+                        setUserAdminError('⚠️ Por favor, assinale o Nome e a senha local demonstrativa para o funcionário.');
                         return;
                       }
                       
@@ -1975,12 +1975,12 @@ export default function SettingsTool({
                       );
                       
                       if (!isUniquePassword) {
-                        setUserAdminError('⚠️ Esta senha já está em uso por outro colaborador desta empresa. Atribua uma senha exclusiva!');
+                        setUserAdminError('⚠️ Esta senha local demonstrativa já está em uso por outro colaborador desta empresa. Atribua uma senha exclusiva para a simulação.');
                         return;
                       }
 
                       if (newUserAllowedTabs.length === 0) {
-                        setUserAdminError('⚠️ Você deve selecionar ao menos uma ferramenta permitida para este usuário!');
+                        setUserAdminError('⚠️ Você deve selecionar ao menos uma permissão local de navegação para este usuário.');
                         return;
                       }
 
@@ -1999,12 +1999,12 @@ export default function SettingsTool({
                       setIsAddingUser(false);
                       setNewUserName('');
                       setNewUserPass('');
-                      setUserAdminSuccess('🎉 Conta de funcionário adicionada! O login já está ativo.');
+                      setUserAdminSuccess('Perfil local de funcionário adicionado para demonstração neste navegador.');
                       setTimeout(() => setUserAdminSuccess(null), 5000);
                     }}
                     className="bg-[#10b981] hover:bg-[#059669] text-white font-extrabold text-xs px-5 py-2.5 rounded-xl cursor-pointer transition-all shadow-md"
                   >
-                    Confirmar Cadastro e Ativar Acesso
+                    Salvar perfil local
                   </button>
                 </div>
               </div>
@@ -2015,12 +2015,12 @@ export default function SettingsTool({
               <div className={`p-4 font-extrabold text-[10px] uppercase tracking-wider ${
                 theme === 'dark' ? 'bg-[#18181c] text-indigo-400 border-b border-[#222228]' : 'bg-slate-50 text-indigo-700 border-b border-slate-100'
               }`}>
-                Colaboradores com Login Ativado nesta Empresa ({subUsers.filter((u: any) => u.login && u.login.toLowerCase() === parentEmail.toLowerCase()).length})
+                Usuários locais salvos neste navegador ({subUsers.filter((u: any) => u.login && u.login.toLowerCase() === parentEmail.toLowerCase()).length})
               </div>
 
               {subUsers.filter((u: any) => u.login && u.login.toLowerCase() === parentEmail.toLowerCase()).length === 0 ? (
                 <div className="p-8 text-center text-slate-400 text-xs font-medium">
-                  Nenhuma conta de colaborador adicionada ainda. Utilize o botão "Adicionar Usuário" e defina os acessos.
+                  Nenhum perfil local adicionado ainda. Utilize o botão "Adicionar usuário local" e defina permissões locais de navegação.
                 </div>
               ) : (
                 <table className="w-full text-left text-xs">
@@ -2028,8 +2028,8 @@ export default function SettingsTool({
                     <tr className={`border-b border-slate-200/5 ${theme === 'dark' ? 'bg-black/10' : 'bg-slate-50'}`}>
                       <th className="p-3.5 text-[10px] font-black uppercase text-slate-400">Nome do Funcionário</th>
                       <th className="p-3.5 text-[10px] font-black uppercase text-slate-400">Login (E-mail Core)</th>
-                      <th className="p-3.5 text-[10px] font-black uppercase text-slate-400">Senha Própria</th>
-                      <th className="p-3.5 text-[10px] font-black uppercase text-slate-400">Permissão de Ferramentas</th>
+                      <th className="p-3.5 text-[10px] font-black uppercase text-slate-400">Senha local demonstrativa</th>
+                      <th className="p-3.5 text-[10px] font-black uppercase text-slate-400">Permissões locais</th>
                       <th className="p-3.5 text-[10px] font-black uppercase text-slate-400 text-right">Desconectar</th>
                     </tr>
                   </thead>
@@ -2066,7 +2066,7 @@ export default function SettingsTool({
                                 const updated = subUsers.filter((u: any) => u.id !== user.id);
                                 setSubUsers(updated);
                                 localStorage.setItem('biz_sub_users', JSON.stringify(updated));
-                                setUserAdminSuccess('🔥 Colaborador removido e conexões encerradas!');
+                                setUserAdminSuccess('Perfil local removido deste navegador.');
                                 setTimeout(() => setUserAdminSuccess(null), 4000);
                               }}
                               className="text-rose-500 hover:text-rose-650 cursor-pointer p-1"

@@ -745,17 +745,6 @@ export default function App() {
                   </button>
                 )}
 
-                {isTabAllowed('hierarchy') && (
-                  <button
-                    id="sidebar-nav-hierarchy"
-                    onClick={() => handleTabChange('hierarchy')}
-                    className={getSidebarBtnClass('hierarchy')}
-                  >
-                    <Users className="w-4 h-4 text-indigo-505" />
-                    Hierarquia & Tarefas
-                  </button>
-                )}
-
                 {isTabAllowed('advisor') && (
                   <button
                     id="sidebar-nav-advisor"
@@ -775,6 +764,17 @@ export default function App() {
                   >
                     <Settings className="w-4 h-4 text-indigo-400" />
                     Ajustes locais
+                  </button>
+                )}
+
+                {isTabAllowed('hierarchy') && (
+                  <button
+                    id="sidebar-nav-hierarchy"
+                    onClick={() => handleTabChange('hierarchy')}
+                    className={`${getSidebarBtnClass('hierarchy')} opacity-80`}
+                  >
+                    <Users className="w-4 h-4 text-slate-400" />
+                    Apoio avançado
                   </button>
                 )}
 
@@ -1035,16 +1035,6 @@ export default function App() {
                   Pré-nota visual
                 </button>
               )}
-              {isTabAllowed('hierarchy') && (
-                <button
-                  onClick={() => handleTabChange('hierarchy')}
-                  className={`py-2 px-3 text-[11px] font-bold rounded-lg transition-colors whitespace-nowrap ${
-                    activeTab === 'hierarchy' ? 'bg-indigo-600 text-white' : 'text-[#94a3b8]'
-                  }`}
-                >
-                  Hierarquia/Tarefas
-                </button>
-              )}
               {isTabAllowed('advisor') && (
                 <button
                   onClick={() => handleTabChange('advisor')}
@@ -1063,6 +1053,16 @@ export default function App() {
                   }`}
                 >
                   Ajustes
+                </button>
+              )}
+              {isTabAllowed('hierarchy') && (
+                <button
+                  onClick={() => handleTabChange('hierarchy')}
+                  className={`py-2 px-3 text-[11px] font-bold rounded-lg transition-colors whitespace-nowrap opacity-80 ${
+                    activeTab === 'hierarchy' ? 'bg-indigo-600 text-white' : 'text-slate-400'
+                  }`}
+                >
+                  Apoio avançado
                 </button>
               )}
             </div>

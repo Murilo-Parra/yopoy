@@ -83,7 +83,8 @@ describe('navegação principal do App', () => {
     expect(screen.getAllByRole('button', { name: /mesa visual/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /organização local/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /estoque em rascunho|rascunhos/i }).length).toBeGreaterThan(0);
-    expect(screen.getAllByRole('button', { name: /hierarquia/i }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('button', { name: /apoio avançado/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('button', { name: /hierarquia/i })).toBeNull();
     expect(screen.getAllByRole('button', { name: /orientação local|^ia$/i }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /ajustes locais|ajustes/i }).length).toBeGreaterThan(0);
     expect(document.body.textContent).not.toMatch(/Caixa:|caixa real|fiscal real/i);
@@ -128,5 +129,38 @@ describe('navegação principal do App', () => {
     expect(screen.queryByRole('button', { name: /organização local/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /estoque em rascunho|rascunhos/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /ajustes locais|ajustes/i })).toBeNull();
+  });
+
+  it('mantém a ferramenta avançada depois dos módulos principais no menu lateral', async () => {
+    render(<App />);
+
+    await waitFor(() => expect(screen.getByRole('heading', { name: /dashboard de teste/i })).toBeTruthy());
+
+    const sidebar = document.getElementById('sidebar-main');
+    const dashboardButton = document.getElementById('sidebar-nav-dashboard');
+    const tasksButton = document.getElementById('sidebar-nav-tasks');
+    const financeButton = document.getElementById('sidebar-nav-finance');
+    const logisticsButton = document.getElementById('sidebar-nav-logistics');
+    const invoiceButton = document.getElementById('sidebar-nav-invoice');
+    const hierarchyButton = document.getElementById('sidebar-nav-hierarchy');
+    const settingsButton = document.getElementById('sidebar-nav-settings-main');
+
+    expect(sidebar).not.toBeNull();
+    expect(dashboardButton).not.toBeNull();
+    expect(tasksButton).not.toBeNull();
+    expect(financeButton).not.toBeNull();
+    expect(logisticsButton).not.toBeNull();
+    expect(invoiceButton).not.toBeNull();
+    expect(settingsButton).not.toBeNull();
+    expect(hierarchyButton).not.toBeNull();
+
+    const buttons = Array.from(sidebar?.querySelectorAll('button') ?? []);
+    const hierarchyIndex = buttons.indexOf(hierarchyButton as HTMLButtonElement);
+    expect(hierarchyIndex).toBeGreaterThan(buttons.indexOf(dashboardButton as HTMLButtonElement));
+    expect(hierarchyIndex).toBeGreaterThan(buttons.indexOf(tasksButton as HTMLButtonElement));
+    expect(hierarchyIndex).toBeGreaterThan(buttons.indexOf(financeButton as HTMLButtonElement));
+    expect(hierarchyIndex).toBeGreaterThan(buttons.indexOf(logisticsButton as HTMLButtonElement));
+    expect(hierarchyIndex).toBeGreaterThan(buttons.indexOf(invoiceButton as HTMLButtonElement));
+    expect(hierarchyIndex).toBeGreaterThan(buttons.indexOf(settingsButton as HTMLButtonElement));
   });
 });

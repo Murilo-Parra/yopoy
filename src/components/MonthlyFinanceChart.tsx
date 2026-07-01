@@ -161,7 +161,7 @@ export default function MonthlyFinanceChart({ transactions, theme }: MonthlyFina
             ))}
             {payload.length >= 2 && (
               <div className="border-t pt-2 mt-1 flex items-center justify-between gap-6 text-[11px] font-bold border-dashed border-slate-200/10">
-                <span className="text-slate-400">Saldo Líquido:</span>
+                <span className="text-slate-400">Saldo visual local:</span>
                 <span className={`font-mono font-bold ${
                   payload[0].value - payload[1].value >= 0 ? 'text-emerald-500' : 'text-rose-500'
                 }`}>
@@ -214,10 +214,13 @@ export default function MonthlyFinanceChart({ transactions, theme }: MonthlyFina
             theme === 'dark' ? 'text-slate-200' : 'text-slate-800'
           }`}>
             <DollarSign className="w-4 h-4 text-emerald-500" />
-            Evolução de Fluxo Mensal (Receitas vs Despesas)
+            Evolução visual mensal (entradas vs saídas)
           </h3>
           <p className="text-xs text-slate-500 dark:text-gray-500 mt-1">
-            Gráfico comparativo consolidando dados históricos reais com integrações contábeis em tempo real.
+            Gráfico demonstrativo local para organização interna, sem valor contábil oficial.
+          </p>
+          <p className="mt-1 text-[11px] text-slate-500 dark:text-gray-500">
+            Visual local demonstrativo do MVP. Sem banco real, sem integração bancária, sem pagamento real e não substitui contador.
           </p>
         </div>
 
@@ -233,7 +236,7 @@ export default function MonthlyFinanceChart({ transactions, theme }: MonthlyFina
           </div>
           <button
             onClick={() => setIsModalOpen(true)}
-            title="Expandir Evolução de Fluxo"
+            title="Expandir referência visual local"
             className={`p-1.5 rounded-lg border transition-all active:scale-95 cursor-pointer flex items-center justify-center ${
               theme === 'dark' 
                 ? 'bg-[#15151d] hover:bg-[#1a1a24] text-emerald-400 border-[#2b2b35]' 
@@ -396,10 +399,10 @@ export default function MonthlyFinanceChart({ transactions, theme }: MonthlyFina
                 Diagnóstico de Rentabilidade
               </p>
               <p className="mt-1 opacity-90">
-                Este mês encerrou com saldo operacional parcial de <strong className="font-bold">R$ {currentSalValueStr}</strong>. 
+                Este mês encerrou com saldo visual parcial de <strong className="font-bold">R$ {currentSalValueStr}</strong>.
                 {isSaldoPositive 
-                  ? " O negócio está gerando fluxo de caixa líquido positivo. Excelente controle de despesas!"
-                  : " Alerta: O faturamento em notas e vendas está abaixo do acumulado de despesas. Reavalie gastos do mês."}
+                  ? " A organização local está positiva nesta referência demonstrativa. Use apenas como apoio interno."
+                  : " Alerta visual: as entradas locais estão abaixo do acumulado de saídas. Revise os registros internos do mês."}
               </p>
             </div>
           </div>
@@ -427,8 +430,8 @@ export default function MonthlyFinanceChart({ transactions, theme }: MonthlyFina
                   <DollarSign className="w-6 h-6 animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="font-black text-base uppercase tracking-wider">Investigação de Balanço Mensal</h3>
-                  <p className="text-xs text-slate-400">Inspeção profunda de receitas, despesas e fluxos gerados sobre datas contábeis.</p>
+                  <h3 className="font-black text-base uppercase tracking-wider">Conferência visual mensal</h3>
+                  <p className="text-xs text-slate-400">Inspeção visual de entradas, saídas e registros gerados sobre datas de referência local.</p>
                 </div>
               </div>
               <button
@@ -496,15 +499,15 @@ export default function MonthlyFinanceChart({ transactions, theme }: MonthlyFina
                   theme === 'dark' ? 'bg-[#141419] border-indigo-500/10 text-gray-400' : 'bg-indigo-50 border-indigo-100 text-indigo-900'
                 }`}>
                   <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse mt-1.5 shrink-0"></div>
-                  <p>Os meses de Janeiro a Abril representam a <strong>fração consolidada histórica</strong> do negócio. O mês corrente incorpora as faturas emitidas, compras simulated, e pagamentos reais de folhas e impostos.</p>
+                  <p>Os meses de Janeiro a Abril representam uma <strong>referência local demonstrativa</strong> do negócio. O mês corrente incorpora registros internos, compras simuladas e referências locais de folha e tributos.</p>
                 </div>
               </div>
 
-              {/* Tabela do DRE Simplificado na Direita */}
+              {/* Resumo visual local de entradas e saídas na direita */}
               <div className="lg:col-span-5 flex flex-col justify-between space-y-4">
                 <div className="space-y-3">
                   <h4 className="text-xs font-black uppercase tracking-widest text-[#94a3b8] px-1">
-                    Livro Diário & DRE Sintético do Exercício
+                    Registro visual local do período
                   </h4>
 
                   <div className={`border rounded-2xl overflow-hidden ${
@@ -553,7 +556,7 @@ export default function MonthlyFinanceChart({ transactions, theme }: MonthlyFina
                   <div className={`p-4 rounded-xl border ${
                     theme === 'dark' ? 'bg-[#141419] border-slate-800' : 'bg-slate-50 border-slate-200'
                   }`}>
-                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Lucro Acumulado</span>
+                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Resultado visual acumulado</span>
                     <strong className="block text-sm font-bold font-mono text-emerald-500 mt-1">
                       R$ {Math.round(chartData.reduce((acc, cr) => acc + cr.saldo, 0)).toLocaleString('pt-BR')}
                     </strong>

@@ -54,22 +54,22 @@ export default function SettingsTool({
   currentUser
 }: SettingsToolProps) {
   // 1. Dados da Empresa
-  const [corporateName, setCorporateName] = useState(() => localStorage.getItem('cfg_corporate_name') || 'AUXILIAR BIZ DISTRIBUIDORA LTDA');
-  const [tradeName, setTradeName] = useState(() => localStorage.getItem('cfg_trade_name') || 'AUXILIAR BIZ');
+  const [corporateName, setCorporateName] = useState(() => localStorage.getItem('cfg_corporate_name') || 'EMPRESA FICTÍCIA LOCAL LTDA');
+  const [tradeName, setTradeName] = useState(() => localStorage.getItem('cfg_trade_name') || 'Empresa Fictícia Local');
   const [cnpj, setCnpj] = useState(() => localStorage.getItem('cfg_cnpj') || '00.000.000/0000-00');
-  const [ie, setIe] = useState(() => localStorage.getItem('cfg_ie') || '102.394.810-11');
-  const [im, setIm] = useState(() => localStorage.getItem('cfg_im') || '849.201-9');
-  const [cnae, setCnae] = useState(() => localStorage.getItem('cfg_cnae') || '47.11-3-02 - Comércio varejista de mercadorias em geral');
-  const [email, setEmail] = useState(() => localStorage.getItem('cfg_email') || 'financeiro@auxiliarbiz.com.br');
-  const [phone, setPhone] = useState(() => localStorage.getItem('cfg_phone') || '(62) 3218-1000');
+  const [ie, setIe] = useState(() => localStorage.getItem('cfg_ie') || 'IE FICTÍCIA LOCAL');
+  const [im, setIm] = useState(() => localStorage.getItem('cfg_im') || 'IM FICTÍCIA LOCAL');
+  const [cnae, setCnae] = useState(() => localStorage.getItem('cfg_cnae') || 'CNAE fictício/local demonstrativo');
+  const [email, setEmail] = useState(() => localStorage.getItem('cfg_email') || 'contato@empresa-ficticia.local');
+  const [phone, setPhone] = useState(() => localStorage.getItem('cfg_phone') || '(00) 0000-0000');
 
   // Endereço
-  const [street, setStreet] = useState(() => localStorage.getItem('cfg_street') || 'Avenida T-9, Edifício Metropolitan');
-  const [number, setNumber] = useState(() => localStorage.getItem('cfg_number') || '1001-A');
-  const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem('cfg_neighborhood') || 'Setor Bueno');
-  const [city, setCity] = useState(() => localStorage.getItem('cfg_city') || 'Goiânia');
-  const [stateUf, setStateUf] = useState(() => localStorage.getItem('cfg_state_uf') || 'GO');
-  const [cep, setCep] = useState(() => localStorage.getItem('cfg_cep') || '74215-020');
+  const [street, setStreet] = useState(() => localStorage.getItem('cfg_street') || 'Logradouro Fictício Local');
+  const [number, setNumber] = useState(() => localStorage.getItem('cfg_number') || '000');
+  const [neighborhood, setNeighborhood] = useState(() => localStorage.getItem('cfg_neighborhood') || 'Bairro Fictício');
+  const [city, setCity] = useState(() => localStorage.getItem('cfg_city') || 'Cidade Fictícia');
+  const [stateUf, setStateUf] = useState(() => localStorage.getItem('cfg_state_uf') || 'UF');
+  const [cep, setCep] = useState(() => localStorage.getItem('cfg_cep') || '00000-000');
 
   // 2. Regime Tributário & Alíquotas
   const [taxRegime, setTaxRegime] = useState(() => localStorage.getItem('cfg_tax_regime') || 'Simples Nacional');
@@ -94,17 +94,17 @@ export default function SettingsTool({
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     return [
-      { id: '1', name: 'Murilo Henrique Parra', role: 'Sócio-Administrador', equity: 60, capital: 150000 },
-      { id: '2', name: 'Juliana Costa Ramos', role: 'Sócio Investidor', equity: 30, capital: 75000 },
-      { id: '3', name: 'Fernanda Lima Rocha', role: 'Sócio Operacional', equity: 10, capital: 25000 }
+      { id: '1', name: 'Sócio Fictício 1', role: 'Sócio-Administrador', equity: 50, capital: 1000 },
+      { id: '2', name: 'Sócia Fictícia 2', role: 'Sócio Investidor', equity: 25, capital: 500 },
+      { id: '3', name: 'Sócia Fictícia 3', role: 'Sócio Operacional', equity: 25, capital: 500 }
     ];
   });
 
   // Partner edit placeholders
   const [newPartnerName, setNewPartnerName] = useState('');
   const [newPartnerRole, setNewPartnerRole] = useState('Sócio-Administrador');
-  const [newPartnerEquity, setNewPartnerEquity] = useState(10);
-  const [newPartnerCapital, setNewPartnerCapital] = useState(25000);
+  const [newPartnerEquity, setNewPartnerEquity] = useState(25);
+  const [newPartnerCapital, setNewPartnerCapital] = useState(500);
 
   // Success alert
   const [showSavedToast, setShowSavedToast] = useState(false);
@@ -132,7 +132,7 @@ export default function SettingsTool({
   const [userAdminError, setUserAdminError] = useState<string | null>(null);
   const [userAdminSuccess, setUserAdminSuccess] = useState<string | null>(null);
 
-  const parentEmail = currentUser?.email || currentUser?.pjEmail || localStorage.getItem('cfg_email') || 'financeiro@auxiliarbiz.com.br';
+  const parentEmail = currentUser?.email || currentUser?.pjEmail || localStorage.getItem('cfg_email') || 'contato@empresa-ficticia.local';
 
   // Estados de Backup & Restauração
   const [backupError, setBackupError] = useState<string | null>(null);
@@ -149,13 +149,13 @@ export default function SettingsTool({
       {
         id: 'cert-1',
         alias: 'Preparação futura - Matriz',
-        companyName: 'AUXILIAR BIZ DISTRIBUIDORA LTDA',
+        companyName: 'EMPRESA FICTÍCIA LOCAL LTDA',
         cnpj: '00.000.000/0000-00',
         type: 'A1',
         fileName: 'referencia_ficticia_local_sem_certificado_real.txt',
         password: 'valor_ficticio_local_sem_uso_real',
-        issuer: 'ICP-Brasil v10 - AC Certisign RFB G5',
-        subject: 'AUXILIAR BIZ DISTRIBUIDORA LTDA:48174526000185',
+        issuer: 'Autoridade Fictícia Local sem uso real',
+        subject: 'EMPRESA FICTICIA LOCAL:00000000000000',
         validFrom: '2025-06-01',
         validUntil: '2027-06-01',
         scopes: ['Pré-nota interna', 'Pacote do contador', 'Dados internos', 'Preparação futura'],
@@ -164,13 +164,13 @@ export default function SettingsTool({
       {
         id: 'cert-2',
         alias: 'Referência futura Filial RJ',
-        companyName: 'Ramos Logística Integrada',
-        cnpj: '12.345.678/0002-99',
+        companyName: 'Empresa Fictícia de Apoio Local',
+        cnpj: '00.000.000/0000-00',
         type: 'A1',
         fileName: 'mock_local_sem_certificado_real.txt',
         password: 'referencia_ficticia_sem_uso_operacional',
-        issuer: 'ICP-Brasil v5 - AC SERASA RFB v5',
-        subject: 'RAMOS LOGISTICA INTEGRADA LTDA:12345678000299',
+        issuer: 'Autoridade Fictícia Local sem uso real',
+        subject: 'EMPRESA FICTICIA DE APOIO LOCAL:00000000000000',
         validFrom: '2024-03-10',
         validUntil: '2025-03-10',
         scopes: ['Dados internos', 'Preparação futura'],
@@ -181,7 +181,7 @@ export default function SettingsTool({
 
   const [isAddingCert, setIsAddingCert] = useState(false);
   const [certAlias, setCertAlias] = useState('');
-  const [certCompanyName, setCertCompanyName] = useState('AUXILIAR BIZ DISTRIBUIDORA LTDA');
+  const [certCompanyName, setCertCompanyName] = useState('EMPRESA FICTÍCIA LOCAL LTDA');
   const [certCnpjForm, setCertCnpjForm] = useState('00.000.000/0000-00');
   const [certTypeForm, setCertTypeForm] = useState<'A1' | 'A3'>('A1');
   const [certPasswordForm, setCertPasswordForm] = useState('');
@@ -196,8 +196,8 @@ export default function SettingsTool({
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
     return [
-      { id: '1', date: '2026-06-03 10:14:02', action: 'Cadastro de referência', detail: 'Arquivo de referência registrado para preparação futura. Sem transmissão fiscal no MVP.', user: 'admin@auxiliarbiz.com' },
-      { id: '2', date: '2026-06-03 10:15:20', action: 'Conferir dados internos', detail: 'Dados internos conferidos para preparação local do contador.', user: 'admin@auxiliarbiz.com' },
+      { id: '1', date: '2026-06-03 10:14:02', action: 'Cadastro de referência', detail: 'Arquivo de referência registrado para preparação futura. Sem transmissão fiscal no MVP.', user: 'admin@empresa-ficticia.local' },
+      { id: '2', date: '2026-06-03 10:15:20', action: 'Conferir dados internos', detail: 'Dados internos conferidos para preparação local do contador.', user: 'admin@empresa-ficticia.local' },
       { id: '3', date: '2026-06-03 10:16:11', action: 'Marcar como preparação futura', detail: 'Recurso fiscal real não disponível no MVP.', user: 'sistema' }
     ];
   });
@@ -346,7 +346,7 @@ export default function SettingsTool({
       type: certTypeForm,
       fileName: certFileName || 'referencia_ficticia_local_sem_certificado_real.txt',
       password: certPasswordForm,
-      issuer: 'ICP-Brasil v10 - AC Autoridade Parra Certificadora',
+      issuer: 'Autoridade Fictícia Local sem uso real',
       subject: `${certCompanyName.toUpperCase()}:${certCnpjForm.replace(/\D/g, '')}`,
       validFrom: today,
       validUntil: certValidForm,
@@ -546,8 +546,8 @@ export default function SettingsTool({
 
     setPartners(prev => [...prev, nextPartner]);
     setNewPartnerName('');
-    setNewPartnerEquity(10);
-    setNewPartnerCapital(25000);
+    setNewPartnerEquity(25);
+    setNewPartnerCapital(500);
   };
 
   const handleRemovePartner = (id: string) => {
@@ -1312,9 +1312,9 @@ export default function SettingsTool({
                         theme === 'dark' ? 'bg-[#16161a] border-[#222228] text-[#f4f4f7]' : 'bg-white border text-slate-850'
                       }`}
                     >
-                      <option value="AUXILIAR BIZ DISTRIBUIDORA LTDA">AUXILIAR BIZ DISTRIBUIDORA LTDA (Matriz)</option>
-                      <option value="Ramos Logística Integrada">Ramos Logística Integrada (Filial RJ)</option>
-                      <option value="Parra Holding Alimentos S.A.">Parra Holding Alimentos S.A.</option>
+                      <option value="EMPRESA FICTÍCIA LOCAL LTDA">EMPRESA FICTÍCIA LOCAL LTDA (Matriz fictícia)</option>
+                      <option value="Empresa Fictícia de Apoio Local">Empresa Fictícia de Apoio Local (Filial fictícia)</option>
+                      <option value="Empresa Fictícia de Controle Local">Empresa Fictícia de Controle Local</option>
                     </select>
                   </div>
 

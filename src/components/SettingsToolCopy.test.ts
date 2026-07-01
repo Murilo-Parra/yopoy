@@ -126,3 +126,48 @@ describe('placeholders sensíveis do SettingsTool', () => {
     }
   });
 });
+
+describe('mocks empresariais do SettingsTool', () => {
+  it('usa empresas, sócios e endereços claramente fictícios', () => {
+    const source = settingsSource();
+
+    expect(source).toMatch(/EMPRESA FICTÍCIA LOCAL LTDA/i);
+    expect(source).toMatch(/Empresa Fictícia de Apoio Local/i);
+    expect(source).toMatch(/Sócio Fictício 1/i);
+    expect(source).toMatch(/Sócia Fictícia 2/i);
+    expect(source).toMatch(/Sócia Fictícia 3/i);
+    expect(source).toMatch(/Logradouro Fictício Local/i);
+    expect(source).toMatch(/Bairro Fictício/i);
+    expect(source).toMatch(/Cidade Fictícia/i);
+    expect(source).toMatch(/IE FICTÍCIA LOCAL/i);
+    expect(source).toMatch(/IM FICTÍCIA LOCAL/i);
+    expect(source).toMatch(/Informações societárias e valores são apenas referência local demonstrativa/i);
+  });
+
+  it('não mantém mocks empresariais, pessoais ou cadastrais realistas antigos', () => {
+    const source = settingsSource();
+    const blockedExamples = [
+      ['AUXILIAR', 'BIZ'].join(' '),
+      ['DISTRIBUIDORA', 'LTDA'].join(' '),
+      ['Ramos', 'Logística', 'Integrada'].join(' '),
+      ['RAMOS', 'LOGISTICA', 'INTEGRADA', 'LTDA'].join(' '),
+      ['Murilo', 'Henrique', 'Parra'].join(' '),
+      ['Juliana', 'Costa', 'Ramos'].join(' '),
+      ['Fernanda', 'Lima', 'Rocha'].join(' '),
+      ['Avenida', 'T-9'].join(' '),
+      ['Edifício', 'Metropolitan'].join(' '),
+      ['Setor', 'Bueno'].join(' '),
+      'Goi' + 'ânia',
+      '74215' + '-020',
+      ['102', '394', '810-11'].join('.'),
+      ['849', '201-9'].join('.'),
+      ['12', '345', '678/0002-99'].join('.'),
+    ];
+
+    for (const blockedExample of blockedExamples) {
+      expect(source).not.toContain(blockedExample);
+    }
+
+    expect(source).not.toMatch(/\b(?!00\.000\.000\/0000-00\b)\d{2}\.\d{3}\.\d{3}\/000[1-9]-\d{2}\b/);
+  });
+});

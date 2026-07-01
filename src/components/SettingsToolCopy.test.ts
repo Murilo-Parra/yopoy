@@ -97,3 +97,32 @@ describe('labels internos de permissões do SettingsTool', () => {
     expect(source).not.toMatch(/Configs/i);
   });
 });
+
+describe('placeholders sensíveis do SettingsTool', () => {
+  it('orienta uso fictício/local para senhas, certificado e dados empresariais', () => {
+    const source = settingsSource();
+
+    expect(source).toMatch(/senha fictícia/i);
+    expect(source).toMatch(/não envie certificado real/i);
+    expect(source).toMatch(/dados fictícios/i);
+    expect(source).toMatch(/referência local demonstrativa/i);
+    expect(source).toMatch(/simulação local/i);
+    expect(source).toMatch(/sem uso real/i);
+    expect(source).toMatch(/sem uso operacional/i);
+    expect(source).toMatch(/Informações societárias e valores são apenas referência local demonstrativa/i);
+  });
+
+  it('não mantém exemplos sensíveis com aparência de dado real', () => {
+    const source = settingsSource();
+    const blockedExamples = [
+      ['carlos', '123'].join(''),
+      ['senha', 'referencia', 'mvp'].join('_'),
+      ['pfx', 'pass', 'private'].join('_'),
+      ['48', '174', '526/0001-85'].join('.'),
+    ];
+
+    for (const blockedExample of blockedExamples) {
+      expect(source).not.toContain(blockedExample);
+    }
+  });
+});

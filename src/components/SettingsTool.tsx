@@ -56,7 +56,7 @@ export default function SettingsTool({
   // 1. Dados da Empresa
   const [corporateName, setCorporateName] = useState(() => localStorage.getItem('cfg_corporate_name') || 'AUXILIAR BIZ DISTRIBUIDORA LTDA');
   const [tradeName, setTradeName] = useState(() => localStorage.getItem('cfg_trade_name') || 'AUXILIAR BIZ');
-  const [cnpj, setCnpj] = useState(() => localStorage.getItem('cfg_cnpj') || '48.174.526/0001-85');
+  const [cnpj, setCnpj] = useState(() => localStorage.getItem('cfg_cnpj') || '00.000.000/0000-00');
   const [ie, setIe] = useState(() => localStorage.getItem('cfg_ie') || '102.394.810-11');
   const [im, setIm] = useState(() => localStorage.getItem('cfg_im') || '849.201-9');
   const [cnae, setCnae] = useState(() => localStorage.getItem('cfg_cnae') || '47.11-3-02 - Comércio varejista de mercadorias em geral');
@@ -78,7 +78,7 @@ export default function SettingsTool({
 
   // 3. Emissor & Certificado
   const [certificateType, setCertificateType] = useState(() => localStorage.getItem('cfg_cert_type') || 'A1');
-  const [certSubject, setCertSubject] = useState(() => localStorage.getItem('cfg_cert_subject') || 'AUXILIAR BIZ DISTRIBUIDORA LTDA - CNPJ: 48.174.526/0001-85');
+  const [certSubject, setCertSubject] = useState(() => localStorage.getItem('cfg_cert_subject') || 'Referência fictícia local - CNPJ: 00.000.000/0000-00');
   const [certValidUntil, setCertValidUntil] = useState(() => localStorage.getItem('cfg_cert_valid') || '2027-05-18');
   const [sefazEnvironment, setSefazEnvironment] = useState(() => localStorage.getItem('cfg_sefaz_env') || 'Homologação');
   const [nextNfeNum, setNextNfeNum] = useState(() => Number(localStorage.getItem('cfg_next_nfe')) || 1024);
@@ -150,10 +150,10 @@ export default function SettingsTool({
         id: 'cert-1',
         alias: 'Preparação futura - Matriz',
         companyName: 'AUXILIAR BIZ DISTRIBUIDORA LTDA',
-        cnpj: '48.174.526/0001-85',
+        cnpj: '00.000.000/0000-00',
         type: 'A1',
-        fileName: 'arquivo_referencia_mvp_2026.pfx',
-        password: 'senha_referencia_mvp',
+        fileName: 'referencia_ficticia_local_sem_certificado_real.txt',
+        password: 'valor_ficticio_local_sem_uso_real',
         issuer: 'ICP-Brasil v10 - AC Certisign RFB G5',
         subject: 'AUXILIAR BIZ DISTRIBUIDORA LTDA:48174526000185',
         validFrom: '2025-06-01',
@@ -167,8 +167,8 @@ export default function SettingsTool({
         companyName: 'Ramos Logística Integrada',
         cnpj: '12.345.678/0002-99',
         type: 'A1',
-        fileName: 'ramos_rio_import_2025.p12',
-        password: 'pfx_pass_private',
+        fileName: 'mock_local_sem_certificado_real.txt',
+        password: 'referencia_ficticia_sem_uso_operacional',
         issuer: 'ICP-Brasil v5 - AC SERASA RFB v5',
         subject: 'RAMOS LOGISTICA INTEGRADA LTDA:12345678000299',
         validFrom: '2024-03-10',
@@ -182,7 +182,7 @@ export default function SettingsTool({
   const [isAddingCert, setIsAddingCert] = useState(false);
   const [certAlias, setCertAlias] = useState('');
   const [certCompanyName, setCertCompanyName] = useState('AUXILIAR BIZ DISTRIBUIDORA LTDA');
-  const [certCnpjForm, setCertCnpjForm] = useState('48.174.526/0001-85');
+  const [certCnpjForm, setCertCnpjForm] = useState('00.000.000/0000-00');
   const [certTypeForm, setCertTypeForm] = useState<'A1' | 'A3'>('A1');
   const [certPasswordForm, setCertPasswordForm] = useState('');
   const [certValidForm, setCertValidForm] = useState('2027-06-03');
@@ -344,7 +344,7 @@ export default function SettingsTool({
       companyName: certCompanyName,
       cnpj: certCnpjForm,
       type: certTypeForm,
-      fileName: certFileName || 'arquivo_referencia_mvp_upload.pfx',
+      fileName: certFileName || 'referencia_ficticia_local_sem_certificado_real.txt',
       password: certPasswordForm,
       issuer: 'ICP-Brasil v10 - AC Autoridade Parra Certificadora',
       subject: `${certCompanyName.toUpperCase()}:${certCnpjForm.replace(/\D/g, '')}`,
@@ -724,9 +724,14 @@ export default function SettingsTool({
           <div className="space-y-6">
             <div className="flex items-center gap-2 pb-3 border-b border-slate-200/10">
               <Building className="w-4.5 h-4.5 text-indigo-500" />
-              <h3 className={`text-xs font-extrabold tracking-wider uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
-                Dados da Matriz e Registros Comerciais
-              </h3>
+              <div>
+                <h3 className={`text-xs font-extrabold tracking-wider uppercase ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>
+                  Dados da Matriz e Registros Comerciais
+                </h3>
+                <p className="text-[10px] text-gray-500 mt-0.5">
+                  Use dados fictícios ou internos de teste no MVP local. Não use dados reais de empresa nesta simulação local.
+                </p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1318,7 +1323,7 @@ export default function SettingsTool({
                     <label className="text-[10px] font-bold text-gray-500 uppercase">CNPJ de referência</label>
                     <input 
                       type="text"
-                      placeholder="Ex: 48.174.526/0001-85"
+                      placeholder="CNPJ fictício para simulação local"
                       value={certCnpjForm}
                       onChange={(e) => setCertCnpjForm(e.target.value)}
                       className={`w-full text-xs p-2.5 rounded-lg font-mono focus:outline-none focus:ring-1 focus:ring-indigo-500 ${
@@ -1433,6 +1438,7 @@ export default function SettingsTool({
                           <span className="font-bold text-indigo-400">Arraste um arquivo de referência</span> ou clique aqui para selecionar
                         </div>
                         <p className="text-[9px] text-gray-500">Uso demonstrativo para preparação futura. Não disponível no MVP para transmissão fiscal.</p>
+                        <p className="text-[9px] text-amber-500">Não envie certificado real no MVP. Use apenas arquivo fictício ou referência local demonstrativa, sem uso operacional e sem uso real.</p>
                       </div>
 
                       {/* File select handler simulated */}
@@ -1543,6 +1549,9 @@ export default function SettingsTool({
                 Capital Integralizado: R$ {totalCapitalInjected.toLocaleString('pt-BR')} &bull; Participação: {totalEquityCalculated}%
               </span>
             </div>
+            <p className="text-[10px] text-gray-500">
+              Informações societárias e valores são apenas referência local demonstrativa no MVP.
+            </p>
 
             {/* TABELA DE SÓCIOS */}
             <div className="border border-slate-200/10 rounded-xl overflow-hidden shadow-xs">
@@ -1600,7 +1609,7 @@ export default function SettingsTool({
               <div className="flex-1 min-w-[200px]">
                 <input
                   type="text"
-                  placeholder="Nome Completo do Sócio"
+                  placeholder="Nome fictício do sócio"
                   value={newPartnerName}
                   onChange={(e) => setNewPartnerName(e.target.value)}
                   className={`w-full text-xs p-2 rounded-lg focus:outline-none ${
@@ -1627,7 +1636,7 @@ export default function SettingsTool({
               <div className="w-24">
                 <input
                   type="number"
-                  placeholder="Particip %"
+                  placeholder="Participação fictícia %"
                   value={newPartnerEquity}
                   onChange={(e) => setNewPartnerEquity(Number(e.target.value))}
                   className={`w-full text-xs p-2 rounded-lg focus:outline-none font-mono ${
@@ -1641,7 +1650,7 @@ export default function SettingsTool({
               <div className="w-32">
                 <input
                   type="number"
-                  placeholder="Capital R$"
+                  placeholder="Capital fictício R$"
                   value={newPartnerCapital}
                   onChange={(e) => setNewPartnerCapital(Number(e.target.value))}
                   className={`w-full text-xs p-2 rounded-lg focus:outline-none font-mono ${
@@ -1777,7 +1786,7 @@ export default function SettingsTool({
                     <input
                       type="password"
                       required
-                      placeholder="Ex: carlos123!"
+                      placeholder="Senha fictícia para simulação local"
                       value={newUserPass}
                       onChange={(e) => setNewUserPass(e.target.value)}
                       className={`w-full text-xs p-3 rounded-lg focus:outline-none font-mono ${

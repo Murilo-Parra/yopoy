@@ -580,7 +580,7 @@ export default function FinanceTool({
     }));
   };
 
-  // Executar pagamento salarial imediato (Gera transação na aba de caixa e substrai saldo)
+  // Registra saída salarial local (gera transação na aba de caixa e subtrai saldo visual)
   const handlePaySalary = (employee: Employee) => {
     const payTrans: Transaction = {
       id: 'pay_' + Date.now() + '_' + employee.id,
@@ -589,14 +589,14 @@ export default function FinanceTool({
       date: '2026-05-31',
       category: 'Funcionários',
       status: 'Confirmado',
-      notes: `Pagamento mensal do cargo de ${employee.role}, status: ${employee.status}.`,
+      notes: `Registro local mensal do cargo de ${employee.role}, status: ${employee.status}.`,
       type: 'Despesa'
     };
 
     setTransactions(prev => [payTrans, ...prev]);
     writeDeskCardFromTransaction(payTrans, 'expense', '2026-05-31');
     
-    alert(`Sucesso! Pagamento de salário no valor de R$ ${employee.salary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para ${employee.name} foi faturado com sucesso no fluxo de caixa.`);
+    alert(`Sucesso! Saída local de salário no valor de R$ ${employee.salary.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} para ${employee.name} foi registrada na organização local.`);
   };
 
   const filteredTransactions = financeSourceTransactions.filter(t => {
@@ -630,7 +630,7 @@ export default function FinanceTool({
           }`}
         >
           <DollarSign className="w-4 h-4 text-emerald-655" />
-          Fluxo de Caixa e Recibos
+          Organização local de entradas e saídas
         </button>
         <button
           id="btn-tab-func"
@@ -656,6 +656,10 @@ export default function FinanceTool({
           <Scale className="w-4 h-4 text-orange-600" />
           Ajuda Contábil & Planejamento Tributário
         </button>
+      </div>
+
+      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4 text-xs font-medium leading-relaxed text-emerald-900">
+        Organização local e visual do MVP. Sem banco real, sem integração bancária, sem pagamento real, sem PIX, sem boleto, sem conciliação real com banco e sem valor contábil oficial. Não substitui contador.
       </div>
 
       {/* RENDER TAB 1: FLUXO DE CAIXA */}
@@ -718,15 +722,15 @@ export default function FinanceTool({
                 )}
               </div>
               <p className="text-[9px] text-gray-400 mt-1.5 leading-tight">
-                Patrimônio líquido inicial em caixa faturável.
+                Referência inicial para o saldo visual local.
               </p>
             </div>
 
-            {/* 2. Receita Bruta Acumulada */}
+            {/* 2. Entradas Locais Registradas */}
             <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between min-h-[120px]">
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Receita Bruta</span>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Entradas locais registradas</span>
                   <div className="bg-emerald-50 text-emerald-600 p-1.5 rounded-lg">
                     <TrendingUp className="w-4 h-4" />
                   </div>
@@ -782,11 +786,11 @@ export default function FinanceTool({
               </p>
             </div>
 
-            {/* 5. Saldo Líquido de Caixa */}
+            {/* 5. Saldo Visual Local */}
             <div className="bg-gradient-to-br from-emerald-50/70 to-white p-4 rounded-2xl border border-emerald-100 shadow-sm flex flex-col justify-between min-h-[120px]">
               <div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-widest block">Saldo Líquido</span>
+                  <span className="text-[10px] font-extrabold text-emerald-800 uppercase tracking-widest block">Saldo visual local</span>
                   <div className="bg-emerald-500 text-white p-1.5 rounded-lg">
                     <Banknote className="w-4 h-4" />
                   </div>
@@ -1070,7 +1074,7 @@ export default function FinanceTool({
                   }`}
                 >
                   <ClipboardList className="w-3.5 h-3.5" />
-                  Livro-Caixa Geral ({financeSourceTransactions.length})
+                  Registro local de caixa ({financeSourceTransactions.length})
                 </button>
                 <button
                   onClick={() => setSelectedTableTab('recebimentos')}
@@ -1114,7 +1118,7 @@ export default function FinanceTool({
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden animate-fade-in">
                   <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                      <h4 className="font-bold text-gray-800 text-sm">Extrato Consolidado Integrado</h4>
+                      <h4 className="font-bold text-gray-800 text-sm">Lista local consolidada</h4>
                       <p className="text-[11px] text-gray-400">Todos os fluxos contábeis correspondentes aos critérios de busca.</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
@@ -1243,7 +1247,7 @@ export default function FinanceTool({
                         <TrendingUp className="w-4 h-4 text-emerald-500" />
                         Tabela de Controle de Recebimentos / Faturamento bruto
                       </h4>
-                      <p className="text-[11px] text-gray-400">Ganhos consolidados de vendas do varejo e aportes em caixa.</p>
+                      <p className="text-[11px] text-gray-400">Entradas locais registradas para conferência visual.</p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <button
@@ -1274,7 +1278,7 @@ export default function FinanceTool({
                       return (
                         <div className="p-12 text-center text-gray-400">
                           <TrendingUp className="w-10 h-10 text-emerald-100 mx-auto mb-2" />
-                          <p className="text-xs">Nenhum faturamento de caixa ou recebimento capturado para os filtros indicados.</p>
+                          <p className="text-xs">Nenhuma entrada local registrada para os filtros indicados.</p>
                         </div>
                       );
                     }
@@ -1437,7 +1441,7 @@ export default function FinanceTool({
                 <div className="space-y-6 animate-fade-in">
                   
                   <div className="bg-white p-4 rounded-xl border border-gray-100 text-xs text-gray-500 font-medium">
-                    As transações abaixo estão segmentadas em <strong>tabelas independentes para cada filtro operacional</strong> cadastrado no caixa corporativo.
+                    As transações abaixo estão segmentadas em <strong>tabelas independentes para cada filtro local</strong> cadastrado na organização visual.
                   </div>
 
                   {(['Suprimentos', 'Logística', 'Serviços', 'Funcionários', 'Impostos', 'Alimentação', 'Tecnologia', 'Outros'] as TransactionCategory[]).map((catName) => {
@@ -1456,7 +1460,7 @@ export default function FinanceTool({
                         </div>
 
                         {catTxList.length === 0 ? (
-                          <p className="p-5 text-center text-xs text-gray-400 italic">Nenhum lançamento contábil classificado nesta categoria.</p>
+                          <p className="p-5 text-center text-xs text-gray-400 italic">Nenhum registro interno de organização classificado nesta categoria.</p>
                         ) : (
                           <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse">
@@ -1542,7 +1546,7 @@ export default function FinanceTool({
                 key={emp.id} 
                 onClick={() => setSelectedEmployeeDetail(emp)}
                 className="bg-white p-5 rounded-2xl border border-gray-150 shadow-sm hover:shadow-lg hover:border-indigo-200 cursor-pointer transition-all flex flex-col justify-between group relative overflow-hidden"
-                title="Clique para ver a ficha contábil detalhada do funcionário"
+                title="Clique para ver a ficha local detalhada do funcionário"
               >
                 <div className="absolute right-0 top-0 bg-indigo-50 text-indigo-700 text-[9px] font-bold px-2 py-0.5 rounded-bl opacity-0 group-hover:opacity-100 transition-opacity">
                   Clique para ampliar
@@ -1605,7 +1609,7 @@ export default function FinanceTool({
                      }`}
                    >
                      <Banknote className="w-3.5 h-3.5" />
-                     Pagar Salário
+                     Registrar saída local de salário
                    </button>
                  </div>
               </div>
@@ -1645,7 +1649,7 @@ export default function FinanceTool({
                         : 'bg-white border-gray-200 text-gray-600'
                     }`}
                   >
-                    Receita (Entrada no caixa)
+                    Receita (entrada local)
                   </button>
                   <button
                     type="button"
@@ -1656,7 +1660,7 @@ export default function FinanceTool({
                         : 'bg-white border-gray-200 text-gray-600'
                     }`}
                   >
-                    Despesa (Pagamento/Saída)
+                    Despesa (saída local registrada)
                   </button>
                 </div>
               </div>
@@ -2084,7 +2088,7 @@ export default function FinanceTool({
                     Detalhes / Notas
                   </label>
                   <textarea
-                    placeholder="Ex: faturado sob boleto bancário"
+                    placeholder="Ex: referência local de cobrança"
                     rows={2}
                     value={calFormNotes}
                     onChange={(e) => setCalFormNotes(e.target.value)}
@@ -2144,7 +2148,7 @@ export default function FinanceTool({
                 Conselheiro Contábil e Planejamento Tributário
               </h3>
               <p className={`max-w-xl mx-auto text-sm ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>
-                Este módulo avançado com Inteligência Artificial simula obrigações fiscais, IRPJ, folha de pagamento e saúde financeira do seu negócio em tempo real.
+                Este módulo avançado com Inteligência Artificial simula lembretes internos de organização, IRPJ de referência, folha salarial local e saúde financeira em visual local.
               </p>
               <div className="pt-4">
                 <span className={`inline-block mb-3 px-3 py-1 rounded text-[10px] font-extrabold uppercase tracking-widest ${theme === 'dark' ? 'bg-indigo-900/40 text-indigo-400' : 'bg-indigo-100 text-indigo-700'}`}>
@@ -2172,7 +2176,7 @@ export default function FinanceTool({
               </span>
               <h3 className="text-base font-extrabold text-orange-950">Módulo de Organização e Planejamento de Impostos</h3>
               <p className="text-xs text-orange-900/80 leading-relaxed">
-                Este assistente analisa os recebimentos atuais de <strong>R$ {totalRevenues.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> lançados na contabilidade e o quadro de equipe para estimar as obrigações fiscais corporativas, tributação individualizada de estoque (ICMS) e provisionar a folha trabalhista subsequente.
+                Este assistente analisa os recebimentos atuais de <strong>R$ {totalRevenues.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> lançados na organização local e o quadro de equipe para estimar lembretes internos de organização, referências tributárias de estoque (ICMS) e preparar a folha subsequente para contador.
               </p>
             </div>
             <div className="flex items-center gap-2 bg-white/80 backdrop-blur-sm px-4 py-2.5 rounded-xl border border-orange-200/50 flex-shrink-0">
@@ -2234,13 +2238,13 @@ export default function FinanceTool({
             const issIcmsPresumido = totalRevenues * 0.0150; // ICMS/ISS médio estimado sob presumido
             const presumidoTotal = pisPresumido + cofinsPresumido + irpjPresumido + csllPresumido + issIcmsPresumido;
 
-            // Lucro Real Estimado
+            // Regime de referência local
             const netMarginBeforeTaxes = totalRevenues - totalExpenses;
             let irpjCSLLReal = 0;
             if (netMarginBeforeTaxes > 0) {
-              irpjCSLLReal = netMarginBeforeTaxes * 0.24; // IRPJ (15%) + CSLL (9%) sobre o lucro real apurado
+              irpjCSLLReal = netMarginBeforeTaxes * 0.24; // IRPJ (15%) + CSLL (9%) sobre a referência local apurada
             }
-            const pisCofinsReal = totalRevenues * 0.0450; // Alíquota sob regime real considerando 50% de crédito compensatório
+            const pisCofinsReal = totalRevenues * 0.0450; // Alíquota sob referência local considerando 50% de crédito compensatório
             const realTotal = irpjCSLLReal + pisCofinsReal + estimatedIssTaxOnServices;
 
             // Regime recomendado
@@ -2251,7 +2255,7 @@ export default function FinanceTool({
               recommendedAmountValue = presumidoTotal;
             }
             if (realTotal < recommendedAmountValue) {
-              recommendedRegimeName = "Lucro Real (Menor alíquota líquida calculada)";
+              recommendedRegimeName = "Regime de referência local (menor referência calculada)";
               recommendedAmountValue = realTotal;
             }
 
@@ -2332,7 +2336,7 @@ export default function FinanceTool({
                       <p className="text-lg font-black font-mono text-emerald-400">
                         R$ {recommendedAmountValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </p>
-                      <span className="text-[9px] text-indigo-200 block">Menor ônus fiscal projetado em tempo real</span>
+                      <span className="text-[9px] text-indigo-200 block">Menor referência fiscal projetada em visual local</span>
                     </div>
                     <div className="bg-indigo-950 p-3 rounded-xl border border-indigo-700 text-yellow-400 font-bold">
                       ★
@@ -2386,7 +2390,7 @@ export default function FinanceTool({
                               : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
                           }`}
                         >
-                          Lucro Real
+                          Regime de referência local
                         </button>
                       </div>
                     </div>
@@ -2421,19 +2425,19 @@ export default function FinanceTool({
                           <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-gray-500">
                             <li><strong>COFINS:</strong> 3,00% (Não cumulativo de entrada)</li>
                             <li><strong>PIS:</strong> 0,65% (Tributação cumulativa)</li>
-                            <li><strong>IRPJ Estimado:</strong> 1,20% do faturamento de caixa</li>
-                            <li><strong>CSLL Estimada:</strong> 1,08% do faturamento de caixa</li>
-                            <li><strong>ICMS/ISS Proporcional:</strong> 1,50% fixado no extrato</li>
+                            <li><strong>IRPJ Estimado:</strong> 1,20% das entradas locais</li>
+                            <li><strong>CSLL Estimada:</strong> 1,08% das entradas locais</li>
+                            <li><strong>ICMS/ISS Proporcional:</strong> 1,50% fixado na lista local</li>
                           </ul>
                         </div>
                       )}
 
-                      {/* Lucro Real Detalhes */}
+                      {/* Regime de referência local */}
                       {taxRegime === 'real' && (
                         <div className="bg-white p-3 rounded-lg border border-gray-100 text-xs text-gray-600 space-y-2 font-medium">
                           <p className="font-bold text-gray-750">Parâmetros Ativos de Margem Líquida:</p>
                           <p className="text-[11px] text-gray-500 leading-relaxed">
-                            O Lucro Real calcula 15% de IRPJ e 9% de CSLL exclusivamente sobre o lucro líquido (receita - despesa operacional). Se operou em prejuízo nesta janela, sua obrigação de IRPJ/CSLL é de R$ 0,00!
+                            Este regime de referência local simula 15% de IRPJ e 9% de CSLL sobre o resultado líquido visual (entrada - saída local). Se a janela estiver negativa, o lembrete interno de IRPJ/CSLL fica em R$ 0,00.
                           </p>
                           <div className="bg-slate-50 p-2 rounded text-[11px] font-mono flex justify-between">
                             <span>Resultado Líquido Atual:</span>
@@ -2505,7 +2509,7 @@ export default function FinanceTool({
                         </div>
 
                         <div className="p-3 flex justify-between bg-gray-50/50">
-                          <span>Lucro Real Estimado (Sobre Lucro Contábil):</span>
+                          <span>Regime de referência local estimado:</span>
                           <span className="font-semibold">R$ {realTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                         </div>
 
@@ -2664,7 +2668,7 @@ export default function FinanceTool({
                   <div className="border-b border-gray-100 pb-3">
                     <h4 className="font-extrabold text-sm text-gray-800 flex items-center gap-1.5">
                       <CalendarDays className="w-4 h-4 text-indigo-600" />
-                      3. Calendário Geral de Pagamentos e Teste de Liquidez do Caixa
+                      3. Calendário local de saídas e teste visual de caixa
                     </h4>
                     <p className="text-[11px] text-gray-400">
                       Veja os dias de desembolso para o restante de suas despesas e simule se o capital consolidado em caixa é suficiente.
@@ -2679,7 +2683,7 @@ export default function FinanceTool({
                       
                       <div className="space-y-3 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-slate-100">
                         
-                        {/* 05/Jun: Folha de Pagamento */}
+                        {/* 05/Jun: Folha salarial local */}
                         <div className="flex items-start gap-4 relative">
                           <span className="w-7 h-7 rounded-full bg-slate-900 border-2 border-white flex items-center justify-center text-white text-[10px] font-bold font-mono">
                             05
@@ -2728,8 +2732,8 @@ export default function FinanceTool({
                           </span>
                           <div className="flex-1 bg-indigo-50/20 p-3 rounded-xl border border-indigo-100 flex justify-between items-center text-xs">
                             <div>
-                              <p className="font-bold text-indigo-950">Guia de Impostos do CNPJ</p>
-                              <p className="text-[10px] text-indigo-501 font-medium">Competência sobre faturamento ({taxRegime.toUpperCase()})</p>
+                              <p className="font-bold text-indigo-950">Lembrete local para contador</p>
+                              <p className="text-[10px] text-indigo-501 font-medium">Referência sobre entradas locais ({taxRegime.toUpperCase()})</p>
                             </div>
                             <span className="font-mono font-bold text-indigo-600">- R$ {activeRegimeTaxCalculated.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                           </div>
@@ -2744,7 +2748,7 @@ export default function FinanceTool({
                       <div className="space-y-1">
                         <span className="text-[10px] font-extrabold text-indigo-600 uppercase tracking-widest block">Análise de Liquidez de Caixa</span>
                         <h5 className="font-bold text-sm text-slate-800">Diagnóstico sobre Compromissos do Mês</h5>
-                        <p className="text-[11px] text-slate-500">Comparativo das obrigações calculadas (Salários, encargos trabalhistas FGTS/INSS e impostos DAS/ICMS) contra o caixa livre registrado.</p>
+                        <p className="text-[11px] text-slate-500">Comparativo dos lembretes internos calculados (salários, encargos trabalhistas e tributos de referência) contra o saldo visual local registrado.</p>
                       </div>
 
                       {/* Resumo da Equação */}
@@ -2786,21 +2790,21 @@ export default function FinanceTool({
                             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 flex items-start gap-2">
                               <Check className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
                               <p>
-                                <strong>Liquidez Saudável!</strong> Seu caixa registrado cobre 100% dos vencimentos planejados de June/2026. É seguro efetuar faturamentos e pagar novos insumos sem prejudicar as guias contábeis.
+                                <strong>Referência local saudável!</strong> O saldo visual local cobre 100% dos lembretes planejados de June/2026. Use como apoio interno antes de registrar novas entradas ou saídas locais.
                               </p>
                             </div>
                           ) : walletLiquidityPercentage >= 65 ? (
                             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 flex items-start gap-2">
                               <Info className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
                               <p>
-                                <strong>Atenção Contábil Provisiva!</strong> Seu caixa cobre parcialmente as obrigações ativas do mês. É necessário reter ou faturar mais <strong>R$ {(grandTotalPlanningThresholdWithReserve - calculatedBalance).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> em novas vendas para fechar o mês com folga nominal.
+                                <strong>Atenção local provisiva!</strong> O saldo visual local cobre parcialmente os lembretes internos do mês. Registre mais <strong>R$ {(grandTotalPlanningThresholdWithReserve - calculatedBalance).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> em entradas locais para simular folga nominal.
                               </p>
                             </div>
                           ) : (
                             <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-850 flex items-start gap-2">
                               <AlertCircle className="w-4 h-4 text-red-650 flex-shrink-0 mt-0.5" />
                               <p>
-                                <strong>Alerta de Caixa Restrito!</strong> O faturamento ativo é insuficiente para fechar a folha trabalhista e quitar guias DAS/ICMS com segurança. Evite compras imediatas de estoque supérfluo e priorize a aceleração das vendas ou antecipação de recebíveis para arrecadar <strong>R$ {(grandTotalPlanningThresholdWithReserve - calculatedBalance).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>.
+                                <strong>Alerta visual de caixa restrito!</strong> As entradas locais registradas são insuficientes para simular a folha e os lembretes internos de tributos. Use a visão como apoio antes de registrar novas saídas e projete <strong>R$ {(grandTotalPlanningThresholdWithReserve - calculatedBalance).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> em entradas locais.
                               </p>
                             </div>
                           )}
@@ -2925,7 +2929,7 @@ export default function FinanceTool({
                   {/* Submit AI analysis */}
                   <div className="md:col-span-2 pt-4 border-t border-gray-100 flex items-center justify-between gap-3">
                     <p className="text-xs text-gray-500 max-w-sm">
-                      A IA de Auditoria Contábil processará a imagem ou texto para identificar os valores de forma auditável e gerar uma sugestão de conciliação de contas.
+                      A IA de conferência local processará a imagem ou texto para identificar valores e gerar uma sugestão de conferência local.
                     </p>
                     <button
                       id="btn-processar-recibo-gemini"
@@ -2942,7 +2946,7 @@ export default function FinanceTool({
                       ) : (
                         <>
                           <Sparkles className="w-4 h-4" />
-                          Autenticar e Extrair Dados com IA
+                          Conferir e Extrair Dados com IA
                         </>
                       )}
                     </button>
@@ -2965,12 +2969,12 @@ export default function FinanceTool({
                 <div className="space-y-5">
                   <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-xl text-emerald-800 text-xs flex items-center gap-2 font-medium">
                     <Check className="w-4 h-4 flex-shrink-0" />
-                    Extração efetuada com sucesso! Revise os valores antes de registrar no caixa.
+                    Extração efetuada com sucesso! Revise os valores antes de registrar na organização local.
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 p-5 rounded-2xl border border-gray-200">
                     <div className="space-y-4">
-                      <h4 className="font-bold text-sm text-gray-800 border-b pb-2 mb-2">Dados do Pagamento</h4>
+                      <h4 className="font-bold text-sm text-gray-800 border-b pb-2 mb-2">Dados do registro local</h4>
                       
                       <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -3046,7 +3050,7 @@ export default function FinanceTool({
 
                       <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-[11px] text-emerald-800">
                         <strong className="block mb-1">Impacto Financeiro Estimado:</strong>
-                        Esta operação deduzirá instantaneamente <strong>R$ {aiResult.amount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> do seu balanço líquido de caixa.
+                        Este registro ajustará visualmente <strong>R$ {aiResult.amount?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> no resumo visual local de caixa.
                       </div>
                     </div>
                   </div>
@@ -3065,7 +3069,7 @@ export default function FinanceTool({
                       onClick={handleConfirmAIReceipt}
                       className="bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl py-2 px-6 text-xs font-bold"
                     >
-                      Gravar Transação e Debitar Caixa
+                      Registrar movimentação local
                     </button>
                   </div>
                 </div>
@@ -3121,7 +3125,7 @@ export default function FinanceTool({
                 <div className="space-y-1 md:col-span-2 border-t border-slate-200 pt-3">
                   <span className="text-[10px] uppercase font-bold text-gray-400 tracking-wider block">Nota de Respaldo Contábil ou Discriminação</span>
                   <p className="text-sm font-medium text-gray-700 leading-relaxed bg-white p-3 rounded-lg border border-slate-100 italic">
-                    "{selectedTransactionDetail.notes || 'Nenhuma nota declarada durante este lançamento contábil.'}"
+                    "{selectedTransactionDetail.notes || 'Nenhuma nota declarada durante este registro interno de organização.'}"
                   </p>
                 </div>
               </div>
@@ -3181,7 +3185,7 @@ export default function FinanceTool({
                   <p className="text-xs text-indigo-900/80 leading-relaxed">
                     {isRevenue(selectedTransactionDetail) 
                       ? `Como este registro é um RECEBIMENTO de R$ ${selectedTransactionDetail.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}, tome nota sobre o imposto de regime aplicável: se no Simples Nacional (${simplesRate}%), o tributo estimado DAS será de R$ ${(selectedTransactionDetail.amount * simplesRate / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`
-                      : `Este registro constitui uma DESPESA operacional de R$ ${selectedTransactionDetail.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Se sua tributação for sob Lucro Real, este valor é uma despesa dedutível da sua base de cálculo do IRPJ e da CSLL, reduzindo assim o imposto corporativo retido.`
+                      : `Este registro constitui uma saída local de R$ ${selectedTransactionDetail.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}. Em regime de referência local, o valor pode ser usado como apoio interno para estimar IRPJ e CSLL, sem valor contábil oficial.`
                     }
                   </p>
                 </div>
@@ -3292,7 +3296,7 @@ export default function FinanceTool({
               <div className="bg-orange-50 border border-orange-150 p-4 rounded-xl flex items-start gap-2.5">
                 <Info className="w-5 h-5 text-orange-650 mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-orange-950 font-medium leading-relaxed">
-                  Para fins contábeis de fluxo de caixa, mantenha uma reserva mensal correspondente ao valor das obrigações sindicais e contratuais. O total projetado para este empregado no subsequente mês fiscal é de <strong>R$ {(selectedEmployeeDetail.salary * (fgtsRate + inssPatronalRate) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> adicionais.
+                  Para preparação local para contador, mantenha uma referência mensal correspondente aos lembretes sindicais e contratuais. O total projetado para este empregado na próxima janela de referência é de <strong>R$ {(selectedEmployeeDetail.salary * (fgtsRate + inssPatronalRate) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> adicionais.
                 </p>
               </div>
             </div>
@@ -3379,7 +3383,7 @@ export default function FinanceTool({
               <div className="bg-indigo-50 border border-indigo-150 p-4 rounded-xl flex items-start gap-2.5">
                 <Info className="w-5 h-5 text-indigo-700 mt-0.5 flex-shrink-0" />
                 <p className="text-xs text-indigo-950 font-medium leading-relaxed">
-                  Para mercadorias no segmento de <strong>{selectedProductDetail.category}</strong> sob regime estadual, a venda subsequente projeta uma margem de valor agregado onde o recolhimento antecipado ajuda a resguardar o estabelecimento contra auditorias da Receita Estadual. Mantenha um rastreador de notas fiscais ativos.
+                  Para mercadorias no segmento de <strong>{selectedProductDetail.category}</strong>, esta referência fiscal futura projeta margem de valor agregado apenas para apoio interno. Mantenha uma lista local de referências para revisão do contador.
                 </p>
               </div>
             </div>

@@ -42,7 +42,7 @@ describe('copy de usuários locais do SettingsTool', () => {
     expect(source).toMatch(/permissões locais/i);
     expect(source).toMatch(/controle demonstrativo/i);
     expect(source).toMatch(/dados são salvos neste navegador|salvos neste navegador/i);
-    expect(source).toMatch(/não substituem? autenticação real/i);
+    expect(source).toMatch(/não substitui autenticação real|não substituem autenticação real/i);
     expect(source).toMatch(/não é segurança de produção|não.*segurança de produção/i);
     expect(source).toMatch(/não usar senhas reais/i);
     expect(source).toMatch(/senhas locais demonstrativas/i);
@@ -169,5 +169,37 @@ describe('mocks empresariais do SettingsTool', () => {
     }
 
     expect(source).not.toMatch(/\b(?!00\.000\.000\/0000-00\b)\d{2}\.\d{3}\.\d{3}\/000[1-9]-\d{2}\b/);
+  });
+});
+
+describe('compromissos locais do MVP no SettingsTool', () => {
+  it('mantém a configuração como local, demonstrativa e sem promessas operacionais reais', () => {
+    const source = settingsSource();
+
+    expect(source).toMatch(/local/i);
+    expect(source).toMatch(/demonstrativo/i);
+    expect(source).toMatch(/fictíci[oa]/i);
+    expect(source).toMatch(/referência local demonstrativa/i);
+    expect(source).toMatch(/sem transmissão fiscal/i);
+    expect(source).toMatch(/sem valor fiscal/i);
+    expect(source).toMatch(/não envie certificado real/i);
+    expect(source).toMatch(/não substituem? autenticação real/i);
+    expect(source).toMatch(/não é segurança de produção/i);
+    expect(source).toMatch(/não usar senhas reais/i);
+    expect(source).toMatch(/sem nuvem|não é backup em nuvem/i);
+    expect(source).toMatch(/navegação visual/i);
+    expect(source).toMatch(/dados fictícios/i);
+
+    expect(source).not.toMatch(/emissão fiscal real disponível/i);
+    expect(source).not.toMatch(/transmissão fiscal real/i);
+    expect(source).not.toMatch(/certificado real operacional/i);
+    expect(source).not.toMatch(/autenticação real por usuário local/i);
+    expect(source).not.toMatch(/credencial segura/i);
+    expect(source).not.toMatch(/senha protegida/i);
+    expect(source).not.toMatch(/armazenamento seguro de certificado/i);
+    expect(source).not.toMatch(/backup em nuvem (ativo|automático|disponível)/i);
+    expect(source).not.toMatch(/sincronização com servidor/i);
+    expect(source).not.toMatch(/permissões reais de backend/i);
+    expect(source).not.toMatch(/dados reais de empresa (armazenados|seguros|permitidos|sincronizados)/i);
   });
 });

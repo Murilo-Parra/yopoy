@@ -59,56 +59,56 @@ export function getSupplierForProduct(product: Product): Supplier {
   const cat = product.category || '';
   if (cat.includes('Laticínios')) {
     return {
-      name: 'Vigor Provedores de Laticínios Ltda.',
-      contactPerson: 'Carlos Alberto (Representante)',
-      phone: '+55 11 98124-5544',
-      email: 'pedidos.laticinios@vigorcentral.com.br',
-      notes: 'Entrega ágil em até 48h. Mínimo de 100 unidades por pedido.'
+      name: 'Fornecedor Fictício Local 1',
+      contactPerson: 'Contato Fictício Local',
+      phone: '+55 00 00000-0000',
+      email: 'contato@fornecedor-ficticio.local',
+      notes: 'Referência local de entrega e volume mínimo fictício para simulação.'
     };
   }
   if (cat.includes('Grãos')) {
     return {
-      name: 'Cerealista Vale do Sol Ltda.',
-      contactPerson: 'Marcos Ferreira (Gerente)',
-      phone: '+55 41 99188-7766',
-      email: 'vendas@cerealistavaledosol.com.br',
-      notes: 'Pedidos fechados às sextas-feiras. Faturado em 30 dias.'
+      name: 'Fornecedor Fictício Local 2',
+      contactPerson: 'Contato Fictício Local',
+      phone: '+55 00 00000-0000',
+      email: 'contato@fornecedor-ficticio.local',
+      notes: 'Referência local de agenda e condição fictícia para apoio interno.'
     };
   }
   if (cat.includes('Molhos') || cat.includes('Conservas')) {
     return {
-      name: 'Liza Alimentos Atacadista S/A',
-      contactPerson: 'Juliana Mendes (Vendas Corporativas)',
-      phone: '+55 11 97412-3366',
-      email: 'atendimento@lizaalimentos.com.br',
-      notes: 'Descontos de 15% acima de R$ 1.500,00 em faturamento de molhos.'
+      name: 'Fornecedor Fictício Local 3',
+      contactPerson: 'Contato Fictício Local',
+      phone: '+55 00 00000-0000',
+      email: 'contato@fornecedor-ficticio.local',
+      notes: 'Referência local de compra sem pedido, faturamento ou envio real.'
     };
   }
   if (cat.includes('Bebidas')) {
     return {
-      name: 'Mega Distribuidora de Bebidas Ltda.',
-      contactPerson: 'Fernando Lima (Logística comercial)',
-      phone: '+55 11 96541-8899',
-      email: 'comercial@megabebidas.com.br',
-      notes: 'Isenção de frete para entregas regionais às terças e quintas.'
+      name: 'Fornecedor Fictício Local 4',
+      contactPerson: 'Contato Fictício Local',
+      phone: '+55 00 00000-0000',
+      email: 'contato@fornecedor-ficticio.local',
+      notes: 'Referência local de entrega; não calcula frete real nem aciona transportadora.'
     };
   }
   if (cat.includes('Frios') || cat.includes('Carnes')) {
     return {
-      name: 'Frigorífico Estrela Alimentos S/A',
-      contactPerson: 'Sandra Rocha (Responsável Direto)',
-      phone: '+55 19 98877-4433',
-      email: 'pedidos@frigorificocentral.com.br',
-      notes: 'Cadeia de frio certificada. Pedidos mínimos de 80kg.'
+      name: 'Fornecedor Fictício Local 5',
+      contactPerson: 'Contato Fictício Local',
+      phone: '+55 00 00000-0000',
+      email: 'contato@fornecedor-ficticio.local',
+      notes: 'Referência local de cuidado com lote; sem certificado ou pedido real.'
     };
   }
   // Default fallback (e.g. Mercearia, Limpeza, etc.)
   return {
-    name: 'Distribuidora de Alimentos Brasil Co.',
-    contactPerson: 'Paula Souza (Faturamento & Atacado)',
-    phone: '+55 11 97063-2211',
-    email: 'vendas.atacado@alimentosbrasil.com.br',
-    notes: 'Fornecedor geral de mercearia seca e embalagens.'
+    name: 'Fornecedor Fictício Local',
+    contactPerson: 'Contato Fictício Local',
+    phone: '+55 00 00000-0000',
+    email: 'contato@fornecedor-ficticio.local',
+    notes: 'Fornecedor fictício/local para referência interna de estoque.'
   };
 }
 
@@ -400,7 +400,7 @@ export default function LogisticsTool({
     setEditingProduct(null);
   };
 
-  // Estados para contato direto com fornecedores de suprimentos (Sem simulação de compra)
+  // Estados para rascunho local de contato com fornecedores fictícios.
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [contactProduct, setContactProduct] = useState<Product | null>(null);
   const [draftMessage, setDraftMessage] = useState('');
@@ -412,14 +412,14 @@ export default function LogisticsTool({
     const threshold = product.lowStockThreshold !== undefined ? product.lowStockThreshold : lowStockThreshold;
     const missingAmount = Math.max(50, Math.ceil((threshold - product.qty) / 10) * 10);
     
-    // Proposta de mensagem profissional pré-definida em português
+    // Rascunho local pré-definido em português.
     const msg = `Olá, ${supplier.contactPerson}!\n\n` +
-      `Gostaria de solicitar uma cotação para reposição imediata do produto "${product.name}" (Lote: ${product.batch}).\n` +
-      `Atualmente o nível de estoque deste lote cadastrado no nosso almoxarifado é crítico (${product.qty} unidades, abaixo do limite recomendável de ${threshold} un).\n\n` +
-      `Solicitamos uma proposta comercial para o fornecimento de um lote de reposição de aproximadamente ${missingAmount} unidades.\n\n` +
-      `Ficamos no aguardo de sua confirmação de preço e prazo de entrega para conclusão do pedido.\n\n` +
+      `Este é um rascunho local para referência de reposição do produto "${product.name}" (Lote: ${product.batch}).\n` +
+      `O nível visual local deste lote está abaixo da referência configurada (${product.qty} unidades, limite de ${threshold} un).\n\n` +
+      `Use este texto apenas como apoio interno para estimar uma reposição fictícia de aproximadamente ${missingAmount} unidades.\n\n` +
+      `Não há envio de pedido real, cotação real ou integração com fornecedor neste MVP.\n\n` +
       `Atenciosamente,\n` +
-      `Gerência Geral - Controle Operacional Integrado`;
+      `Apoio local de estoque`;
       
     setDraftMessage(msg);
     setIsCopied(false);
@@ -437,7 +437,7 @@ export default function LogisticsTool({
   // Base de tempo definida pelo sistema: 2026-05-31
   const REFERENCE_DATE = useMemo(() => new Date('2026-05-31'), []);
 
-  // Alerta de validade: 1 semana antes (<= 7 dias de diferença de validade do produto)
+  // Lembrete local de validade: 1 semana antes (<= 7 dias de diferença de validade do produto)
   const checkIsExpiringInOneWeek = (expirationStr: string): boolean => {
     const expDate = new Date(expirationStr);
     const timeDiff = expDate.getTime() - REFERENCE_DATE.getTime();
@@ -446,7 +446,7 @@ export default function LogisticsTool({
     return daysDiff >= 0 && daysDiff <= 7;
   };
 
-  // Alerta de validade: produto já vencido
+  // Lembrete local de validade: produto já vencido
   const checkIsExpired = (expirationStr: string): boolean => {
     const expDate = new Date(expirationStr);
     const timeDiff = expDate.getTime() - REFERENCE_DATE.getTime();
@@ -485,7 +485,7 @@ export default function LogisticsTool({
         setScanMessage(`Produto escaneado: ${match.name}`);
       } else {
         setScannedProduct(null);
-        setScanMessage('Código de barras escaneado, mas produto não cadastrado no banco logístico.');
+        setScanMessage('Código de barras escaneado, mas produto não cadastrado no registro local de apoio.');
       }
       setScanningActive(false);
     }, 1200);
@@ -538,7 +538,7 @@ export default function LogisticsTool({
       senderId: emp.id,
       senderName: emp.name,
       receiverId: 'admin',
-      text: `Instrução logística recebida! Vi que você encaminhou a tarefa de alerta do produto ${forwardingAlertTask.product.name} (Lote: ${forwardingAlertTask.product.batch}). Vou resolvê-la agora mesmo no setor ${forwardingAlertTask.product.location}!`,
+      text: `Registro interno recebido. A tarefa local do produto ${forwardingAlertTask.product.name} (Lote: ${forwardingAlertTask.product.batch}) foi encaminhada para conferência visual no setor ${forwardingAlertTask.product.location}.`,
       timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     };
     messages.push(customMsg);
@@ -568,7 +568,7 @@ export default function LogisticsTool({
     // Verificar se o código de barras já existe
     const exists = products.some(p => p.barcode === newBarcode);
     if (exists) {
-      alert('Aviso: Já existe um lote registrado com este mesmo código de barras. Registre um lote diferente ou remova o estoque anterior.');
+      alert('Aviso: Já existe um lote registrado com este mesmo código de barras. Registre um lote diferente ou remova a referência local anterior.');
       return;
     }
 
@@ -609,7 +609,7 @@ export default function LogisticsTool({
     setBarcodeInput(newProd.barcode);
 
     // Auditoria para adição fiscal de produto
-    logFiscalAlteration("CADASTRO_FISCAL_PRODUTO", `Cadastrado novo produto para emissão fiscal: "${newProd.name}" (ID: ${newProd.id}), NCM: ${newProd.ncm || 'N/A'}, GTIN: ${newProd.gtin || 'N/A'}`);
+    logFiscalAlteration("CADASTRO_FISCAL_PRODUTO", `Cadastrado novo produto para preparação local de conferência futura: "${newProd.name}" (ID: ${newProd.id}), NCM: ${newProd.ncm || 'N/A'}, GTIN: ${newProd.gtin || 'N/A'}`);
 
     // Reset formulário
     setNewBarcode('');
@@ -634,7 +634,7 @@ export default function LogisticsTool({
     setIsAddProductOpen(false);
   };
 
-  // Ajustar quantidade de estoque diretamente
+  // Ajustar quantidade local de estoque diretamente
   const handleUpdateStockQty = (prodId: string, amount: number) => {
     setProducts(prev => prev.map(p => {
       if (p.id === prodId) {
@@ -649,9 +649,9 @@ export default function LogisticsTool({
     }));
   };
 
-  // Excluir Lote/Produto do Estoque
+  // Excluir lote/produto do registro local de estoque
   const handleDeleteProduct = (prodId: string) => {
-    if (confirm('Tem certeza que deseja dar baixa total de estoque deste lote de mercadoria?')) {
+    if (confirm('Tem certeza que deseja remover este lote do registro local de apoio? Esta ação não executa baixa automática real nem substitui inventário oficial.')) {
       setProducts(prev => prev.filter(p => p.id !== prodId));
       if (scannedProduct && scannedProduct.id === prodId) {
         setScannedProduct(null);
@@ -683,10 +683,10 @@ export default function LogisticsTool({
               <Box className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
             </div>
             <h3 className={`text-xl font-bold mb-2 ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-              Monitoramento Inteligente de Estoque
+              Apoio local de estoque
             </h3>
             <p className={`max-w-md text-sm mb-6 ${theme === 'dark' ? 'text-gray-400' : 'text-slate-600'}`}>
-              Múltiplos centros de distribuição, alertas preditivos de validade e baixa de estoque disponíveis exclusivamente no Plano Premium.
+              Áreas locais de apoio, lembretes de validade e ajustes locais de estoque disponíveis exclusivamente no Plano Premium. Sem pedido real, frete real, baixa automática real ou documento fiscal.
             </p>
             <span className={`text-xs font-bold uppercase tracking-widest mb-4 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>
               Disponível apenas no Plano Premium
@@ -734,6 +734,16 @@ export default function LogisticsTool({
         </div>
       ) : (
         <>
+          <div className={`rounded-2xl border p-4 text-xs leading-relaxed ${
+            theme === 'dark'
+              ? 'bg-emerald-950/10 border-emerald-900/35 text-emerald-100/80'
+              : 'bg-emerald-50 border-emerald-100 text-emerald-900'
+          }`}>
+            <strong>Apoio local de estoque do MVP.</strong> Organização local e visual local para registro interno:
+            sem integração com fornecedor, sem pedido real, sem baixa automática real, sem frete real,
+            sem rastreamento real e sem documento fiscal. Não emite nota, não transmite dados fiscais e não possui valor fiscal.
+          </div>
+
           {/* Seletor de Sub-Abas de Logística */}
           <div className="flex border-b border-slate-200 dark:border-[#222228] pb-px mb-6 items-center justify-between">
             <div className="flex gap-2">
@@ -747,7 +757,7 @@ export default function LogisticsTool({
                     : 'text-slate-500 hover:text-slate-800 dark:text-gray-400 dark:hover:text-gray-200'
                 }`}
               >
-                <span>Inventário & Terminal</span>
+                <span>Apoio local de estoque</span>
               </button>
 
               <button
@@ -760,7 +770,7 @@ export default function LogisticsTool({
                     : 'text-slate-500 hover:text-slate-800 dark:text-gray-400 dark:hover:text-gray-200'
                 }`}
               >
-                <span>Alertas & Validade</span>
+                <span>Lembretes locais</span>
                 {(expiringProducts.length > 0 || expiredProducts.length > 0 || lowStockProducts.length > 0) && (
                   <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
                 )}
@@ -775,22 +785,22 @@ export default function LogisticsTool({
           {activeLogisticsTab === 'alerts' && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         
-        {/* Alertas de Vencimento de Validade em 1 Semana */}
+        {/* Lembretes locais de validade em 1 semana */}
         <div id="expiration-alerts-box" className={`border rounded-2xl p-5 shadow-sm transition-all duration-200 ${
           theme === 'dark' ? 'bg-[#1c1c24] border-red-950/45' : 'bg-amber-50/50 border-amber-250'
         }`}>
           <div className="flex items-center gap-2 text-rose-500 mb-3">
             <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-500 animate-pulse" />
-            <h3 className={`text-sm font-semibold uppercase tracking-wider ${theme === 'dark' ? 'text-amber-400' : 'text-amber-800'}`}>Alertas de Vencimento (Próximos 7 dias)</h3>
+            <h3 className={`text-sm font-semibold uppercase tracking-wider ${theme === 'dark' ? 'text-amber-400' : 'text-amber-800'}`}>Lembretes locais de validade (próximos 7 dias)</h3>
             <span className={`font-mono text-[10px] px-2 py-0.5 rounded-full font-semibold ml-auto ${
               theme === 'dark' ? 'bg-amber-950 text-amber-300' : 'bg-amber-100 text-amber-800 border border-amber-200'
             }`}>
-              {expiringProducts.length} itens detectados
+              {expiringProducts.length} referências locais
             </span>
           </div>
           
           {expiringProducts.length === 0 ? (
-            <p className={`text-xs italic ${theme === 'dark' ? 'text-gray-400' : 'text-slate-500'}`}>Ótimo! Nenhum lote comercial expira na próxima semana.</p>
+            <p className={`text-xs italic ${theme === 'dark' ? 'text-gray-400' : 'text-slate-500'}`}>Nenhuma referência local de validade para a próxima semana.</p>
           ) : (
             <div className="space-y-2 max-h-[170px] overflow-y-auto pr-1">
               {expiringProducts.map(p => {
@@ -804,11 +814,11 @@ export default function LogisticsTool({
                         setForwardingAlertTask({
                           type: 'expiring',
                           product: p,
-                          title: `Conferir lote do produto ${p.name} (Lote: ${p.batch}) com validade crítica em ${p.expirationDate} no setor ${p.location}`
+                          title: `Conferir referência local do produto ${p.name} (Lote: ${p.batch}) com validade próxima em ${p.expirationDate} no setor ${p.location}`
                         });
                       }
                     }}
-                    title="Clique para encaminhar este alerta como uma tarefa a ser resolvida por um funcionário"
+                    title="Clique para encaminhar este lembrete local como tarefa interna"
                     className={`border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 hover:bg-opacity-80 cursor-pointer transition-all hover:ring-2 hover:ring-indigo-500/85 active:scale-98 ${
                       theme === 'dark' 
                         ? 'bg-amber-950/20 border-amber-900/40 hover:bg-amber-950/30' 
@@ -921,22 +931,22 @@ export default function LogisticsTool({
           )}
         </div>
 
-        {/* Produtos Já Vencidos */}
+        {/* Referências locais de produtos vencidos */}
         <div id="expired-products-box" className={`border rounded-2xl p-5 shadow-sm transition-all duration-200 ${
           theme === 'dark' ? 'bg-[#1c1c24] border-red-950/45' : 'bg-red-50/50 border-red-250'
         }`}>
           <div className="flex items-center gap-2 text-rose-500 mb-3">
             <AlertTriangle className="w-5 h-5 flex-shrink-0 text-red-500 animate-pulse" />
-            <h3 className={`text-sm font-semibold uppercase tracking-wider ${theme === 'dark' ? 'text-red-400' : 'text-red-800'}`}>Lotes de Estoque Vencidos</h3>
+            <h3 className={`text-sm font-semibold uppercase tracking-wider ${theme === 'dark' ? 'text-red-400' : 'text-red-800'}`}>Lembretes locais de validade vencida</h3>
             <span className={`font-mono text-[10px] px-2 py-0.5 rounded-full font-semibold ml-auto ${
               theme === 'dark' ? 'bg-red-950/80 text-red-300' : 'bg-red-100 text-red-800 border border-red-200'
             }`}>
-              {expiredProducts.length} lotes críticos
+              {expiredProducts.length} referências locais
             </span>
           </div>
 
           {expiredProducts.length === 0 ? (
-            <p className={`text-xs italic ${theme === 'dark' ? 'text-gray-400' : 'text-slate-500'}`}>Parabéns! Não existem mercadorias com validade vencida registradas.</p>
+            <p className={`text-xs italic ${theme === 'dark' ? 'text-gray-400' : 'text-slate-500'}`}>Não existem referências locais de validade vencida registradas.</p>
           ) : (
             <div className="space-y-2 max-h-[170px] overflow-y-auto pr-1">
               {expiredProducts.map(p => {
@@ -947,10 +957,10 @@ export default function LogisticsTool({
                       setForwardingAlertTask({
                         type: 'expired',
                         product: p,
-                        title: `Retirar do estoque o lote VENCIDO de ${p.name} (Lote: ${p.batch}) no setor ${p.location} imediatamente`
+                        title: `Conferir localmente o lote vencido de ${p.name} (Lote: ${p.batch}) no setor ${p.location}`
                       });
                     }}
-                    title="Clique para encaminhar este alerta como uma tarefa a ser resolvida por um funcionário"
+                    title="Clique para encaminhar este lembrete local como tarefa interna"
                     className={`border rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 hover:bg-opacity-80 cursor-pointer transition-all hover:ring-2 hover:ring-indigo-500/85 active:scale-98 ${
                       theme === 'dark' 
                         ? 'bg-red-950/20 border-red-900/40 hover:bg-red-950/30' 
@@ -1007,7 +1017,7 @@ export default function LogisticsTool({
       </div>
           )}
 
-      {/* Tabela de Produtos com Baixo Estoque */}
+      {/* Referências locais de produtos com baixo estoque */}
       {activeLogisticsTab === 'alerts' && (
       <div id="low-stock-products-monitoring" className={`border rounded-2xl p-5 shadow-sm transition-all duration-200 ${
         theme === 'dark' ? 'bg-[#111114] border-[#222228]' : 'bg-white border-slate-200 shadow-xs'
@@ -1019,10 +1029,10 @@ export default function LogisticsTool({
             </div>
             <div>
               <h3 className={`text-sm font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-amber-400' : 'text-slate-800'}`}>
-                Monitoramento de Baixo Estoque Crítico
+                Referência local de baixo estoque
               </h3>
               <p className={`text-xs mt-0.5 ${theme === 'dark' ? 'text-gray-500' : 'text-slate-400'}`}>
-                Lotes ativos com quantidades abaixo do limite de <strong className="text-indigo-500 dark:text-indigo-400 font-extrabold">{lowStockThreshold} un.</strong>
+                Lotes de apoio local com quantidades abaixo da referência de <strong className="text-indigo-500 dark:text-indigo-400 font-extrabold">{lowStockThreshold} un.</strong>
               </p>
             </div>
           </div>
@@ -1032,7 +1042,7 @@ export default function LogisticsTool({
               : 'bg-amber-500/10 text-amber-500 animate-pulse'
           }`}>
             <AlertTriangle className="w-3.5 h-3.5" />
-            {lowStockProducts.length} lotes em alerta
+            {lowStockProducts.length} lembretes locais
           </span>
         </div>
 
@@ -1042,7 +1052,7 @@ export default function LogisticsTool({
               <Check className="w-5 h-5" />
             </div>
             <p className={`text-xs font-medium ${theme === 'dark' ? 'text-gray-450' : 'text-slate-600'}`}>
-              Excelente! Todos os produtos estão com níveis saudáveis de estoque (acima do limite mínimo).
+              Todos os produtos estão acima da referência local mínima.
             </p>
           </div>
         ) : (
@@ -1055,10 +1065,10 @@ export default function LogisticsTool({
                   <th className="py-3 px-4">Lote / Produto</th>
                   <th className="py-3 px-4">Categoria</th>
                   <th className="py-3 px-4">Código de Barras</th>
-                  <th className="py-3 px-4">Localização</th>
+                  <th className="py-3 px-4">Local de referência</th>
                   <th className="py-3 px-4 text-center">Nível Mínimo</th>
-                  <th className="py-3 px-4 text-center">Estoque Atual (Editar)</th>
-                  <th className="py-3 px-4 text-right">Ação Corretiva</th>
+                  <th className="py-3 px-4 text-center">Qtd local (Editar)</th>
+                  <th className="py-3 px-4 text-right">Apoio interno</th>
                 </tr>
               </thead>
               <tbody className={`divide-y text-xs ${theme === 'dark' ? 'divide-[#222228]' : 'divide-slate-150'}`}>
@@ -1078,7 +1088,7 @@ export default function LogisticsTool({
                           <div 
                             onClick={() => openContactModal(p)}
                             className="font-semibold cursor-pointer hover:underline hover:text-emerald-500 text-slate-800 dark:text-gray-200"
-                            title="Clique para entrar em contato com o fornecedor deste lote"
+                            title="Abrir rascunho local com fornecedor fictício deste lote"
                           >
                             {p.name}
                           </div>
@@ -1187,7 +1197,7 @@ export default function LogisticsTool({
                         </div>
                       </td>
 
-                      {/* Ação corretiva */}
+                      {/* Apoio interno */}
                       <td className="py-2 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5 flex-wrap">
                           <button
@@ -1198,10 +1208,10 @@ export default function LogisticsTool({
                                 ? 'bg-[#052e16] hover:bg-[#14532d] text-emerald-400 border-emerald-500/30' 
                                 : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200 shadow-3xs'
                             }`}
-                            title="Entrar em contato direto com o fornecedor deste produto"
+                            title="Abrir rascunho local com fornecedor fictício deste produto"
                           >
                             <Phone className="w-3.5 h-3.5 text-emerald-500" />
-                            Contatar Fornecedor
+                            Rascunho local
                           </button>
                           <button
                             onClick={() => handleSimulateScan(p.barcode)}
@@ -1379,7 +1389,7 @@ export default function LogisticsTool({
                     </div>
                   </div>
 
-                  {/* Controle rápido de Ajuste e Baixa do estoque do produto escaneado */}
+                  {/* Controle rápido de ajuste local do produto escaneado */}
                   <div className={`flex items-center justify-between pt-3 border-t ${theme === 'dark' ? 'border-[#222228]' : 'border-slate-150'}`}>
                     <div>
                       <p className={theme === 'dark' ? 'text-gray-500' : 'text-slate-400'}>Qtd de Lote</p>
@@ -1407,7 +1417,7 @@ export default function LogisticsTool({
                         id="btn-trash-scanned"
                         onClick={() => handleDeleteProduct(scannedProduct.id)}
                         className={`p-1.5 rounded-lg hover:bg-red-500/10 transition-colors cursor-pointer ${theme === 'dark' ? 'text-red-400 hover:text-red-600' : 'text-red-600 hover:text-red-800'}`}
-                        title="Zerar lote"
+                        title="Remover referência local"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1431,16 +1441,16 @@ export default function LogisticsTool({
           <StockDistributionChart products={products} theme={theme} />
         </div>
 
-        {/* COLUNA 2: BANCO DE DADOS DE ESTOQUE GERAL */}
+        {/* COLUNA 2: registro local de apoio de estoque */}
         <div className="lg:col-span-7 space-y-5">
           <div className={`border p-5 rounded-2xl shadow-sm transition-all duration-200 ${
             theme === 'dark' ? 'bg-[#111114] border-[#222228]' : 'bg-white border-slate-200/90 shadow-xs'
           }`}>
             <div className={`flex flex-wrap items-center justify-between gap-4 border-b pb-4 mb-4 ${theme === 'dark' ? 'border-[#222228]' : 'border-slate-100'}`}>
               <div>
-                <h3 className={`text-base font-bold ${theme === 'dark' ? 'text-gray-200' : 'text-slate-800'}`}>Inventário de Produtos por Lote</h3>
+                <h3 className={`text-base font-bold ${theme === 'dark' ? 'text-gray-200' : 'text-slate-800'}`}>Registro local de apoio de estoque</h3>
                 <p className={`text-xs mt-1 ${theme === 'dark' ? 'text-gray-500' : 'text-slate-400'}`}>
-                  Exibindo e rastreando {filteredProducts.length} lotes de mercadorias em estoque físico.
+                  Exibindo {filteredProducts.length} lotes como referência local de estoque, sem controle oficial.
                 </p>
               </div>
 
@@ -1457,7 +1467,7 @@ export default function LogisticsTool({
                           : 'border-indigo-150 bg-indigo-50/75 text-indigo-750 hover:bg-indigo-50/90 hover:border-indigo-200 shadow-xs'
                     }`}
                     disabled={selectedProductIds.length === 0}
-                    title="Exportar apenas os lotes de produtos selecionados por checkbox"
+                    title="Exportar apenas as referências locais selecionadas por checkbox"
                   >
                     <CheckSquare className="w-3.5 h-3.5 text-indigo-500" />
                     Exportar Selecionados{selectedProductIds.length > 0 && ` (${selectedProductIds.length})`}
@@ -1541,12 +1551,12 @@ export default function LogisticsTool({
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-xl text-xs flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <Plus className="w-4 h-4" />
-                  Cadastrar Lote
+                  Registrar lote local
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsInventoryModalOpen(true)}
-                  title="Expandir Inventário por Lote"
+                  title="Expandir registro local por lote"
                   className={`p-2 rounded-xl border transition-all active:scale-95 cursor-pointer flex items-center justify-center ${
                     theme === 'dark' 
                       ? 'bg-[#15151d] hover:bg-[#1a1a24] text-emerald-400 border-[#2b2b35]' 
@@ -1938,7 +1948,7 @@ export default function LogisticsTool({
                                 id={`btn-table-del-${p.id}`}
                                 onClick={() => handleDeleteProduct(p.id)}
                                 className={`p-1 rounded-lg hover:bg-red-500/10 cursor-pointer ${theme === 'dark' ? 'text-gray-400 hover:text-red-500' : 'text-slate-405 hover:text-red-655'}`}
-                                title="Zerar Lote"
+                                title="Remover referência local"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -1973,7 +1983,7 @@ export default function LogisticsTool({
             }`}>
               <h4 className={`font-bold flex items-center gap-2 ${theme === 'dark' ? 'text-gray-200' : 'text-slate-850'}`}>
                 <Box className="w-5 h-5 text-emerald-500" />
-                Cadastrar Lote / Mercadoria (Fidelidade Fiscal)
+                Registrar lote / mercadoria local
               </h4>
               <button onClick={() => setIsAddProductOpen(false)} className={`hover:opacity-80 transition-opacity cursor-pointer ${theme === 'dark' ? 'text-gray-400' : 'text-slate-400 hover:text-slate-650'}`}>
                 <X className="w-5 h-5" />
@@ -2002,7 +2012,7 @@ export default function LogisticsTool({
                     : 'border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-gray-100'
                 }`}
               >
-                Dados Fiscais
+                Referência fiscal local
               </button>
               <button
                 type="button"
@@ -2245,7 +2255,7 @@ export default function LogisticsTool({
                           : 'bg-white border-slate-250 text-slate-800 placeholder-slate-450'
                       }`}
                     />
-                    <p className="text-[10px] text-gray-500 mt-1">Classificação Fiscal de acordo com a Nomenclatura Comum do Mercosul.</p>
+                    <p className="text-[10px] text-gray-500 mt-1">Referência local de classificação para conferência futura, sem emissão fiscal.</p>
                   </div>
 
                   <div>
@@ -2483,7 +2493,7 @@ export default function LogisticsTool({
             }`}>
               <h4 className={`font-bold flex items-center gap-2 ${theme === 'dark' ? 'text-gray-200' : 'text-slate-850'}`}>
                 <Pencil className="w-5 h-5 text-indigo-500" />
-                Editar Lote / Mercadoria (Fidelidade Fiscal)
+                Editar lote / mercadoria local
               </h4>
               <button onClick={() => setIsEditModalOpen(false)} className={`hover:opacity-80 transition-opacity cursor-pointer ${theme === 'dark' ? 'text-gray-400' : 'text-slate-400 hover:text-slate-650'}`}>
                 <X className="w-5 h-5" />
@@ -2512,7 +2522,7 @@ export default function LogisticsTool({
                     : 'border-transparent text-gray-500 hover:text-gray-950 dark:hover:text-gray-100'
                 }`}
               >
-                Dados Fiscais
+                Referência fiscal local
               </button>
               <button
                 type="button"
@@ -2779,7 +2789,7 @@ export default function LogisticsTool({
                           : 'bg-white border-slate-250 text-slate-800 placeholder-slate-450'
                       }`}
                     />
-                    <p className="text-[10px] text-gray-500 mt-1">Classificação Fiscal da Nomenclatura Comum do Mercosul.</p>
+                    <p className="text-[10px] text-gray-500 mt-1">Referência local de classificação para conferência futura, sem emissão fiscal.</p>
                   </div>
 
                   <div>
@@ -3172,7 +3182,7 @@ export default function LogisticsTool({
                   <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full -mr-6 -mt-6"></div>
                   
                   <div>
-                    <span className="text-[9px] font-extrabold uppercase font-mono tracking-widest text-[#6366f1] dark:text-[#818cf8] block">Fornecedor Credenciado</span>
+                    <span className="text-[9px] font-extrabold uppercase font-mono tracking-widest text-[#6366f1] dark:text-[#818cf8] block">Fornecedor fictício/local</span>
                     <h5 className={`font-extrabold text-sm mt-0.5 ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>{supplier.name}</h5>
                   </div>
 
@@ -3188,7 +3198,7 @@ export default function LogisticsTool({
                     <div className="space-y-1.5Packed font-mono">
                       <div className="flex items-center gap-1.5 text-gray-450">
                         <Phone className="w-3.5 h-3.5 text-emerald-500" />
-                        <span className="font-semibold text-[11px] uppercase">WhatsApp / Cel</span>
+                        <span className="font-semibold text-[11px] uppercase">Contato de referência</span>
                       </div>
                       <p className={`font-bold ${theme === 'dark' ? 'text-gray-250' : 'text-slate-700'}`}>{supplier.phone}</p>
                     </div>
@@ -3196,19 +3206,19 @@ export default function LogisticsTool({
                     <div className="space-y-1.5Packed md:col-span-2">
                       <div className="flex items-center gap-1.5 text-gray-450">
                         <Mail className="w-3.5 h-3.5 text-indigo-400" />
-                        <span className="font-semibold text-[11px] uppercase">E-mail Comercial</span>
+                        <span className="font-semibold text-[11px] uppercase">E-mail de referência</span>
                       </div>
                       <p className={`font-mono font-medium ${theme === 'dark' ? 'text-gray-250' : 'text-slate-700'}`}>{supplier.email}</p>
                     </div>
                   </div>
 
-                  {/* Condições comerciais e Observações */}
+                  {/* Referências locais e observações */}
                   <div className={`p-2.5 rounded-lg text-[10px] flex gap-2 items-start ${
                     theme === 'dark' ? 'bg-[#111114] text-gray-400' : 'bg-white text-slate-500 border border-slate-100'
                   }`}>
                     <Info className="w-3.5 h-3.5 text-indigo-500 flex-shrink-0 mt-0.5" />
                     <div>
-                      <strong className="block text-gray-400 dark:text-gray-300">Notas Comerciais:</strong>
+                      <strong className="block text-gray-400 dark:text-gray-300">Notas locais:</strong>
                       <span>{supplier.notes}</span>
                     </div>
                   </div>
@@ -3218,9 +3228,9 @@ export default function LogisticsTool({
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className={`block text-[11px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-gray-400' : 'text-slate-500'}`}>
-                      Mensagem de cotação / pedido
+                      Rascunho local de referência
                     </label>
-                    <span className="text-[10px] text-gray-400 italic">Você pode editar a minuta abaixo antes de enviar</span>
+                    <span className="text-[10px] text-gray-400 italic">Não envia pedido, cotação ou mensagem real pelo Yopoy</span>
                   </div>
                   <textarea
                     rows={6}
@@ -3253,7 +3263,7 @@ export default function LogisticsTool({
                     ) : (
                       <>
                         <Copy className="w-4 h-4 text-indigo-500" />
-                        Copiar Mensagem
+                        Copiar rascunho
                       </>
                     )}
                   </button>
@@ -3265,7 +3275,7 @@ export default function LogisticsTool({
                     className="bg-[#25D366] hover:bg-[#20ba5a] text-white rounded-xl py-2.5 px-3 text-xs font-bold transition-all shadow-md shadow-[#25D366]/10 cursor-pointer flex items-center justify-center gap-1.5 hover:scale-[1.01] active:scale-[0.99]"
                   >
                     <MessageSquare className="w-4 h-4 text-white" />
-                    Enviar WhatsApp
+                    Abrir WhatsApp
                   </a>
 
                   <a
@@ -3273,13 +3283,13 @@ export default function LogisticsTool({
                     className="bg-[#4f46e5] hover:bg-[#4338ca] text-white rounded-xl py-2.5 px-3 text-xs font-bold transition-all shadow-md shadow-[#4f46e5]/10 cursor-pointer flex items-center justify-center gap-1.5 hover:scale-[1.01] active:scale-[0.99]"
                   >
                     <Mail className="w-4 h-4 text-white" />
-                    Enviar por E-mail
+                    Abrir e-mail
                   </a>
                 </div>
 
                 {/* Info Note */}
                 <p className="text-[10px] text-gray-400 text-center italic pt-1">
-                  Os botões acima abrirão novos canais de comunicação com dados estruturados para acelerar seu fluxo de compras.
+                  Os botões podem abrir aplicativos externos. O Yopoy não envia pedido real, cotação real ou mensagem real ao fornecedor.
                 </p>
 
               </div>
@@ -3311,14 +3321,14 @@ export default function LogisticsTool({
                   </div>
                   <div>
                     <h3 className="font-black text-sm sm:text-base uppercase tracking-wider flex items-center gap-2">
-                      Painel Expandido: Inventário de Lotes
+                      Painel expandido: registro local de lotes
                       <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
                         theme === 'dark' ? 'bg-emerald-950 text-emerald-400' : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
                       }`}>
-                        VIGÊNCIA FISCAL ATIVA
+                        REFERÊNCIA LOCAL
                       </span>
                     </h3>
-                    <p className="text-[11px] text-gray-400">Rastreamento, edição profunda, perdas e auditoria de estoques integrados por endereçamento físico.</p>
+                    <p className="text-[11px] text-gray-400">Conferência local, edição visual e referências internas de estoque por área de apoio.</p>
                   </div>
                 </div>
 
@@ -3708,7 +3718,7 @@ export default function LogisticsTool({
                                   <button
                                     onClick={() => handleDeleteProduct(p.id)}
                                     className={`p-1 rounded-lg hover:bg-red-500/10 ${theme === 'dark' ? 'text-gray-450 hover:text-red-450' : 'text-slate-405 hover:text-red-655'}`}
-                                    title="Dar Baixa Lote"
+                                    title="Registrar ajuste local de lote"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </button>
